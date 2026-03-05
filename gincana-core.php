@@ -2,6 +2,7 @@
 /**
  * Plugin Name: Gincana Core
  * Description: Lógica de escenarios, estaciones, pruebas y gamificación ligera (puntos, intentos, ranking) para la gimcana digital.
+ * Version: 0.1.4
  * Author: Welow Marketing
  * Text Domain: gincana-core
  */
