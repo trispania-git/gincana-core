@@ -9,7 +9,7 @@
 
 if ( ! defined('ABSPATH') ) exit;
 
-define('GINCANA_CORE_VERSION', '0.1.3');
+define('GINCANA_CORE_VERSION', '0.1.4');
 define('GINCANA_CORE_PATH', plugin_dir_path(__FILE__));
 define('GINCANA_CORE_URL', plugin_dir_url(__FILE__));
 
@@ -19,11 +19,14 @@ require_once GINCANA_CORE_PATH . 'includes/shortcodes.php';
 require_once GINCANA_CORE_PATH . 'includes/permalinks.php';
 require_once GINCANA_CORE_PATH . 'includes/class-activator.php';
 require_once GINCANA_CORE_PATH . 'includes/rest-routes.php';
-require_once GINCANA_CORE_PATH . 'includes/admin-list.php'; 
+require_once GINCANA_CORE_PATH . 'includes/admin-list.php';
 require_once GINCANA_CORE_PATH . 'includes/admin-list-pruebas.php';
 require_once GINCANA_CORE_PATH . 'includes/admin-menu.php';
 require_once GINCANA_CORE_PATH . 'includes/admin-cpt-menu.php';
 require_once GINCANA_CORE_PATH . 'includes/admin-users.php';
+
+// NUEVO: Importador CSV
+require_once GINCANA_CORE_PATH . 'includes/admin-import-csv.php';
 
 // Hooks de activación/desactivación
 register_activation_hook(__FILE__, ['Gincana_Core_Activator','activate']);
