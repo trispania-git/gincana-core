@@ -4,24 +4,21 @@ if ( ! defined('ABSPATH') ) exit;
 /**
  * Admin – Importador CSV (Escenario -> Estaciones -> Pruebas)
  *
- * Arquitectura actual (según tu plugin):
- * - Estación referencia al Escenario por meta: gc_escenario_ref (ID)
- * - Estación referencia a la Prueba por meta: gc_prueba_ref (ID)
- * - Orden de estación por meta: gc_orden (NUMERIC)
+ * Arquitectura del plugin:
+ * - Estación -> Escenario: gc_escenario_ref (ID)
+ * - Estación -> Prueba:    gc_prueba_ref (ID)
+ * - Orden estación:        gc_orden (NUMERIC)
+ *
+ * Meta escenario para nº estaciones: gc_num_estaciones
  *
  * CSV esperado (cabeceras obligatorias):
  * station_slug,station_title,station_order,test_slug,test_title
  *
  * Cabeceras opcionales (si vienen, se guardan como meta en la prueba):
  * question,answer,points
- *
- * Ejemplo:
- * station_slug,station_title,station_order,test_slug,test_title,question,answer,points
- * entrada,Entrada,1,p1,Prueba 1,¿Capital de Francia?,Paris,10
  */
 
 add_action('admin_menu', function () {
-  // Parent slug del menú top-level del plugin (según tu estructura actual)
   $parent_slug = 'gincana-core';
 
   add_submenu_page(
@@ -42,36 +39,27 @@ function gincana_core_render_import_csv_page() {
   $result = null;
   $errors = [];
 
-  // Procesar submit
   if ( isset($_POST['gincana_csv_submit']) ) {
     check_admin_referer('gincana_import_csv_action', 'gincana_import_csv_nonce');
 
     $escenario_id = isset($_POST['gincana_escenario_id']) ? (int) $_POST['gincana_escenario_id'] : 0;
-    if ( $escenario_id <= 0 ) {
-      $errors[] = 'Selecciona un escenario.';
-    }
+    $replace_mode = ! empty($_POST['gincana_replace_mode']) ? true : false;
 
-    if ( empty($_FILES['gincana_csv_file']) || empty($_FILES['gincana_csv_file']['tmp_name']) ) {
-      $errors[] = 'Sube un fichero CSV.';
-    }
+    if ( $escenario_id <= 0 ) $errors[] = 'Selecciona un escenario.';
+    if ( empty($_FILES['gincana_csv_file']) || empty($_FILES['gincana_csv_file']['tmp_name']) ) $errors[] = 'Sube un fichero CSV.';
 
     if ( empty($errors) ) {
       $file = $_FILES['gincana_csv_file'];
-
-      // Validación básica
       $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
       if ( $ext !== 'csv' ) {
         $errors[] = 'El fichero debe ser .csv';
       } else {
-        $result = gincana_core_handle_csv_import($escenario_id, $file['tmp_name']);
-        if ( ! empty($result['errors']) ) {
-          $errors = array_merge($errors, $result['errors']);
-        }
+        $result = gincana_core_handle_csv_import($escenario_id, $file['tmp_name'], $replace_mode);
+        if ( ! empty($result['errors']) ) $errors = array_merge($errors, $result['errors']);
       }
     }
   }
 
-  // Escenarios publicados
   $escenarios = get_posts([
     'post_type'       => 'escenario',
     'post_status'     => 'publish',
@@ -84,6 +72,7 @@ function gincana_core_render_import_csv_page() {
   ]);
 
   $selected_esc = isset($_POST['gincana_escenario_id']) ? (int) $_POST['gincana_escenario_id'] : 0;
+  $selected_replace = ! empty($_POST['gincana_replace_mode']) ? true : false;
 
   echo '<div class="wrap">';
   echo '<h1>Importar CSV</h1>';
@@ -100,33 +89,32 @@ function gincana_core_render_import_csv_page() {
 
     echo '<h2>Resumen</h2>';
     echo '<ul style="margin-left:18px;list-style:disc;">';
+    echo '<li>Modo: <strong>'.($result['replace_mode'] ? 'Reemplazar (borrado previo)' : 'Actualizar/Crear (sin borrado)').'</strong></li>';
     echo '<li>Filas procesadas: <strong>'.(int)$result['rows'].'</strong></li>';
+    echo '<li>Estaciones borradas: <strong>'.(int)$result['stations_deleted'].'</strong></li>';
+    echo '<li>Pruebas borradas: <strong>'.(int)$result['tests_deleted'].'</strong></li>';
     echo '<li>Estaciones creadas: <strong>'.(int)$result['stations_created'].'</strong></li>';
     echo '<li>Estaciones actualizadas: <strong>'.(int)$result['stations_updated'].'</strong></li>';
     echo '<li>Pruebas creadas: <strong>'.(int)$result['tests_created'].'</strong></li>';
     echo '<li>Pruebas actualizadas: <strong>'.(int)$result['tests_updated'].'</strong></li>';
-    echo '<li>Escenario actualizado: <strong>num_estaciones = '.(int)$result['num_stations'].'</strong></li>';
+    echo '<li>Escenario actualizado: <strong>gc_num_estaciones = '.(int)$result['num_stations'].'</strong></li>';
     echo '</ul>';
 
     if ( ! empty($result['log']) ) {
       echo '<h2>Log</h2>';
       echo '<div style="background:#fff;border:1px solid #ccd0d4;padding:12px;max-height:320px;overflow:auto;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-size:12px;line-height:1.35;">';
-      foreach ($result['log'] as $line) {
-        echo esc_html($line) . "<br>";
-      }
+      foreach ($result['log'] as $line) echo esc_html($line) . "<br>";
       echo '</div>';
     }
   }
 
   echo '<hr style="margin:20px 0;">';
-
   echo '<h2>Subir CSV</h2>';
   echo '<form method="post" enctype="multipart/form-data">';
   wp_nonce_field('gincana_import_csv_action', 'gincana_import_csv_nonce');
 
   echo '<table class="form-table" role="presentation"><tbody>';
 
-  // Selector escenario
   echo '<tr>';
   echo '<th scope="row"><label for="gincana_escenario_id">Escenario</label></th>';
   echo '<td>';
@@ -141,16 +129,26 @@ function gincana_core_render_import_csv_page() {
     );
   }
   echo '</select>';
-  echo '<p class="description">El importador meterá estaciones y pruebas dentro de este escenario y actualizará <code>num_estaciones</code> al número de estaciones del CSV.</p>';
+  echo '<p class="description">El importador actualizará automáticamente <code>gc_num_estaciones</code> al número de estaciones únicas del CSV.</p>';
   echo '</td>';
   echo '</tr>';
 
-  // File
+  echo '<tr>';
+  echo '<th scope="row">Modo de importación</th>';
+  echo '<td>';
+  echo '<label style="display:inline-flex;gap:8px;align-items:center;">';
+  echo '<input type="checkbox" name="gincana_replace_mode" value="1" '.checked($selected_replace, true, false).' />';
+  echo '<span><strong>Reemplazar escenario</strong>: borrar estaciones del escenario y sus pruebas enlazadas antes de importar.</span>';
+  echo '</label>';
+  echo '<p class="description" style="max-width:820px;">Recomendado si quieres que el escenario quede exactamente como el CSV. Si no lo marcas, el importador solo crea/actualiza y puede quedar contenido antiguo.</p>';
+  echo '</td>';
+  echo '</tr>';
+
   echo '<tr>';
   echo '<th scope="row"><label for="gincana_csv_file">Fichero CSV</label></th>';
   echo '<td>';
   echo '<input type="file" name="gincana_csv_file" id="gincana_csv_file" accept=".csv,text/csv" required />';
-  echo '<p class="description">Cabeceras obligatorias: <code>station_slug, station_title, station_order, test_slug, test_title</code>. Opcionales: <code>question, answer, points</code>.</p>';
+  echo '<p class="description">Obligatorias: <code>station_slug, station_title, station_order, test_slug, test_title</code>. Opcionales: <code>question, answer, points</code>.</p>';
   echo '</td>';
   echo '</tr>';
 
@@ -170,12 +168,23 @@ function gincana_core_render_import_csv_page() {
   echo '</div>';
 }
 
-function gincana_core_handle_csv_import($escenario_id, $tmp_path) {
+function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode = false) {
   $log = [];
   $errors = [];
 
+  $stations_deleted = 0;
+  $tests_deleted = 0;
+
   if ( ! file_exists($tmp_path) ) {
     return ['errors' => ['No se ha podido leer el fichero subido.']];
+  }
+
+  // 0) Si replace_mode: borrar estaciones del escenario (y sus pruebas enlazadas)
+  if ( $replace_mode ) {
+    $deleted = gincana_core_delete_scenario_stations_and_tests($escenario_id);
+    $stations_deleted = (int) ($deleted['stations_deleted'] ?? 0);
+    $tests_deleted    = (int) ($deleted['tests_deleted'] ?? 0);
+    $log[] = "Modo reemplazar: borradas {$stations_deleted} estaciones y {$tests_deleted} pruebas enlazadas.";
   }
 
   $fh = fopen($tmp_path, 'r');
@@ -183,14 +192,12 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path) {
     return ['errors' => ['No se ha podido abrir el CSV.']];
   }
 
-  // Leer cabecera
   $header = fgetcsv($fh, 0, ',');
   if ( ! is_array($header) || empty($header) ) {
     fclose($fh);
     return ['errors' => ['El CSV está vacío o no tiene cabecera.']];
   }
 
-  // Normalizar cabeceras
   $header = array_map(function($h){
     $h = trim((string)$h);
     $h = strtolower($h);
@@ -199,16 +206,13 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path) {
 
   $required = ['station_slug','station_title','station_order','test_slug','test_title'];
   foreach ($required as $req) {
-    if ( ! in_array($req, $header, true) ) {
-      $errors[] = 'Falta la columna obligatoria: '.$req;
-    }
+    if ( ! in_array($req, $header, true) ) $errors[] = 'Falta la columna obligatoria: '.$req;
   }
   if ( ! empty($errors) ) {
     fclose($fh);
     return ['errors' => $errors];
   }
 
-  // Mapa columna -> index
   $idx = array_flip($header);
 
   $rows = 0;
@@ -217,14 +221,10 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path) {
   $tests_created = 0;
   $tests_updated = 0;
 
-  // Para contar estaciones únicas (por slug) en el CSV
   $station_slugs_seen = [];
 
   while ( ($row = fgetcsv($fh, 0, ',')) !== false ) {
-    // Saltar filas vacías
-    if ( ! is_array($row) || count(array_filter($row, fn($v)=>trim((string)$v)!=='')) === 0 ) {
-      continue;
-    }
+    if ( ! is_array($row) || count(array_filter($row, fn($v)=>trim((string)$v)!=='')) === 0 ) continue;
 
     $rows++;
 
@@ -244,11 +244,10 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path) {
 
     $station_slugs_seen[$station_slug] = true;
 
-    // 1) Crear/actualizar estación (scoped por escenario + slug)
+    // 1) Estación (por escenario + slug)
     $station_id = gincana_core_find_station_by_slug_in_scenario($station_slug, $escenario_id);
 
     if ( $station_id ) {
-      // Update título si cambia
       wp_update_post([
         'ID'         => $station_id,
         'post_title' => $station_title,
@@ -272,11 +271,10 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path) {
       $log[] = "Estación creada: {$station_title} (ID {$station_id})";
     }
 
-    // Meta estación
     update_post_meta($station_id, 'gc_escenario_ref', (int)$escenario_id);
     update_post_meta($station_id, 'gc_orden', (int)$station_order_int);
 
-    // 2) Crear/actualizar prueba por slug (global)
+    // 2) Prueba (por slug, global)
     $test_id = gincana_core_find_test_by_slug($test_slug);
 
     if ( $test_id ) {
@@ -317,23 +315,22 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path) {
       if ($p !== '') update_post_meta($test_id, 'gc_points', (int)$p);
     }
 
-    // 3) Enlazar estación -> prueba (clave del plugin)
+    // 3) Enlazar estación -> prueba
     update_post_meta($station_id, 'gc_prueba_ref', (int)$test_id);
   }
 
   fclose($fh);
 
-  // 4) Actualizar num_estaciones del escenario al nº de estaciones únicas del CSV
+  // 4) Actualizar gc_num_estaciones
   $num_stations = count($station_slugs_seen);
-
-  // Guardamos ambas por compatibilidad (si ACF usa una u otra key)
-  update_post_meta($escenario_id, 'num_estaciones', (int)$num_stations);
   update_post_meta($escenario_id, 'gc_num_estaciones', (int)$num_stations);
-
-  $log[] = "Escenario {$escenario_id}: num_estaciones actualizado a {$num_stations}";
+  $log[] = "Escenario {$escenario_id}: gc_num_estaciones actualizado a {$num_stations}";
 
   return [
+    'replace_mode'     => (bool)$replace_mode,
     'rows'             => (int)$rows,
+    'stations_deleted' => (int)$stations_deleted,
+    'tests_deleted'    => (int)$tests_deleted,
     'stations_created' => (int)$stations_created,
     'stations_updated' => (int)$stations_updated,
     'tests_created'    => (int)$tests_created,
@@ -341,6 +338,43 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path) {
     'num_stations'     => (int)$num_stations,
     'errors'           => $errors,
     'log'              => $log,
+  ];
+}
+
+function gincana_core_delete_scenario_stations_and_tests($escenario_id) {
+  $stations = get_posts([
+    'post_type'       => 'estacion',
+    'post_status'     => 'any',
+    'numberposts'     => -1,
+    'fields'          => 'ids',
+    'meta_query'      => [[
+      'key'     => 'gc_escenario_ref',
+      'value'   => (int)$escenario_id,
+      'compare' => '=',
+    ]],
+    'no_found_rows'   => true,
+    'suppress_filters'=> true,
+  ]);
+
+  $stations_deleted = 0;
+  $tests_deleted = 0;
+
+  foreach ($stations as $station_id) {
+    $station_id = (int)$station_id;
+
+    $test_id = (int) get_post_meta($station_id, 'gc_prueba_ref', true);
+    if ($test_id > 0) {
+      wp_delete_post($test_id, true);
+      $tests_deleted++;
+    }
+
+    wp_delete_post($station_id, true);
+    $stations_deleted++;
+  }
+
+  return [
+    'stations_deleted' => (int)$stations_deleted,
+    'tests_deleted'    => (int)$tests_deleted,
   ];
 }
 
