@@ -3,7 +3,6 @@ if ( ! defined('ABSPATH') ) exit;
 
 /**
  * Metabox para estaciones:
- * - tipo de estación
  * - audio
  * - imágenes extra
  * - token QR
@@ -46,15 +45,10 @@ function gc_get_station_entry_url($post_id) {
 function gc_render_estacion_metabox($post) {
     wp_nonce_field('gc_save_estacion_meta', 'gc_estacion_nonce');
 
-    $tipo   = get_post_meta($post->ID, 'gc_tipo_estacion', true);
-    $audio  = get_post_meta($post->ID, 'gc_audio', true);
-    $img1   = get_post_meta($post->ID, 'gc_img_1', true);
-    $img2   = get_post_meta($post->ID, 'gc_img_2', true);
-    $token  = get_post_meta($post->ID, 'gc_qr_token', true);
-
-    if (empty($tipo)) {
-        $tipo = 'adulto';
-    }
+    $audio = get_post_meta($post->ID, 'gc_audio', true);
+    $img1  = get_post_meta($post->ID, 'gc_img_1', true);
+    $img2  = get_post_meta($post->ID, 'gc_img_2', true);
+    $token = get_post_meta($post->ID, 'gc_qr_token', true);
 
     if (empty($token)) {
         $token = gc_generate_station_token($post->ID);
@@ -64,17 +58,6 @@ function gc_render_estacion_metabox($post) {
     $qr_url = gc_get_station_entry_url($post->ID);
     ?>
     <table class="form-table">
-
-        <tr>
-            <th><label for="gc_tipo_estacion">Tipo de estación</label></th>
-            <td>
-                <select name="gc_tipo_estacion" id="gc_tipo_estacion">
-                    <option value="adulto" <?php selected($tipo, 'adulto'); ?>>Adulto</option>
-                    <option value="infantil" <?php selected($tipo, 'infantil'); ?>>Infantil</option>
-                </select>
-                <p class="description">Adulto = el QR abre pregunta. Infantil = el QR valida “encontrada”.</p>
-            </td>
-        </tr>
 
         <tr>
             <th><label for="gc_audio">Audio (URL)</label></th>
@@ -129,12 +112,6 @@ add_action('save_post', function ($post_id) {
     if ( get_post_type($post_id) !== 'estacion' ) return;
     if ( ! current_user_can('edit_post', $post_id) ) return;
 
-    $tipo = sanitize_text_field($_POST['gc_tipo_estacion'] ?? 'adulto');
-    if ( ! in_array($tipo, ['adulto', 'infantil'], true) ) {
-        $tipo = 'adulto';
-    }
-
-    update_post_meta($post_id, 'gc_tipo_estacion', $tipo);
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));
     update_post_meta($post_id, 'gc_img_2', esc_url_raw($_POST['gc_img_2'] ?? ''));
@@ -145,5 +122,4 @@ add_action('save_post', function ($post_id) {
     }
 
     update_post_meta($post_id, 'gc_qr_url', gc_get_station_entry_url($post_id));
-
 });

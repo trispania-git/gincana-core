@@ -7,7 +7,7 @@ if ( ! defined('ABSPATH') ) exit;
  * Requiere una página en WordPress con slug:
  * /acceso-estacion/
  *
- * El QR debe apuntar a algo como:
+ * El QR debe apuntar a:
  * /acceso-estacion/?gc_station=123&gc_token=TOKEN
  */
 
@@ -31,15 +31,20 @@ function gc_shortcode_estacion_acceso() {
         return gc_station_wrap_message('QR no válido.', 'error');
     }
 
-    $tipo   = get_post_meta($station_id, 'gc_tipo_estacion', true);
-    $audio  = get_post_meta($station_id, 'gc_audio', true);
-    $img1   = get_post_meta($station_id, 'gc_img_1', true);
-    $img2   = get_post_meta($station_id, 'gc_img_2', true);
-    $title  = get_the_title($station_id);
-
-    if (empty($tipo)) {
-        $tipo = 'adulto';
+    $escenario_id = (int) get_post_meta($station_id, 'gc_escenario_ref', true);
+    if ($escenario_id <= 0) {
+        return gc_station_wrap_message('La estación no tiene escenario enlazado.', 'error');
     }
+
+    $tipo_escenario = get_post_meta($escenario_id, 'gc_tipo_escenario', true);
+    if (empty($tipo_escenario)) {
+        $tipo_escenario = 'adulto';
+    }
+
+    $audio = get_post_meta($station_id, 'gc_audio', true);
+    $img1  = get_post_meta($station_id, 'gc_img_1', true);
+    $img2  = get_post_meta($station_id, 'gc_img_2', true);
+    $title = get_the_title($station_id);
 
     ob_start();
 
@@ -66,7 +71,7 @@ function gc_shortcode_estacion_acceso() {
         echo '</div>';
     }
 
-    if ($tipo === 'infantil') {
+    if ($tipo_escenario === 'infantil') {
         echo gc_render_infantil_station($station_id, $title);
     } else {
         echo gc_render_adulto_station($station_id, $title);
@@ -100,7 +105,7 @@ function gc_render_adulto_station($station_id, $title) {
         return gc_station_wrap_message('La prueba no tiene preguntas configuradas.', 'error');
     }
 
-    $pregunta = $preguntas[0];
+    $pregunta  = $preguntas[0];
     $enunciado = isset($pregunta['enunciado']) ? $pregunta['enunciado'] : '';
     $opciones  = isset($pregunta['opciones']) && is_array($pregunta['opciones']) ? $pregunta['opciones'] : [];
 
