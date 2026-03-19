@@ -24,6 +24,7 @@ require_once GINCANA_CORE_PATH . 'includes/admin-list-pruebas.php';
 require_once GINCANA_CORE_PATH . 'includes/admin-menu.php';
 require_once GINCANA_CORE_PATH . 'includes/admin-cpt-menu.php';
 require_once GINCANA_CORE_PATH . 'includes/admin-users.php';
+require_once GINCANA_CORE_PATH . 'includes/metabox-estacion.php';
 
 // NUEVO: Importador CSV
 require_once GINCANA_CORE_PATH . 'includes/admin-import-csv.php';
