@@ -50,8 +50,8 @@ add_shortcode('gincana_header', function($atts){
     $is_logged = is_user_logged_in();
     $user = $is_logged ? wp_get_current_user() : null;
     $display_name = $user ? ($user->display_name ?: $user->user_login) : '';
-    $logout_url = wp_logout_url(get_permalink());
     $current_url = get_permalink();
+    $logout_url = add_query_arg('redirect_to', urlencode($current_url), wp_logout_url());
     $login_url_with_redirect = add_query_arg('redirect_to', urlencode($current_url), $login_url);
 
     $uid = 'gc-hdr-' . uniqid();

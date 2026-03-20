@@ -393,11 +393,15 @@ add_shortcode('gincana_registro', function($atts){
 
 // ── Redirigir wp-login a nuestras páginas ───────────────────────
 add_action('login_init', function(){
-    // No interceptar si es logout, postpass, o petición AJAX/REST
-    if (isset($_GET['action']) && in_array($_GET['action'], ['logout', 'postpass', 'rp', 'resetpass', 'lostpassword'])) return;
+    // No interceptar peticiones AJAX/REST
     if (defined('DOING_AJAX') && DOING_AJAX) return;
     if (defined('REST_REQUEST') && REST_REQUEST) return;
     if (is_admin()) return;
+
+    $action = isset($_GET['action']) ? $_GET['action'] : '';
+
+    // Dejar pasar: logout, resetpass, lostpassword, postpass
+    if (in_array($action, ['logout', 'postpass', 'rp', 'resetpass', 'lostpassword', 'confirmaction'])) return;
 
     // Buscar páginas de acceso/registro
     $login_page = get_page_by_path('acceso');
@@ -406,7 +410,7 @@ add_action('login_init', function(){
     $redirect_to = isset($_GET['redirect_to']) ? $_GET['redirect_to'] : '';
 
     // Si es registro
-    if (isset($_GET['action']) && $_GET['action'] === 'register' && $reg_page) {
+    if ($action === 'register' && $reg_page) {
         $url = get_permalink($reg_page);
         if ($redirect_to) $url = add_query_arg('redirect_to', urlencode($redirect_to), $url);
         wp_safe_redirect($url);
@@ -423,6 +427,19 @@ add_action('login_init', function(){
         wp_safe_redirect($url);
         exit;
     }
+});
+
+// ── Redirect tras logout: volver a la página de origen ──────────
+add_action('wp_logout', function(){
+    if (!empty($_REQUEST['redirect_to'])) {
+        $redirect = esc_url_raw($_REQUEST['redirect_to']);
+    } elseif (!empty($_GET['gc_return'])) {
+        $redirect = esc_url_raw($_GET['gc_return']);
+    } else {
+        $redirect = home_url('/');
+    }
+    wp_safe_redirect($redirect);
+    exit;
 });
 
 
