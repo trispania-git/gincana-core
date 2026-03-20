@@ -340,8 +340,8 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       ?>
 
         <<?php echo $tag; ?> class="gc-card <?php echo esc_attr($card_cls); ?>"<?php echo $href; ?>>
-          <div class="gc-card-icon" style="background:<?php echo $icon_bg; ?>;color:<?php echo $icon_fg; ?>;">
-            <?php echo $icon_text; ?>
+          <div class="gc-card-icon" style="background:<?php echo $icon_bg; ?>;">
+            <span style="color:<?php echo $icon_fg; ?>;line-height:1;"><?php echo $icon_text; ?></span>
           </div>
           <div class="gc-card-body">
             <div class="gc-card-title"><?php echo esc_html($title); ?></div>
