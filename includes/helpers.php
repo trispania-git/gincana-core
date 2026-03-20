@@ -4,19 +4,31 @@ if ( ! defined('ABSPATH') ) exit;
 /**
  * ============================================================
  * Helpers de Gincana Core
- * - gincana_is_divi_builder(): detecta si Divi (Theme/Visual) Builder está activo
- * - gincana_points_calculate(): calcula la puntuación final
- * - gincana_points_add(): registra puntos en la tabla *_gincana_points_log
- * - Helpers de progreso/orden: gincana_user_passed, _prev/_next, _can_access
- * - Filtros:
- *     - gincana_time_bonus_rules -> permite ajustar tramos/bonus de tiempo
- *     - gincana_points_total     -> permite ajustar el total final calculado
  * ============================================================
  */
 
 /**
+ * Resuelve un valor de post_meta que puede ser un ID numérico,
+ * un objeto WP_Post o un array con clave 'ID' (compatibilidad ACF).
+ * Devuelve siempre un int (0 si no se puede resolver).
+ */
+if ( ! function_exists('gc_resolve_meta_id') ) {
+  function gc_resolve_meta_id($raw) {
+    if ( is_numeric($raw) ) return (int) $raw;
+    if ( is_object($raw) && isset($raw->ID) ) return (int) $raw->ID;
+    if ( is_array($raw) && isset($raw['ID']) ) return (int) $raw['ID'];
+    if ( is_array($raw) ) {
+      $first = reset($raw);
+      if ( is_numeric($first) ) return (int) $first;
+      if ( is_object($first) && isset($first->ID) ) return (int) $first->ID;
+      if ( is_array($first) && isset($first['ID']) ) return (int) $first['ID'];
+    }
+    return 0;
+  }
+}
+
+/**
  * Detector de Divi (Theme/Visual) Builder
- * Devuelve true cuando el Theme Builder / Visual Builder está renderizando la página.
  */
 if ( ! function_exists('gincana_is_divi_builder') ) {
   function gincana_is_divi_builder() : bool {
@@ -37,29 +49,21 @@ if ( ! function_exists('gincana_is_divi_builder') ) {
 
 /**
  * Regla vigente de puntos:
- * - Puntos por tiempo (intervalos de 5 s, hasta 30 s) SIEMPRE que se acierte:
- *     0.00–4.99s  => 90
- *     5.00–9.99s  => 75
- *     10.00–14.99s=> 60
- *     15.00–19.99s=> 45
- *     20.00–24.99s=> 30
- *     25.00–30.00s=> 15
- *     >30s        => 0
+ * - Puntos por tiempo (intervalos de 5 s, hasta 30 s)
  * - +10 SOLO si es primer intento.
- * - CAP a 100 (min(100, tiempo + bonus_1er_intento)).
+ * - CAP a 100.
  */
 if ( ! function_exists('gincana_points_calculate') ) {
   function gincana_points_calculate($user_id, $escenario_id, $estacion_id, $time_ms, $is_first_try) {
 
-    // 1) Puntos por tiempo (intervalos 5s hasta 30s; >30s => 0)
     $t = max(0, (int) $time_ms);
     $time_rules = apply_filters('gincana_time_bonus_rules', [
-      ['lte_ms' =>  4999, 'add' => 90], // 0.00–4.99s
-      ['lte_ms' =>  9999, 'add' => 75], // 5.00–9.99s
-      ['lte_ms' => 14999, 'add' => 60], // 10.00–14.99s
-      ['lte_ms' => 19999, 'add' => 45], // 15.00–19.99s
-      ['lte_ms' => 24999, 'add' => 30], // 20.00–24.99s
-      ['lte_ms' => 30000, 'add' => 15], // 25.00–30.00s
+      ['lte_ms' =>  4999, 'add' => 90],
+      ['lte_ms' =>  9999, 'add' => 75],
+      ['lte_ms' => 14999, 'add' => 60],
+      ['lte_ms' => 19999, 'add' => 45],
+      ['lte_ms' => 24999, 'add' => 30],
+      ['lte_ms' => 30000, 'add' => 15],
     ]);
 
     $points_time = 0;
@@ -67,13 +71,9 @@ if ( ! function_exists('gincana_points_calculate') ) {
       if ($t <= (int) $rule['lte_ms']) { $points_time = (int) $rule['add']; break; }
     }
 
-    // 2) +10 solo si es primer intento; si no, +0
     $bonus_try = $is_first_try ? 10 : 0;
-
-    // 3) Total (cap a 100)
     $total = min(100, max(0, $points_time + $bonus_try));
 
-    // Filtro final por si quieres ajustar globalmente por código
     return (int) apply_filters('gincana_points_total', $total, [
       'user_id'      => $user_id,
       'escenario_id' => $escenario_id,
@@ -88,16 +88,12 @@ if ( ! function_exists('gincana_points_calculate') ) {
 
 /**
  * Registra puntos en la tabla *_gincana_points_log
- * Campos esperados:
- *  - user_id (int), escenario_id (int), estacion_id (int|null),
- *    points (int), reason (string), meta_json (json|null), created_at (auto DB)
  */
 if ( ! function_exists('gincana_points_add') ) {
   function gincana_points_add($user_id, $escenario_id, $points, $reason = 'passed', $estacion_id = null, $meta = []) {
     global $wpdb;
     $table = $wpdb->prefix . 'gincana_points_log';
 
-    // Sanitizar/normalizar
     $user_id      = (int) $user_id;
     $escenario_id = (int) $escenario_id;
     $estacion_id  = $estacion_id ? (int) $estacion_id : null;
@@ -105,7 +101,6 @@ if ( ! function_exists('gincana_points_add') ) {
     $reason       = $reason ? (string) $reason : 'passed';
     $meta_json    = ! empty($meta) ? wp_json_encode($meta) : null;
 
-    // Insert
     $wpdb->insert(
       $table,
       [
@@ -124,6 +119,7 @@ if ( ! function_exists('gincana_points_add') ) {
 }
 
 // === Helpers de progreso / orden ===
+
 if ( ! function_exists('gincana_user_passed') ) {
   function gincana_user_passed($user_id, $estacion_id){
     global $wpdb;
@@ -137,7 +133,7 @@ if ( ! function_exists('gincana_user_passed') ) {
 
 if ( ! function_exists('gincana_prev_estacion_id') ) {
   function gincana_prev_estacion_id($escenario_id, $estacion_id){
-    $orden_actual = (int) get_field('gc_orden', $estacion_id);
+    $orden_actual = (int) get_post_meta($estacion_id, 'gc_orden', true);
     if ($orden_actual <= 1) return 0;
 
     $q = new WP_Query([
@@ -158,12 +154,11 @@ if ( ! function_exists('gincana_can_access_estacion') ) {
   function gincana_can_access_estacion($user_id, $estacion_id){
     if (!$user_id) return false;
 
-    $esc_raw = get_field('gc_escenario_ref', $estacion_id);
-    $escenario_id = is_numeric($esc_raw) ? (int)$esc_raw : ( (is_object($esc_raw)&&isset($esc_raw->ID)) ? (int)$esc_raw->ID : ( (is_array($esc_raw)&&isset($esc_raw['ID'])) ? (int)$esc_raw['ID'] : 0 ) );
+    $escenario_id = (int) get_post_meta($estacion_id, 'gc_escenario_ref', true);
     if (!$escenario_id) return false;
 
-    $orden = (int) get_field('gc_orden', $estacion_id);
-    if ($orden <= 1) return true; // primera estación del escenario
+    $orden = (int) get_post_meta($estacion_id, 'gc_orden', true);
+    if ($orden <= 1) return true;
 
     $prev_id = gincana_prev_estacion_id($escenario_id, $estacion_id);
     if (!$prev_id) return true;
@@ -174,15 +169,13 @@ if ( ! function_exists('gincana_can_access_estacion') ) {
 
 if ( ! function_exists('gincana_next_estacion_id') ) {
   function gincana_next_estacion_id($escenario_id, $estacion_id){
-    // 1) Si has definido gc_siguiente_ref, úsalo.
-    $next_raw = get_field('gc_siguiente_ref', $estacion_id);
+    $next_raw = get_post_meta($estacion_id, 'gc_siguiente_ref', true);
     if ($next_raw) {
-      if (is_numeric($next_raw)) return (int)$next_raw;
-      if (is_object($next_raw)&&isset($next_raw->ID)) return (int)$next_raw->ID;
-      if (is_array($next_raw)&&isset($next_raw['ID'])) return (int)$next_raw['ID'];
+      $next_id = gc_resolve_meta_id($next_raw);
+      if ($next_id) return $next_id;
     }
-    // 2) Si no, el de orden +1 dentro del mismo escenario
-    $orden_actual = (int) get_field('gc_orden', $estacion_id);
+
+    $orden_actual = (int) get_post_meta($estacion_id, 'gc_orden', true);
     if ($orden_actual <= 0) return 0;
 
     $q = new WP_Query([

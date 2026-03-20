@@ -3,21 +3,20 @@ if ( ! defined('ABSPATH') ) exit;
 
 /**
  * Registro de shortcodes (dentro de 'init')
- * NOTA: gincana_is_divi_builder() debe estar definida en includes/helpers.php
  */
 add_action('init', function(){
 
-  // === Shortcode REAL del quiz: [gincana_prueba] o [gincana_prueba estacion="ID"] (INICIO) ===
+  // === Shortcode REAL del quiz: [gincana_prueba] o [gincana_prueba estacion="ID"] ===
   add_shortcode('gincana_prueba', function($atts){
 
-    // --- PLACEHOLDER si estamos en el Builder (no ejecuta JS/REST) ---
+    // Placeholder en builder
     if ( function_exists('gincana_is_divi_builder') && gincana_is_divi_builder() ) {
       return '<div class="gincana-quiz et_pb_module" style="padding:16px;border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc;">
         <strong>Gincana — Prueba</strong><br/><small>(Vista de maquetación: sin cronómetro ni validaciones)</small>
       </div>';
     }
 
-    // 1) Resolver estación (atributo → queried object → loop → URL)
+    // 1) Resolver estación
     $a = shortcode_atts(['estacion' => ''], $atts);
     $estacion_id = 0;
 
@@ -40,48 +39,23 @@ add_action('init', function(){
     }
     if (!$estacion_id) return '<div>No se ha podido determinar la estación.</div>';
 
-    // 2) Prueba vinculada (ACF) — normalizar a ID
-    if (!function_exists('get_field')) {
-      return '<div>ACF no está activo.</div>';
-    }
-    $prueba_raw = get_field('gc_prueba_ref', $estacion_id);
-    $prueba_id  = 0;
-    if (is_numeric($prueba_raw)) {
-      $prueba_id = (int)$prueba_raw;
-    } elseif (is_object($prueba_raw) && isset($prueba_raw->ID)) {
-      $prueba_id = (int)$prueba_raw->ID;
-    } elseif (is_array($prueba_raw)) {
-      if (isset($prueba_raw['ID'])) {
-        $prueba_id = (int)$prueba_raw['ID'];
-      } else {
-        $first = reset($prueba_raw);
-        if (is_numeric($first)) $prueba_id = (int)$first;
-        elseif (is_object($first) && isset($first->ID)) $prueba_id = (int)$first->ID;
-        elseif (is_array($first) && isset($first['ID'])) $prueba_id = (int)$first['ID'];
-      }
-    }
+    // 2) Prueba vinculada
+    $prueba_raw = get_post_meta($estacion_id, 'gc_prueba_ref', true);
+    $prueba_id  = gc_resolve_meta_id($prueba_raw);
     if (!$prueba_id) return '<div>No hay una Prueba vinculada a esta estación.</div>';
 
-    // 3) Leer ACF de la prueba
-    $pregs         = get_field('gc_preguntas', $prueba_id);
-    $tipo_global   = get_field('gc_tipo', $prueba_id); // multiple | vf | texto
-    $tiempo_max_s  = (int) (get_field('gc_tiempo_max_s', $prueba_id) ?: 30);
-    $intentos_max  = (int) (get_field('gc_intentos_max', $prueba_id) ?: 2);
+    // 3) Leer meta de la prueba
+    $pregs         = get_post_meta($prueba_id, 'gc_preguntas', true);
+    $tipo_global   = get_post_meta($prueba_id, 'gc_tipo', true);
+    $tiempo_max_s  = (int) (get_post_meta($prueba_id, 'gc_tiempo_max_s', true) ?: 30);
+    $intentos_max  = (int) (get_post_meta($prueba_id, 'gc_intentos_max', true) ?: 2);
 
-    // 3.b) Normalizar ESCENARIO desde la Estación (ID/objeto/array)
-    $esc_raw = get_field('gc_escenario_ref', $estacion_id);
-    $escenario_id = 0;
-    if (is_numeric($esc_raw)) {
-      $escenario_id = (int) $esc_raw;
-    } elseif (is_object($esc_raw) && isset($esc_raw->ID)) {
-      $escenario_id = (int) $esc_raw->ID;
-    } elseif (is_array($esc_raw) && isset($esc_raw['ID'])) {
-      $escenario_id = (int) $esc_raw['ID'];
-    }
+    // 3.b) Escenario desde la Estación
+    $escenario_id = (int) get_post_meta($estacion_id, 'gc_escenario_ref', true);
 
     if (empty($pregs)) return '<div>La Prueba no tiene preguntas configuradas.</div>';
 
-    // === GUARD: estación ya superada (INICIO) ===
+    // === GUARD: estación ya superada ===
     $current_user_id = get_current_user_id();
     if ( function_exists('gincana_user_passed') && gincana_user_passed($current_user_id, $estacion_id) ) {
       global $wpdb;
@@ -114,11 +88,13 @@ add_action('init', function(){
       <?php
       return ob_get_clean();
     }
-    // === GUARD: estación ya superada (FIN) ===
 
-    // --- BLOQUEO POR PROGRESO (INICIO) ---
+    // --- BLOQUEO POR PROGRESO ---
     if ( function_exists('gincana_can_access_estacion') && ! gincana_can_access_estacion($current_user_id, $estacion_id) ) {
-      $pista = (string) (get_field('gc_pista_bloqueo', $estacion_id) ?: 'Esta estación está bloqueada. Supera la anterior o escanea el QR en el lugar para saltarla (sin puntos).');
+      $pista = get_post_meta($estacion_id, 'gc_pista_bloqueo', true);
+      if ( empty($pista) ) {
+        $pista = 'Esta estación está bloqueada. Supera la anterior o escanea el QR en el lugar para saltarla (sin puntos).';
+      }
       ob_start(); ?>
       <div class="gincana-quiz et_pb_module" data-estacion="<?php echo esc_attr($estacion_id); ?>">
         <div class="gq-locked" style="padding:16px;border:1px solid #eee;border-radius:10px;background:#fff9f2;">
@@ -164,7 +140,6 @@ add_action('init', function(){
       <?php
       return ob_get_clean();
     }
-    // --- BLOQUEO POR PROGRESO (FIN) ---
 
     // 4) Nonce REST
     $nonce = function_exists('wp_create_nonce') ? wp_create_nonce('wp_rest') : '';
@@ -412,11 +387,10 @@ add_action('init', function(){
     <?php
     return ob_get_clean();
   });
-  // === Fin Shortcode REAL del quiz: [gincana_prueba] ===
 
 });
 
-// === Shortcode CTA primera estación: [gincana_primera_estacion text="Comenzar" class="et_pb_button"] (INICIO) ===
+// === Shortcode CTA primera estación: [gincana_primera_estacion] ===
 add_action('init', function(){
   add_shortcode('gincana_primera_estacion', function($atts){
     $a = shortcode_atts([
@@ -453,15 +427,12 @@ add_action('init', function(){
     return '<a class="'.$class.'" href="'.esc_url($first_url).'">'.$text.'</a>';
   });
 });
-// === Shortcode CTA primera estación (FIN) ===
 
 
-
-// === Shortcode Ranking: [gincana_ranking escenario="ID" limit="20" show_avatars="0" title="..." show_self_below="1" label_self="Tu posición"] (INICIO) ===
+// === Shortcode Ranking: [gincana_ranking escenario="ID"] ===
 add_action('init', function(){
   add_shortcode('gincana_ranking', function($atts){
 
-    // Placeholder en builder
     if ( function_exists('gincana_is_divi_builder') && gincana_is_divi_builder() ) {
       return '<div class="gincana-placeholder et_pb_module" style="padding:12px;border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc;">
         <strong>Gincana — Ranking</strong><br/><small>(Vista de maquetación)</small>
@@ -484,13 +455,10 @@ add_action('init', function(){
 
     // 1) Resolver escenario_id
     $escenario_id = (int)$a['escenario'];
-    if (!$escenario_id && function_exists('get_field')) {
+    if (!$escenario_id) {
       $post_id = get_the_ID();
       if ($post_id && get_post_type($post_id) === 'estacion') {
-        $esc_raw = get_field('gc_escenario_ref', $post_id);
-        if (is_numeric($esc_raw)) $escenario_id = (int)$esc_raw;
-        elseif (is_object($esc_raw) && isset($esc_raw->ID)) $escenario_id = (int)$esc_raw->ID;
-        elseif (is_array($esc_raw) && isset($esc_raw['ID'])) $escenario_id = (int)$esc_raw['ID'];
+        $escenario_id = (int) get_post_meta($post_id, 'gc_escenario_ref', true);
       }
     }
     if (!$escenario_id) {
@@ -521,11 +489,10 @@ add_action('init', function(){
       return '<div>No hay participantes con puntos en este escenario todavía.</div>';
     }
 
-    // 3) Render tabla (resalta al usuario actual)
+    // 3) Render tabla
     $current_user_id = get_current_user_id();
     $title = $a['title'] !== '' ? sanitize_text_field($a['title']) : ('Ranking del escenario #'.$escenario_id);
 
-    // Saber si el usuario actual ya está en el top N
     $inTop = false;
     if ($current_user_id) {
       foreach ($rows as $r) {
@@ -568,7 +535,7 @@ add_action('init', function(){
       </table>
 
       <?php
-      // 4) Mostrar posición del usuario fuera del top N (si procede)
+      // 4) Mostrar posición del usuario fuera del top N
       if ($showSelf && $current_user_id && !$inTop) {
         $user_total = (int) $wpdb->get_var( $wpdb->prepare("
           SELECT SUM(points) FROM $table
@@ -603,15 +570,12 @@ add_action('init', function(){
     return ob_get_clean();
   });
 });
-// === Fin Shortcode Ranking: [gincana_ranking] ===
 
 
-
-// === Shortcode Itinerario: [gincana_itinerario escenario="ID" size="34" current_scale="1.35" link_completed="1" sticky="top:12px" title="Itinerario"] (INICIO) ===
+// === Shortcode Itinerario: [gincana_itinerario escenario="ID"] ===
 add_action('init', function(){
   add_shortcode('gincana_itinerario', function($atts){
 
-    // Placeholder en builder
     if ( function_exists('gincana_is_divi_builder') && gincana_is_divi_builder() ) {
       return '<div class="gincana-placeholder et_pb_module" style="padding:12px;border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc;">
         <strong>Gincana — Itinerario</strong><br/><small>(Vista de maquetación)</small>
@@ -639,11 +603,8 @@ add_action('init', function(){
     if (!$escenario_id && $ctx_id) {
       if (get_post_type($ctx_id) === 'escenario') {
         $escenario_id = (int)$ctx_id;
-      } elseif (get_post_type($ctx_id) === 'estacion' && function_exists('get_field')) {
-        $esc_raw = get_field('gc_escenario_ref', $ctx_id);
-        if (is_numeric($esc_raw)) $escenario_id = (int)$esc_raw;
-        elseif (is_object($esc_raw) && isset($esc_raw->ID)) $escenario_id = (int)$esc_raw->ID;
-        elseif (is_array($esc_raw) && isset($esc_raw['ID'])) $escenario_id = (int)$esc_raw['ID'];
+      } elseif (get_post_type($ctx_id) === 'estacion') {
+        $escenario_id = (int) get_post_meta($ctx_id, 'gc_escenario_ref', true);
       }
     }
     if (!$escenario_id) return '';
@@ -711,7 +672,7 @@ add_action('init', function(){
       <?php endif; ?>
       <div class="gqi-track" role="list" aria-label="Itinerario de estaciones" style="display:flex;flex-wrap:wrap;gap:<?php echo (int)$gap; ?>px;align-items:center;">
         <?php foreach ($est_ids as $i => $eid):
-          $order = function_exists('get_field') ? (get_field('gc_orden', $eid) ?: ($i+1)) : ($i+1);
+          $order = (int) get_post_meta($eid, 'gc_orden', true) ?: ($i+1);
           $title = get_the_title($eid) ?: ('Estación '.$order);
           $url   = get_permalink($eid);
 
@@ -745,15 +706,12 @@ add_action('init', function(){
     return ob_get_clean();
   });
 });
-// === Shortcode Itinerario (FIN) ===
 
 
-
-// === Shortcode Progreso del usuario: [gincana_progreso escenario="ID" show_times="1" show_points="1" show_progressbar="1" title="Mi progreso"] (INICIO) ===
+// === Shortcode Progreso: [gincana_progreso escenario="ID"] ===
 add_action('init', function(){
   add_shortcode('gincana_progreso', function($atts){
 
-    // Placeholder en builder
     if ( function_exists('gincana_is_divi_builder') && gincana_is_divi_builder() ) {
       return '<div class="gincana-placeholder et_pb_module" style="padding:12px;border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc;">
         <strong>Gincana — Progreso</strong><br/><small>(Vista de maquetación)</small>
@@ -782,11 +740,8 @@ add_action('init', function(){
       if ($ctx_id) {
         if (get_post_type($ctx_id) === 'escenario') {
           $escenario_id = (int) $ctx_id;
-        } elseif (get_post_type($ctx_id) === 'estacion' && function_exists('get_field')) {
-          $esc_raw = get_field('gc_escenario_ref', $ctx_id);
-          if (is_numeric($esc_raw)) $escenario_id = (int)$esc_raw;
-          elseif (is_object($esc_raw) && isset($esc_raw->ID)) $escenario_id = (int)$esc_raw->ID;
-          elseif (is_array($esc_raw) && isset($esc_raw['ID'])) $escenario_id = (int)$esc_raw['ID'];
+        } elseif (get_post_type($ctx_id) === 'estacion') {
+          $escenario_id = (int) get_post_meta($ctx_id, 'gc_escenario_ref', true);
         }
       }
     }
@@ -894,7 +849,7 @@ add_action('init', function(){
         </thead>
         <tbody>
           <?php foreach ($estaciones as $idx => $eid):
-            $order = (int) (function_exists('get_field') ? (get_field('gc_orden', $eid) ?: ($idx+1)) : ($idx+1));
+            $order = (int) get_post_meta($eid, 'gc_orden', true) ?: ($idx+1);
             $title = get_the_title($eid) ?: ('Estación #'.$eid);
             $url   = get_permalink($eid);
             $is_passed = (isset($progress[$eid]['status']) && $progress[$eid]['status'] === 'passed');
@@ -948,5 +903,3 @@ add_action('init', function(){
     return ob_get_clean();
   });
 });
-// === Shortcode Progreso del usuario (FIN) ===
-

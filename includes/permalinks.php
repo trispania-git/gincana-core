@@ -4,7 +4,7 @@ if ( ! defined('ABSPATH') ) exit;
 /**
  * Permalinks Estación (MODO SEGURO Divi 5):
  * Estructura: /escenario/{escenario}/{estacion}/
- * Requiere ACF: gc_escenario_ref (Return = ID) en Estación.
+ * Requiere post_meta: gc_escenario_ref (ID) en Estación.
  *
  * NOTA: Este modo evita reglas “sin prefijo” que chocan con previews del Theme Builder.
  * Cuando Divi 5 esté estable, podemos volver a intentar la versión sin prefijo.
@@ -64,20 +64,13 @@ add_filter('post_type_link', function($permalink, $post, $leavename = false, $sa
     return $permalink;
   }
 
-  // Obtener slug del escenario desde ACF
+  // Obtener slug del escenario desde post_meta
   $esc_slug = 'escenario';
-  if ( function_exists('get_field') ) {
-    $esc_raw = get_field('gc_escenario_ref', $post->ID);
-    $esc_id  = 0;
-    if (is_numeric($esc_raw)) $esc_id = (int)$esc_raw;
-    elseif (is_object($esc_raw) && isset($esc_raw->ID)) $esc_id = (int)$esc_raw->ID;
-    elseif (is_array($esc_raw) && isset($esc_raw['ID'])) $esc_id = (int)$esc_raw['ID'];
-
-    if ($esc_id) {
-      $esc = get_post($esc_id);
-      if ($esc && $esc->post_type === 'escenario') {
-        $esc_slug = $esc->post_name;
-      }
+  $esc_id = (int) get_post_meta($post->ID, 'gc_escenario_ref', true);
+  if ($esc_id) {
+    $esc = get_post($esc_id);
+    if ($esc && $esc->post_type === 'escenario') {
+      $esc_slug = $esc->post_name;
     }
   }
 

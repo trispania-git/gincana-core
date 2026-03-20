@@ -6,9 +6,9 @@ if ( ! defined('ABSPATH') ) exit;
  * - Filtro por Escenario y por Estación
  * - Columnas: Escenario, Estación (derivadas de la Estación que referencia esta Prueba vía gc_prueba_ref)
  *
- * Requisitos ACF:
- * - En "estacion": gc_escenario_ref (Post Object → Escenario, return = ID)
- * - En "estacion": gc_prueba_ref    (Post Object → Prueba,    return = ID)
+ * Requisitos post_meta:
+ * - En "estacion": gc_escenario_ref (ID del escenario)
+ * - En "estacion": gc_prueba_ref    (ID de la prueba)
  */
 
 // ====== 1) Filtros en el admin (Escenario / Estación) ======

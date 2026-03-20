@@ -3,7 +3,7 @@ if ( ! defined('ABSPATH') ) exit;
 
 /**
  * Admin – listado de Estaciones:
- * - Filtro por Escenario (ACF: gc_escenario_ref)
+ * - Filtro por Escenario (post_meta: gc_escenario_ref)
  * - Columnas: Escenario, Orden (gc_orden)
  * - Ordenar por Orden
  */
