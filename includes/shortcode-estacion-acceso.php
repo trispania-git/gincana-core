@@ -44,29 +44,25 @@ function gc_shortcode_estacion_acceso() {
 
     $descripcion = get_post_meta($station_id, 'gc_descripcion', true);
 
-    echo '<div class="gc-station-access" style="max-width:760px;margin:0 auto;padding:24px;">';
-    echo '<h1 style="margin-bottom:8px;">' . esc_html($title) . '</h1>';
+    echo '<div class="gc-station-access" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">';
+    echo '<h2 style="margin:0 0 12px;font-size:22px;font-weight:700;line-height:1.3;">' . esc_html($title) . '</h2>';
 
     if ($descripcion) {
-        echo '<div class="gc-station-desc" style="margin:12px 0 20px;padding:16px 18px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:0 12px 12px 0;font-size:15px;line-height:1.6;color:#334155;">';
+        echo '<div class="gc-station-desc" style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;">';
         echo wp_kses_post($descripcion);
         echo '</div>';
     }
 
     if ($audio) {
-        echo '<div style="margin:16px 0;">';
+        echo '<div style="margin:0 0 16px;">';
         echo '<audio controls style="width:100%;"><source src="' . esc_url($audio) . '">Tu navegador no soporta audio HTML5.</audio>';
         echo '</div>';
     }
 
     if ($img1 || $img2) {
-        echo '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:16px 0 24px;">';
-        if ($img1) {
-            echo '<div><img src="' . esc_url($img1) . '" alt="" style="width:100%;height:auto;border-radius:12px;"></div>';
-        }
-        if ($img2) {
-            echo '<div><img src="' . esc_url($img2) . '" alt="" style="width:100%;height:auto;border-radius:12px;"></div>';
-        }
+        echo '<div style="display:flex;flex-direction:column;gap:12px;margin:0 0 24px;">';
+        if ($img1) echo '<img src="' . esc_url($img1) . '" alt="" style="width:100%;height:auto;border-radius:10px;">';
+        if ($img2) echo '<img src="' . esc_url($img2) . '" alt="" style="width:100%;height:auto;border-radius:10px;">';
         echo '</div>';
     }
 
@@ -353,10 +349,11 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     $is_logged   = is_user_logged_in();
     $user_id     = get_current_user_id();
 
-    // Helper para renderizar contenido visual (descripcion + media)
-    $render_content = function() use ($descripcion, $audio, $img1, $img2, $is_logged) {
+    // Helper para renderizar contenido visual (titulo + descripcion + media)
+    $render_content = function() use ($title, $descripcion, $audio, $img1, $img2) {
+        echo '<h2 class="gc-station-title" style="margin:0 0 12px;font-size:22px;font-weight:700;line-height:1.3;">' . esc_html($title) . '</h2>';
         if ($descripcion) {
-            echo '<div class="gc-station-desc" style="margin:0 0 20px;padding:16px 18px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:0 12px 12px 0;font-size:15px;line-height:1.6;color:#334155;">';
+            echo '<div class="gc-station-desc" style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;">';
             echo wp_kses_post($descripcion);
             echo '</div>';
         }
@@ -366,9 +363,9 @@ add_shortcode('gincana_estacion_contenido', function($atts){
             echo '</div>';
         }
         if ($img1 || $img2) {
-            echo '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:0 0 24px;">';
-            if ($img1) echo '<div><img src="' . esc_url($img1) . '" alt="" style="width:100%;height:auto;border-radius:12px;"></div>';
-            if ($img2) echo '<div><img src="' . esc_url($img2) . '" alt="" style="width:100%;height:auto;border-radius:12px;"></div>';
+            echo '<div style="display:flex;flex-direction:column;gap:12px;margin:0 0 24px;">';
+            if ($img1) echo '<img src="' . esc_url($img1) . '" alt="" style="width:100%;height:auto;border-radius:10px;">';
+            if ($img2) echo '<img src="' . esc_url($img2) . '" alt="" style="width:100%;height:auto;border-radius:10px;">';
             echo '</div>';
         }
     };
@@ -377,7 +374,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     if ($is_logged && function_exists('gincana_user_passed') && gincana_user_passed($user_id, $station_id) ) {
         $escenario_url = get_permalink($escenario_id);
         ob_start();
-        echo '<div class="gc-station-content" style="max-width:760px;margin:0 auto;padding:24px;">';
+        echo '<div class="gc-station-content" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">';
         $render_content();
         echo '<div style="padding:20px;border:1px solid #e6f0e6;border-radius:14px;background:#f7fff7;text-align:center;">';
         echo '<p style="margin:0 0 12px;font-size:16px;">&#10003; Ya has completado esta estacion.</p>';
@@ -389,7 +386,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
 
     // Render completo
     ob_start();
-    echo '<div class="gc-station-content" style="max-width:760px;margin:0 auto;padding:24px;">';
+    echo '<div class="gc-station-content" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">';
 
     $render_content();
 
