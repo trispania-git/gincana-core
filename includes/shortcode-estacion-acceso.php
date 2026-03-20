@@ -42,8 +42,16 @@ function gc_shortcode_estacion_acceso() {
 
     ob_start();
 
+    $descripcion = get_post_meta($station_id, 'gc_descripcion', true);
+
     echo '<div class="gc-station-access" style="max-width:760px;margin:0 auto;padding:24px;">';
     echo '<h1 style="margin-bottom:8px;">' . esc_html($title) . '</h1>';
+
+    if ($descripcion) {
+        echo '<div class="gc-station-desc" style="margin:12px 0 20px;padding:16px 18px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:0 12px 12px 0;font-size:15px;line-height:1.6;color:#334155;">';
+        echo wp_kses_post($descripcion);
+        echo '</div>';
+    }
 
     if ($audio) {
         echo '<div style="margin:16px 0;">';

@@ -241,6 +241,8 @@ add_shortcode('gincana_estaciones_lista', function($atts){
         $title  = get_the_title($eid) ?: ('Estacion ' . $order);
         $url    = get_permalink($eid);
         $thumb  = get_the_post_thumbnail_url($eid, 'thumbnail');
+        $desc_raw = get_post_meta($eid, 'gc_descripcion', true);
+        $excerpt  = $desc_raw ? wp_trim_words(wp_strip_all_tags($desc_raw), 15, '...') : '';
 
         $is_passed  = !empty($progress[$eid]) && $progress[$eid] === 'passed';
         $is_current = ($eid === $next_unlocked);
@@ -277,6 +279,9 @@ add_shortcode('gincana_estaciones_lista', function($atts){
           </div>
           <div class="gc-card-body">
             <div class="gc-card-title"><?php echo esc_html($title); ?></div>
+            <?php if ($excerpt): ?>
+              <div class="gc-card-excerpt" style="font-size:13px;color:#64748b;margin-top:2px;line-height:1.4;"><?php echo esc_html($excerpt); ?></div>
+            <?php endif; ?>
             <div class="gc-card-status <?php echo esc_attr($status_cls); ?>"><?php echo esc_html($status_text); ?></div>
           </div>
           <?php if ($tag === 'a'): ?>

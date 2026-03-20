@@ -45,6 +45,7 @@ function gc_get_station_entry_url($post_id) {
 function gc_render_estacion_metabox($post) {
     wp_nonce_field('gc_save_estacion_meta', 'gc_estacion_nonce');
 
+    $descripcion = get_post_meta($post->ID, 'gc_descripcion', true);
     $audio = get_post_meta($post->ID, 'gc_audio', true);
     $img1  = get_post_meta($post->ID, 'gc_img_1', true);
     $img2  = get_post_meta($post->ID, 'gc_img_2', true);
@@ -58,6 +59,22 @@ function gc_render_estacion_metabox($post) {
     $qr_url = gc_get_station_entry_url($post->ID);
     ?>
     <table class="form-table">
+
+        <tr>
+            <th><label for="gc_descripcion">Descripcion cultural</label></th>
+            <td>
+                <?php
+                wp_editor($descripcion, 'gc_descripcion', [
+                    'textarea_name' => 'gc_descripcion',
+                    'textarea_rows' => 6,
+                    'media_buttons' => false,
+                    'teeny'         => true,
+                    'quicktags'     => true,
+                ]);
+                ?>
+                <p class="description">Texto descriptivo del lugar (historia, curiosidades...). Se muestra al jugador en la pagina de la estacion.</p>
+            </td>
+        </tr>
 
         <tr>
             <th><label for="gc_audio">Audio (URL)</label></th>
@@ -112,6 +129,7 @@ add_action('save_post', function ($post_id) {
     if ( get_post_type($post_id) !== 'estacion' ) return;
     if ( ! current_user_can('edit_post', $post_id) ) return;
 
+    update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));
     update_post_meta($post_id, 'gc_img_2', esc_url_raw($_POST['gc_img_2'] ?? ''));
