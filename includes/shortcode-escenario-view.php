@@ -315,7 +315,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
         if ($is_passed) {
           $icon_bg     = '#16a34a';
           $icon_fg     = '#ffffff';
-          $icon_text   = '&#10003;'; // checkmark
+          $icon_text   = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
           $status_text = 'Completada';
           $status_cls  = 'passed';
           $card_cls    = '';
@@ -341,7 +341,11 @@ add_shortcode('gincana_estaciones_lista', function($atts){
 
         <<?php echo $tag; ?> class="gc-card <?php echo esc_attr($card_cls); ?>"<?php echo $href; ?>>
           <div class="gc-card-icon" style="background:<?php echo $icon_bg; ?>;">
-            <span style="color:<?php echo $icon_fg; ?>;line-height:1;"><?php echo $icon_text; ?></span>
+            <?php if ($is_passed): ?>
+              <?php echo $icon_text; ?>
+            <?php else: ?>
+              <span style="color:<?php echo $icon_fg; ?>;line-height:1;"><?php echo $icon_text; ?></span>
+            <?php endif; ?>
           </div>
           <div class="gc-card-body">
             <div class="gc-card-title"><?php echo esc_html($title); ?></div>
