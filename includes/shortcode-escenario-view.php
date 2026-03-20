@@ -288,7 +288,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     }
   </style>
 
-  <div id="<?php echo esc_attr($uid); ?>">
+  <div id="<?php echo esc_attr($uid); ?>" style="width:95%;max-width:760px;margin:0 auto;">
 
     <?php if ($user_id): ?>
     <div class="gc-progress-wrap">
@@ -313,19 +313,22 @@ add_shortcode('gincana_estaciones_lista', function($atts){
 
         // Estado visual
         if ($is_passed) {
-          $icon_class  = 'passed';
+          $icon_bg     = '#16a34a';
+          $icon_fg     = '#ffffff';
           $icon_text   = '&#10003;'; // checkmark
           $status_text = 'Completada';
           $status_cls  = 'passed';
           $card_cls    = '';
         } elseif ($is_current) {
-          $icon_class  = 'current';
+          $icon_bg     = '#2563eb';
+          $icon_fg     = '#ffffff';
           $icon_text   = (string)$order;
           $status_text = ($tipo_escenario === 'infantil') ? 'Siguiente puerta' : 'Siguiente estacion';
           $status_cls  = 'current';
           $card_cls    = 'is-current';
         } else {
-          $icon_class  = 'locked';
+          $icon_bg     = '#cbd5e1';
+          $icon_fg     = '#64748b';
           $icon_text   = (string)$order;
           $status_text = 'Bloqueada';
           $status_cls  = 'locked';
@@ -337,7 +340,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       ?>
 
         <<?php echo $tag; ?> class="gc-card <?php echo esc_attr($card_cls); ?>"<?php echo $href; ?>>
-          <div class="gc-card-icon <?php echo esc_attr($icon_class); ?>">
+          <div class="gc-card-icon" style="background:<?php echo $icon_bg; ?>;color:<?php echo $icon_fg; ?>;">
             <?php echo $icon_text; ?>
           </div>
           <div class="gc-card-body">
