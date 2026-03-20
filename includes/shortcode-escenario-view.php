@@ -244,9 +244,9 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       font-size: 15px;
       color: #fff;
     }
-    #<?php echo $uid; ?> .gc-card-icon.passed  { background: var(--gc-success); }
-    #<?php echo $uid; ?> .gc-card-icon.current { background: var(--gc-accent); }
-    #<?php echo $uid; ?> .gc-card-icon.locked  { background: #cbd5e1; color: #64748b; }
+    #<?php echo $uid; ?> .gc-card-icon.passed  { background: var(--gc-success); color: #fff !important; }
+    #<?php echo $uid; ?> .gc-card-icon.current { background: var(--gc-accent); color: #fff !important; }
+    #<?php echo $uid; ?> .gc-card-icon.locked  { background: #cbd5e1; color: #64748b !important; }
 
     /* Contenido */
     #<?php echo $uid; ?> .gc-card-body {
