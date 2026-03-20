@@ -309,6 +309,111 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
     return ob_get_clean();
 }
 
+/**
+ * Shortcode: [gincana_estacion_contenido]
+ *
+ * Para usar en la plantilla Theme Builder del CPT "estacion".
+ * Detecta la estacion actual, muestra descripcion + media + quiz/validacion.
+ * No requiere QR — funciona por acceso directo desde el listado del escenario.
+ */
+add_shortcode('gincana_estacion_contenido', function($atts){
+
+    // Placeholder para Divi Builder
+    if ( function_exists('gincana_is_divi_builder') && gincana_is_divi_builder() ) {
+        return '<div style="padding:16px;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;text-align:center;">
+            <strong>Gincana — Contenido de Estacion</strong><br><small>(Vista previa del builder)</small>
+        </div>';
+    }
+
+    $a = shortcode_atts(['estacion' => ''], $atts);
+
+    // Resolver estacion
+    $station_id = (int)$a['estacion'];
+    if (!$station_id) {
+        $station_id = (int) get_queried_object_id();
+    }
+    if (!$station_id) {
+        $station_id = (int) get_the_ID();
+    }
+    if (!$station_id || get_post_type($station_id) !== 'estacion') {
+        return gc_station_wrap_message('No se pudo determinar la estacion.', 'error');
+    }
+
+    // Debe estar logueado
+    if (!is_user_logged_in()) {
+        $login_url = wp_login_url(get_permalink($station_id));
+        return '<div style="max-width:760px;margin:24px auto;padding:20px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;text-align:center;">
+            <p style="margin:0 0 12px;font-size:16px;">Debes iniciar sesion para participar en la gimkana.</p>
+            <a href="' . esc_url($login_url) . '" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Iniciar sesion</a>
+        </div>';
+    }
+
+    $escenario_id = (int) get_post_meta($station_id, 'gc_escenario_ref', true);
+    if ($escenario_id <= 0) {
+        return gc_station_wrap_message('La estacion no tiene escenario enlazado.', 'error');
+    }
+
+    $tipo_escenario = get_post_meta($escenario_id, 'gc_tipo_escenario', true) ?: 'adulto';
+    $title       = get_the_title($station_id);
+    $descripcion = get_post_meta($station_id, 'gc_descripcion', true);
+    $audio       = get_post_meta($station_id, 'gc_audio', true);
+    $img1        = get_post_meta($station_id, 'gc_img_1', true);
+    $img2        = get_post_meta($station_id, 'gc_img_2', true);
+
+    // Comprobar si ya la ha superado
+    $user_id = get_current_user_id();
+    if ( function_exists('gincana_user_passed') && gincana_user_passed($user_id, $station_id) ) {
+        $escenario_url = get_permalink($escenario_id);
+        ob_start();
+        echo '<div class="gc-station-content" style="max-width:760px;margin:0 auto;padding:24px;">';
+
+        if ($descripcion) {
+            echo '<div class="gc-station-desc" style="margin:0 0 20px;padding:16px 18px;background:#f8fafc;border-left:4px solid #16a34a;border-radius:0 12px 12px 0;font-size:15px;line-height:1.6;color:#334155;">';
+            echo wp_kses_post($descripcion);
+            echo '</div>';
+        }
+
+        echo '<div style="padding:20px;border:1px solid #e6f0e6;border-radius:14px;background:#f7fff7;text-align:center;">';
+        echo '<p style="margin:0 0 12px;font-size:16px;">&#10003; Ya has completado esta estacion.</p>';
+        echo '<a href="' . esc_url($escenario_url) . '" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
+        echo '</div>';
+        echo '</div>';
+        return ob_get_clean();
+    }
+
+    // Render completo
+    ob_start();
+    echo '<div class="gc-station-content" style="max-width:760px;margin:0 auto;padding:24px;">';
+
+    if ($descripcion) {
+        echo '<div class="gc-station-desc" style="margin:0 0 20px;padding:16px 18px;background:#f8fafc;border-left:4px solid #2563eb;border-radius:0 12px 12px 0;font-size:15px;line-height:1.6;color:#334155;">';
+        echo wp_kses_post($descripcion);
+        echo '</div>';
+    }
+
+    if ($audio) {
+        echo '<div style="margin:0 0 16px;">';
+        echo '<audio controls style="width:100%;"><source src="' . esc_url($audio) . '">Tu navegador no soporta audio HTML5.</audio>';
+        echo '</div>';
+    }
+
+    if ($img1 || $img2) {
+        echo '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:0 0 24px;">';
+        if ($img1) echo '<div><img src="' . esc_url($img1) . '" alt="" style="width:100%;height:auto;border-radius:12px;"></div>';
+        if ($img2) echo '<div><img src="' . esc_url($img2) . '" alt="" style="width:100%;height:auto;border-radius:12px;"></div>';
+        echo '</div>';
+    }
+
+    if ($tipo_escenario === 'infantil') {
+        echo gc_render_infantil_station($station_id, $title, $escenario_id);
+    } else {
+        echo gc_render_adulto_station($station_id, $title, $escenario_id);
+    }
+
+    echo '</div>';
+    return ob_get_clean();
+});
+
 function gc_station_wrap_message($message, $type = 'info') {
     $bg = '#eff6ff';
     $border = '#bfdbfe';
