@@ -2,6 +2,72 @@
 if ( ! defined('ABSPATH') ) exit;
 
 /**
+ * Shortcode: [gincana_escenario_contenido]
+ *
+ * Muestra el contenido del escenario: titulo, descripcion, audio, imagenes.
+ * Para usar en la plantilla Theme Builder del CPT "escenario".
+ */
+add_shortcode('gincana_escenario_contenido', function($atts){
+
+  // Placeholder para Divi Builder
+  if ( function_exists('gincana_is_divi_builder') && gincana_is_divi_builder() ) {
+    return '<div style="padding:16px;border:1px dashed #cbd5e1;border-radius:12px;background:#f8fafc;text-align:center;">
+      <strong>Gincana — Contenido de Escenario</strong><br><small>(Vista previa del builder)</small>
+    </div>';
+  }
+
+  $a = shortcode_atts(['escenario' => ''], $atts);
+
+  // Resolver escenario
+  $escenario_id = (int)$a['escenario'];
+  if (!$escenario_id) {
+    $ctx = get_the_ID();
+    if ($ctx && get_post_type($ctx) === 'escenario') {
+      $escenario_id = (int)$ctx;
+    }
+  }
+  if (!$escenario_id) {
+    return '<p>No se pudo determinar el escenario.</p>';
+  }
+
+  $title       = get_the_title($escenario_id);
+  $descripcion = get_post_meta($escenario_id, 'gc_descripcion', true);
+  $audio       = get_post_meta($escenario_id, 'gc_audio', true);
+  $img1        = get_post_meta($escenario_id, 'gc_img_1', true);
+  $img2        = get_post_meta($escenario_id, 'gc_img_2', true);
+
+  ob_start();
+  ?>
+  <div class="gc-escenario-content" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">
+
+    <h2 style="margin:0 0 12px;font-size:22px;font-weight:700;line-height:1.3;"><?php echo esc_html($title); ?></h2>
+
+    <?php if ($descripcion): ?>
+      <div style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;">
+        <?php echo wp_kses_post($descripcion); ?>
+      </div>
+    <?php endif; ?>
+
+    <?php if ($audio): ?>
+      <div style="margin:0 0 16px;">
+        <audio controls style="width:100%;"><source src="<?php echo esc_url($audio); ?>">Tu navegador no soporta audio HTML5.</audio>
+      </div>
+    <?php endif; ?>
+
+    <?php if ($img1 || $img2): ?>
+      <div style="display:flex;flex-direction:column;gap:12px;margin:0 0 24px;">
+        <?php if ($img1): ?><img src="<?php echo esc_url($img1); ?>" alt="" style="width:100%;height:auto;border-radius:10px;"><?php endif; ?>
+        <?php if ($img2): ?><img src="<?php echo esc_url($img2); ?>" alt="" style="width:100%;height:auto;border-radius:10px;"><?php endif; ?>
+      </div>
+    <?php endif; ?>
+
+  </div>
+  <?php
+  return ob_get_clean();
+});
+
+
+/**
  * Shortcode: [gincana_estaciones_lista]
  *
  * Muestra las estaciones de un escenario como tarjetas visuales (mobile-first).
@@ -142,8 +208,8 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     #<?php echo $uid; ?> .gc-card {
       display: flex;
       align-items: center;
-      gap: 14px;
-      padding: 16px;
+      gap: 12px;
+      padding: 12px 14px;
       background: var(--gc-card-bg);
       border: 1px solid #e2e8f0;
       border-radius: var(--gc-radius);
@@ -168,14 +234,14 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     /* Icono circular */
     #<?php echo $uid; ?> .gc-card-icon {
       flex-shrink: 0;
-      width: 48px;
-      height: 48px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
-      font-size: 18px;
+      font-size: 15px;
       color: #fff;
     }
     #<?php echo $uid; ?> .gc-card-icon.passed  { background: var(--gc-success); }
@@ -240,9 +306,6 @@ add_shortcode('gincana_estaciones_lista', function($atts){
         $order  = (int) get_post_meta($eid, 'gc_orden', true) ?: ($i + 1);
         $title  = get_the_title($eid) ?: ('Estacion ' . $order);
         $url    = get_permalink($eid);
-        $thumb  = get_the_post_thumbnail_url($eid, 'thumbnail');
-        $desc_raw = get_post_meta($eid, 'gc_descripcion', true);
-        $excerpt  = $desc_raw ? wp_trim_words(wp_strip_all_tags($desc_raw), 15, '...') : '';
 
         $is_passed  = !empty($progress[$eid]) && $progress[$eid] === 'passed';
         $is_current = ($eid === $next_unlocked);
@@ -279,9 +342,6 @@ add_shortcode('gincana_estaciones_lista', function($atts){
           </div>
           <div class="gc-card-body">
             <div class="gc-card-title"><?php echo esc_html($title); ?></div>
-            <?php if ($excerpt): ?>
-              <div class="gc-card-excerpt" style="font-size:13px;color:#64748b;margin-top:2px;line-height:1.4;"><?php echo esc_html($excerpt); ?></div>
-            <?php endif; ?>
             <div class="gc-card-status <?php echo esc_attr($status_cls); ?>"><?php echo esc_html($status_text); ?></div>
           </div>
           <?php if ($tag === 'a'): ?>

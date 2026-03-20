@@ -20,10 +20,11 @@ add_action('add_meta_boxes', function () {
 function gc_render_escenario_metabox($post) {
     wp_nonce_field('gc_save_escenario_meta', 'gc_escenario_nonce');
 
-    $tipo = get_post_meta($post->ID, 'gc_tipo_escenario', true);
-    if (empty($tipo)) {
-        $tipo = 'adulto';
-    }
+    $tipo        = get_post_meta($post->ID, 'gc_tipo_escenario', true) ?: 'adulto';
+    $descripcion = get_post_meta($post->ID, 'gc_descripcion', true);
+    $audio       = get_post_meta($post->ID, 'gc_audio', true);
+    $img1        = get_post_meta($post->ID, 'gc_img_1', true);
+    $img2        = get_post_meta($post->ID, 'gc_img_2', true);
     ?>
     <table class="form-table">
         <tr>
@@ -34,9 +35,47 @@ function gc_render_escenario_metabox($post) {
                     <option value="infantil" <?php selected($tipo, 'infantil'); ?>>Infantil</option>
                 </select>
                 <p class="description">
-                    Adulto: el QR de cada estación abre una pregunta tipo test.<br>
-                    Infantil: el QR de cada estación valida que ha sido encontrada.
+                    Adulto: el QR de cada estacion abre una pregunta tipo test.<br>
+                    Infantil: el QR de cada estacion valida que ha sido encontrada.
                 </p>
+            </td>
+        </tr>
+
+        <tr>
+            <th><label for="gc_descripcion">Descripcion</label></th>
+            <td>
+                <?php
+                wp_editor($descripcion, 'gc_esc_descripcion', [
+                    'textarea_name' => 'gc_descripcion',
+                    'textarea_rows' => 6,
+                    'media_buttons' => false,
+                    'teeny'         => true,
+                    'quicktags'     => true,
+                ]);
+                ?>
+                <p class="description">Texto introductorio del escenario. Se muestra al jugador en la pagina principal.</p>
+            </td>
+        </tr>
+
+        <tr>
+            <th><label for="gc_audio">Audio (URL)</label></th>
+            <td>
+                <input type="text" name="gc_audio" id="gc_audio" value="<?php echo esc_attr($audio); ?>" style="width:100%;" />
+                <p class="description">Audio introductorio o narración. Sube a la biblioteca multimedia y pega la URL.</p>
+            </td>
+        </tr>
+
+        <tr>
+            <th><label for="gc_img_1">Imagen 1 (URL)</label></th>
+            <td>
+                <input type="text" name="gc_img_1" id="gc_img_1" value="<?php echo esc_attr($img1); ?>" style="width:100%;" />
+            </td>
+        </tr>
+
+        <tr>
+            <th><label for="gc_img_2">Imagen 2 (URL)</label></th>
+            <td>
+                <input type="text" name="gc_img_2" id="gc_img_2" value="<?php echo esc_attr($img2); ?>" style="width:100%;" />
             </td>
         </tr>
     </table>
@@ -56,4 +95,8 @@ add_action('save_post', function ($post_id) {
     }
 
     update_post_meta($post_id, 'gc_tipo_escenario', $tipo);
+    update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
+    update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
+    update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));
+    update_post_meta($post_id, 'gc_img_2', esc_url_raw($_POST['gc_img_2'] ?? ''));
 });
