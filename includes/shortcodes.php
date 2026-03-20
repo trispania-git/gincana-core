@@ -659,18 +659,49 @@ add_action('init', function(){
 
     // Render
     $uid = 'gq-it-' . uniqid();
-    $circle   = $size;
-    $fontBase = max(12, round($size * 0.5));
-    $gap      = max(6, round($size * 0.35));
-    $currentD = round($circle * $current_scale);
-    $stickyStyle = $sticky_css !== '' ? "position:sticky;{$sticky_css};" : '';
+    $total_est = count($est_ids);
+    $stickyStyle = $sticky_css !== '' ? "position:sticky;{$sticky_css};z-index:50;" : '';
 
     ob_start(); ?>
-    <div id="<?php echo esc_attr($uid); ?>" class="gincana-itinerario et_pb_module" style="<?php echo esc_attr($stickyStyle); ?>">
+    <style>
+      #<?php echo $uid; ?> .gqi-track {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+      #<?php echo $uid; ?> .gqi-step {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: <?php echo (int)$size; ?>px;
+        height: <?php echo (int)$size; ?>px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: <?php echo max(10, round($size * 0.45)); ?>px;
+        line-height: 1;
+        flex-shrink: 0;
+        transition: transform 0.2s;
+      }
+      #<?php echo $uid; ?> .gqi-step.is-current {
+        transform: scale(<?php echo number_format($current_scale, 2); ?>);
+      }
+      /* En movil: reducir si hay muchas estaciones */
+      @media (max-width: 420px) {
+        #<?php echo $uid; ?> .gqi-track { gap: 2px; }
+        #<?php echo $uid; ?> .gqi-step {
+          width: min(<?php echo (int)$size; ?>px, calc((100vw - 40px) / <?php echo $total_est; ?> - 3px));
+          height: min(<?php echo (int)$size; ?>px, calc((100vw - 40px) / <?php echo $total_est; ?> - 3px));
+          font-size: <?php echo max(9, round($size * 0.4)); ?>px;
+        }
+      }
+    </style>
+    <div id="<?php echo esc_attr($uid); ?>" class="gincana-itinerario et_pb_module" style="<?php echo esc_attr($stickyStyle); ?>background:#fff;padding:8px 4px;border-radius:10px;">
       <?php if ($a['title'] !== ''): ?>
-        <div class="gqi-title" style="font-weight:600;margin-bottom:8px;"><?php echo esc_html($a['title']); ?></div>
+        <div class="gqi-title" style="font-weight:600;margin-bottom:8px;text-align:center;"><?php echo esc_html($a['title']); ?></div>
       <?php endif; ?>
-      <div class="gqi-track" role="list" aria-label="Itinerario de estaciones" style="display:flex;flex-wrap:wrap;gap:<?php echo (int)$gap; ?>px;align-items:center;">
+      <div class="gqi-track" role="list" aria-label="Itinerario de estaciones">
         <?php foreach ($est_ids as $i => $eid):
           $order = (int) get_post_meta($eid, 'gc_orden', true) ?: ($i+1);
           $title = get_the_title($eid) ?: ('Estación '.$order);
@@ -680,17 +711,16 @@ add_action('init', function(){
           $is_passed    = !empty($progress[$eid]['passed']);
           $is_unlocked  = (!$is_passed && $eid === $next_unlocked_id);
 
-          $diameter = $is_current ? $currentD : $circle;
           $bg   = $is_current ? '#2563eb' : ($is_passed ? '#16a34a' : ($is_unlocked ? '#f59e0b' : '#e2e8f0'));
           $fg   = $is_current || $is_passed || $is_unlocked ? '#ffffff' : '#334155';
           $ring = $is_current ? '0 0 0 3px rgba(37,99,235,0.25)' : 'none';
           $title_attr = $title . ' (Orden ' . (int)$order . ')'
                         . ($is_passed ? ' — Completada' : ($is_unlocked ? ' — Desbloqueada' : ' — Pendiente'));
+          $current_cls = $is_current ? ' is-current' : '';
 
-          $content = '<span aria-hidden="true" style="font-weight:600;font-size:'.(int)$fontBase.'px;line-height:1;">'.(int)$order.'</span>';
-          $circle_html = '<div class="gqi-step" role="listitem" aria-label="'.esc_attr($title_attr).'"
-              style="display:flex;justify-content:center;align-items:center;width:'.$diameter.'px;height:'.$diameter.'px;border-radius:999px;background:'.$bg.';color:'.$fg.';box-shadow:'.$ring.';">
-                '.$content.'
+          $circle_html = '<div class="gqi-step'.$current_cls.'" role="listitem" aria-label="'.esc_attr($title_attr).'"
+              style="background:'.$bg.';color:'.$fg.';box-shadow:'.$ring.';">
+                '.(int)$order.'
               </div>';
 
           $can_link = $linkify && ($is_passed || $is_unlocked || $is_current);
