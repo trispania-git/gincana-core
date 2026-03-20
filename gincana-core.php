@@ -30,6 +30,8 @@ require_once GINCANA_CORE_PATH . 'includes/metabox-escenario.php';
 require_once GINCANA_CORE_PATH . 'includes/shortcode-estacion-acceso.php';
 require_once GINCANA_CORE_PATH . 'includes/shortcode-escenario-view.php';
 require_once GINCANA_CORE_PATH . 'includes/shortcode-auth.php';
+require_once GINCANA_CORE_PATH . 'includes/shortcode-header-nav.php';
+require_once GINCANA_CORE_PATH . 'includes/restrict-dashboard.php';
 
 require_once GINCANA_CORE_PATH . 'includes/admin-import-csv.php';
 
