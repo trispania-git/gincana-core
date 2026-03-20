@@ -584,11 +584,11 @@ add_action('init', function(){
 
     $a = shortcode_atts([
       'escenario'      => '',
-      'size'           => '34',
+      'size'           => '28',
       'current_scale'  => '1.35',
       'link_completed' => '1',
       'sticky'         => '',
-      'title'          => 'Itinerario',
+      'title'          => '',
     ], $atts);
 
     $size          = max(22, (int)$a['size']);
