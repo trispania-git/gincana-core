@@ -191,3 +191,55 @@ if ( ! function_exists('gincana_next_estacion_id') ) {
     return $q->have_posts() ? (int)$q->posts[0] : 0;
   }
 }
+
+/**
+ * Renderiza la barra de iconos de una estacion (audio + ubicacion).
+ * Devuelve HTML. Usa SVGs inline para evitar dependencias.
+ */
+if ( ! function_exists('gc_render_action_icons') ) {
+  function gc_render_action_icons($audio_url = '', $maps_url = '') {
+    if (!$audio_url && !$maps_url) return '';
+
+    $uid = 'gc-icons-' . uniqid();
+
+    $html = '<div id="' . esc_attr($uid) . '" class="gc-action-icons" style="display:flex;align-items:center;gap:12px;margin:0 0 16px;">';
+
+    // Icono de audio
+    if ($audio_url) {
+      $html .= '<button type="button" class="gc-audio-toggle" title="Escuchar audio" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;cursor:pointer;font-size:13px;color:#334155;transition:background 0.2s,border-color 0.2s;">';
+      $html .= '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/></svg>';
+      $html .= '<span>Audio</span>';
+      $html .= '</button>';
+      $html .= '<audio id="' . esc_attr($uid) . '-player" preload="none" style="display:none;"><source src="' . esc_url($audio_url) . '"></audio>';
+    }
+
+    // Icono de ubicacion
+    if ($maps_url) {
+      $html .= '<a href="' . esc_url($maps_url) . '" target="_blank" rel="noopener" class="gc-icon-btn" title="Ver ubicacion en Google Maps" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;text-decoration:none;font-size:13px;color:#334155;transition:background 0.2s,border-color 0.2s;">';
+      $html .= '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+      $html .= '<span>Ubicacion</span>';
+      $html .= '</a>';
+    }
+
+    $html .= '</div>';
+
+    // JS para toggle audio
+    if ($audio_url) {
+      $html .= '<script>(function(){';
+      $html .= 'var uid="' . esc_js($uid) . '";';
+      $html .= 'var wrap=document.getElementById(uid);if(!wrap)return;';
+      $html .= 'var btn=wrap.querySelector(".gc-audio-toggle");';
+      $html .= 'var audio=document.getElementById(uid+"-player");';
+      $html .= 'if(!btn||!audio)return;';
+      $html .= 'var playing=false;';
+      $html .= 'btn.addEventListener("click",function(){';
+      $html .= '  if(playing){audio.pause();btn.querySelector("span").textContent="Audio";btn.style.background="#fff";btn.style.borderColor="#e2e8f0";playing=false;}';
+      $html .= '  else{audio.play();btn.querySelector("span").textContent="Pausar";btn.style.background="#eff6ff";btn.style.borderColor="#2563eb";playing=true;}';
+      $html .= '});';
+      $html .= 'audio.addEventListener("ended",function(){btn.querySelector("span").textContent="Audio";btn.style.background="#fff";btn.style.borderColor="#e2e8f0";playing=false;});';
+      $html .= '})();</script>';
+    }
+
+    return $html;
+  }
+}

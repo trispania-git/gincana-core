@@ -35,27 +35,24 @@ function gc_shortcode_estacion_acceso() {
         $tipo_escenario = 'adulto';
     }
 
-    $audio = get_post_meta($station_id, 'gc_audio', true);
-    $img1  = get_post_meta($station_id, 'gc_img_1', true);
-    $img2  = get_post_meta($station_id, 'gc_img_2', true);
-    $title = get_the_title($station_id);
+    $audio    = get_post_meta($station_id, 'gc_audio', true);
+    $maps_url = get_post_meta($station_id, 'gc_maps_url', true);
+    $img1     = get_post_meta($station_id, 'gc_img_1', true);
+    $img2     = get_post_meta($station_id, 'gc_img_2', true);
+    $title    = get_the_title($station_id);
 
     ob_start();
 
     $descripcion = get_post_meta($station_id, 'gc_descripcion', true);
 
     echo '<div class="gc-station-access" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">';
-    echo '<h2 style="margin:0 0 12px;font-size:22px;font-weight:700;line-height:1.3;">' . esc_html($title) . '</h2>';
+    echo '<h2 style="margin:0 0 8px;font-size:22px;font-weight:700;line-height:1.3;">' . esc_html($title) . '</h2>';
+
+    echo gc_render_action_icons($audio, $maps_url);
 
     if ($descripcion) {
         echo '<div class="gc-station-desc" style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;">';
         echo wp_kses_post($descripcion);
-        echo '</div>';
-    }
-
-    if ($audio) {
-        echo '<div style="margin:0 0 16px;">';
-        echo '<audio controls style="width:100%;"><source src="' . esc_url($audio) . '">Tu navegador no soporta audio HTML5.</audio>';
         echo '</div>';
     }
 
@@ -344,22 +341,19 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     $title       = get_the_title($station_id);
     $descripcion = get_post_meta($station_id, 'gc_descripcion', true);
     $audio       = get_post_meta($station_id, 'gc_audio', true);
+    $maps_url    = get_post_meta($station_id, 'gc_maps_url', true);
     $img1        = get_post_meta($station_id, 'gc_img_1', true);
     $img2        = get_post_meta($station_id, 'gc_img_2', true);
     $is_logged   = is_user_logged_in();
     $user_id     = get_current_user_id();
 
-    // Helper para renderizar contenido visual (titulo + descripcion + media)
-    $render_content = function() use ($title, $descripcion, $audio, $img1, $img2) {
-        echo '<h2 class="gc-station-title" style="margin:0 0 12px;font-size:22px;font-weight:700;line-height:1.3;">' . esc_html($title) . '</h2>';
+    // Helper para renderizar contenido visual (titulo + iconos + descripcion + media)
+    $render_content = function() use ($title, $descripcion, $audio, $maps_url, $img1, $img2) {
+        echo '<h2 class="gc-station-title" style="margin:0 0 8px;font-size:22px;font-weight:700;line-height:1.3;">' . esc_html($title) . '</h2>';
+        echo gc_render_action_icons($audio, $maps_url);
         if ($descripcion) {
             echo '<div class="gc-station-desc" style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;">';
             echo wp_kses_post($descripcion);
-            echo '</div>';
-        }
-        if ($audio) {
-            echo '<div style="margin:0 0 16px;">';
-            echo '<audio controls style="width:100%;"><source src="' . esc_url($audio) . '">Tu navegador no soporta audio HTML5.</audio>';
             echo '</div>';
         }
         if ($img1 || $img2) {

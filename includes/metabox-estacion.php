@@ -46,10 +46,11 @@ function gc_render_estacion_metabox($post) {
     wp_nonce_field('gc_save_estacion_meta', 'gc_estacion_nonce');
 
     $descripcion = get_post_meta($post->ID, 'gc_descripcion', true);
-    $audio = get_post_meta($post->ID, 'gc_audio', true);
-    $img1  = get_post_meta($post->ID, 'gc_img_1', true);
-    $img2  = get_post_meta($post->ID, 'gc_img_2', true);
-    $token = get_post_meta($post->ID, 'gc_qr_token', true);
+    $audio    = get_post_meta($post->ID, 'gc_audio', true);
+    $maps_url = get_post_meta($post->ID, 'gc_maps_url', true);
+    $img1     = get_post_meta($post->ID, 'gc_img_1', true);
+    $img2     = get_post_meta($post->ID, 'gc_img_2', true);
+    $token    = get_post_meta($post->ID, 'gc_qr_token', true);
 
     if (empty($token)) {
         $token = gc_generate_station_token($post->ID);
@@ -80,7 +81,15 @@ function gc_render_estacion_metabox($post) {
             <th><label for="gc_audio">Audio (URL)</label></th>
             <td>
                 <input type="text" name="gc_audio" id="gc_audio" value="<?php echo esc_attr($audio); ?>" style="width:100%;" />
-                <p class="description">Sube el audio a la biblioteca multimedia y pega aquí la URL.</p>
+                <p class="description">Sube el audio a la biblioteca multimedia y pega aqui la URL. Se mostrara como icono de auriculares.</p>
+            </td>
+        </tr>
+
+        <tr>
+            <th><label for="gc_maps_url">Ubicacion (Google Maps)</label></th>
+            <td>
+                <input type="url" name="gc_maps_url" id="gc_maps_url" value="<?php echo esc_attr($maps_url); ?>" style="width:100%;" placeholder="https://maps.google.com/..." />
+                <p class="description">Enlace de Google Maps del lugar. Se mostrara como icono de ubicacion.</p>
             </td>
         </tr>
 
@@ -131,6 +140,7 @@ add_action('save_post', function ($post_id) {
 
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
+    update_post_meta($post_id, 'gc_maps_url', esc_url_raw($_POST['gc_maps_url'] ?? ''));
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));
     update_post_meta($post_id, 'gc_img_2', esc_url_raw($_POST['gc_img_2'] ?? ''));
 
