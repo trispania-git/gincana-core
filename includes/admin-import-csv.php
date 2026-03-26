@@ -22,7 +22,8 @@ if ( ! defined('ABSPATH') ) exit;
  *
  * CSV opcional recomendado:
  * test_type,time_limit_s,max_attempts,block_hint,question_type,question_text,
- * option_1,option_2,option_3,option_4,correct_option,correct_text
+ * option_1,option_2,option_3,option_4,correct_option,correct_text,
+ * station_description,station_maps_url,station_audio,station_img_1,station_img_2
  *
  * Tipos válidos:
  * - test_type / question_type: multiple | vf | texto
@@ -173,14 +174,19 @@ function gincana_core_render_import_csv_page() {
 
   echo '<hr style="margin:20px 0;">';
   echo '<h2>Plantilla CSV recomendada</h2>';
-  echo '<pre style="background:#f6f7f7;border:1px solid #ccd0d4;padding:12px;white-space:pre-wrap;">';
+  echo '<pre style="background:#f6f7f7;border:1px solid #ccd0d4;padding:12px;white-space:pre-wrap;font-size:11px;">';
   echo esc_html(
-"station_slug,station_title,station_order,test_slug,test_title,test_type,time_limit_s,max_attempts,block_hint,question_type,question_text,option_1,option_2,option_3,option_4,correct_option,correct_text
-entrada,Entrada principal,1,p1,Primera prueba,multiple,30,2,Debes completar antes la estación anterior,multiple,¿Capital de Francia?,Madrid,Paris,Roma,Berlín,2,
-castillo,Castillo,2,p2,Segunda prueba,texto,30,2,,texto,¿2+2?,,,,,,4"
+"station_slug,station_title,station_order,test_slug,test_title,test_type,time_limit_s,max_attempts,block_hint,question_type,question_text,option_1,option_2,option_3,option_4,correct_option,correct_text,station_description,station_maps_url,station_audio,station_img_1,station_img_2
+entrada,Entrada principal,1,p1,Primera prueba,multiple,30,2,Debes completar antes,multiple,¿Capital de Francia?,Madrid,Paris,Roma,Berlin,2,,Descripcion del lugar,https://maps.app.goo.gl/xxx,https://example.com/audio.mp3,,
+castillo,Castillo,2,p2,Segunda prueba,texto,30,2,,texto,¿2+2?,,,,,,4,Texto cultural,,,,,"
   );
   echo '</pre>';
 
+  echo '<h3>Campos de estacion</h3>';
+  echo '<ul style="margin-left:18px;list-style:disc;">';
+  echo '<li><strong>Obligatorios:</strong> station_slug, station_title, station_order, test_slug, test_title</li>';
+  echo '<li><strong>Opcionales:</strong> block_hint, station_description, station_maps_url, station_audio, station_img_1, station_img_2</li>';
+  echo '</ul>';
   echo '<p><strong>correct_option</strong> usa valores 1, 2, 3 o 4. En preguntas de texto, usa <strong>correct_text</strong>.</p>';
 
   echo '</div>';
@@ -295,6 +301,28 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
       if ($block_hint !== '') {
         update_post_meta($station_id, 'gc_pista_bloqueo', $block_hint);
       }
+    }
+
+    // Campos opcionales de contenido de estacion
+    if ( isset($idx['station_description']) ) {
+      $desc = gincana_core_csv_cell($row, $idx['station_description']);
+      if ($desc !== '') update_post_meta($station_id, 'gc_descripcion', wp_kses_post($desc));
+    }
+    if ( isset($idx['station_maps_url']) ) {
+      $maps = gincana_core_csv_cell($row, $idx['station_maps_url']);
+      if ($maps !== '') update_post_meta($station_id, 'gc_maps_url', esc_url_raw($maps));
+    }
+    if ( isset($idx['station_audio']) ) {
+      $audio = gincana_core_csv_cell($row, $idx['station_audio']);
+      if ($audio !== '') update_post_meta($station_id, 'gc_audio', esc_url_raw($audio));
+    }
+    if ( isset($idx['station_img_1']) ) {
+      $img1 = gincana_core_csv_cell($row, $idx['station_img_1']);
+      if ($img1 !== '') update_post_meta($station_id, 'gc_img_1', esc_url_raw($img1));
+    }
+    if ( isset($idx['station_img_2']) ) {
+      $img2 = gincana_core_csv_cell($row, $idx['station_img_2']);
+      if ($img2 !== '') update_post_meta($station_id, 'gc_img_2', esc_url_raw($img2));
     }
 
     // ===== 2) PRUEBA =====
