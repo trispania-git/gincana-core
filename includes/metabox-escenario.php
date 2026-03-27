@@ -58,24 +58,24 @@ function gc_render_escenario_metabox($post) {
         </tr>
 
         <tr>
-            <th><label for="gc_audio">Audio (URL)</label></th>
+            <th><label for="gc_audio">Audio</label></th>
             <td>
-                <input type="text" name="gc_audio" id="gc_audio" value="<?php echo esc_attr($audio); ?>" style="width:100%;" />
-                <p class="description">Audio introductorio o narración. Sube a la biblioteca multimedia y pega la URL.</p>
+                <?php gc_render_media_field('gc_audio', $audio, 'audio', 'Seleccionar audio'); ?>
+                <p class="description">Audio introductorio o narracion del escenario.</p>
             </td>
         </tr>
 
         <tr>
-            <th><label for="gc_img_1">Imagen 1 (URL)</label></th>
+            <th><label for="gc_img_1">Imagen 1</label></th>
             <td>
-                <input type="text" name="gc_img_1" id="gc_img_1" value="<?php echo esc_attr($img1); ?>" style="width:100%;" />
+                <?php gc_render_media_field('gc_img_1', $img1, 'image', 'Seleccionar imagen'); ?>
             </td>
         </tr>
 
         <tr>
-            <th><label for="gc_img_2">Imagen 2 (URL)</label></th>
+            <th><label for="gc_img_2">Imagen 2</label></th>
             <td>
-                <input type="text" name="gc_img_2" id="gc_img_2" value="<?php echo esc_attr($img2); ?>" style="width:100%;" />
+                <?php gc_render_media_field('gc_img_2', $img2, 'image', 'Seleccionar imagen'); ?>
             </td>
         </tr>
     </table>
