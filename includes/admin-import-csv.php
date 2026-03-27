@@ -220,9 +220,32 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
     $log[] = "Modo reemplazar: borradas {$stations_deleted} estaciones y {$tests_deleted} pruebas enlazadas.";
   }
 
-  $fh = fopen($tmp_path, 'r');
-  if ( ! $fh ) {
+  // Leer todo el fichero y asegurar codificación UTF-8
+  $raw_content = file_get_contents($tmp_path);
+  if ( $raw_content === false || strlen($raw_content) === 0 ) {
     return ['errors' => ['No se ha podido abrir el CSV.']];
+  }
+
+  // Eliminar BOM UTF-8 si existe
+  $raw_content = preg_replace('/^\xEF\xBB\xBF/', '', $raw_content);
+
+  // Detectar codificación y convertir a UTF-8
+  if ( ! mb_check_encoding($raw_content, 'UTF-8') ) {
+    // Excel en español suele guardar como Windows-1252
+    $raw_content = mb_convert_encoding($raw_content, 'UTF-8', 'Windows-1252');
+    $log[] = "Codificación convertida de Windows-1252 a UTF-8";
+  } else {
+    $log[] = "Codificación del CSV: UTF-8";
+  }
+
+  // Escribir el contenido limpio a un fichero temporal
+  $clean_tmp = tempnam(sys_get_temp_dir(), 'gc_csv_');
+  file_put_contents($clean_tmp, $raw_content);
+
+  $fh = fopen($clean_tmp, 'r');
+  if ( ! $fh ) {
+    @unlink($clean_tmp);
+    return ['errors' => ['No se ha podido procesar el CSV.']];
   }
 
   // Auto-detectar separador (coma o punto y coma)
@@ -233,12 +256,8 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
   $header = fgetcsv($fh, 0, $sep);
   if ( ! is_array($header) || empty($header) ) {
     fclose($fh);
+    @unlink($clean_tmp);
     return ['errors' => ['El CSV está vacío o no tiene cabecera.']];
-  }
-
-  // Limpiar BOM UTF-8 del primer campo si existe
-  if (!empty($header[0])) {
-    $header[0] = preg_replace('/^\x{FEFF}/u', '', $header[0]);
   }
 
   $header = array_map(function($h){
@@ -429,56 +448,17 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
       }
 
       // ===== GUARDAR gc_preguntas =====
-      global $wpdb;
       $preguntas_value = [ $pregunta ];
 
-      // Test 1: ¿Podemos guardar CUALQUIER meta en este post?
-      delete_post_meta($test_id, '_gc_test_write');
-      $test_write = add_post_meta($test_id, '_gc_test_write', 'hello', true);
-      $test_read  = get_post_meta($test_id, '_gc_test_write', true);
-      $log[] = "    DIAG test_id={$test_id}: test_write=" . var_export($test_write, true) . " test_read=" . var_export($test_read, true);
-
-      // Test 2: ¿Podemos guardar un array simple?
-      delete_post_meta($test_id, '_gc_test_array');
-      $test_arr = add_post_meta($test_id, '_gc_test_array', ['a' => 1, 'b' => 2], true);
-      $test_arr_read = get_post_meta($test_id, '_gc_test_array', true);
-      $log[] = "    DIAG: array_write=" . var_export($test_arr, true) . " array_read_type=" . gettype($test_arr_read);
-
-      // Test 3: Guardar gc_preguntas
       delete_post_meta($test_id, 'gc_preguntas');
-      $serialized = maybe_serialize($preguntas_value);
-      $log[] = "    DIAG: serialized_length=" . strlen($serialized) . " serialized_preview=" . substr($serialized, 0, 200);
-
       $meta_result = add_post_meta($test_id, 'gc_preguntas', $preguntas_value, true);
-      $log[] = "    DIAG: add_post_meta result=" . var_export($meta_result, true) . " last_error=" . ($wpdb->last_error ?: 'none');
 
-      // Si add_post_meta falla, intentar wpdb directo
-      if ( ! $meta_result ) {
-        $wpdb->query($wpdb->prepare(
-          "INSERT INTO {$wpdb->postmeta} (post_id, meta_key, meta_value) VALUES (%d, %s, %s)",
-          $test_id, 'gc_preguntas', $serialized
-        ));
-        $log[] = "    DIAG wpdb insert: last_error=" . ($wpdb->last_error ?: 'none') . " rows_affected=" . $wpdb->rows_affected;
-      }
-
-      // Limpiar cache y verificar
-      wp_cache_delete($test_id, 'post_meta');
-      $verify = get_post_meta($test_id, 'gc_preguntas', true);
-
-      if ( is_array($verify) && ! empty($verify) ) {
+      if ( $meta_result ) {
         $log[] = "    Pregunta guardada OK (test_id={$test_id}): " . mb_substr($pregunta['enunciado'], 0, 50) . " | Opciones: " . count($pregunta['opciones'] ?? []) . " | Correcta: " . ($correct_option ?: 'N/A');
       } else {
-        // Verificar directamente en la BD sin cache
-        $db_check = $wpdb->get_var($wpdb->prepare(
-          "SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id=%d AND meta_key='gc_preguntas'", $test_id
-        ));
-        $errors[] = "Fila {$rows}: NO se pudo guardar gc_preguntas en prueba ID {$test_id}. db_check=" . var_export( !empty($db_check), true) . " db_len=" . strlen((string)$db_check);
-        $log[] = "    ERROR test_id={$test_id}: verify=" . var_export($verify, true) . " db_direct=" . ($db_check ? 'tiene_datos('.strlen($db_check).'chars)' : 'VACIO');
+        $errors[] = "Fila {$rows}: no se pudo guardar la pregunta en prueba ID {$test_id}.";
+        $log[] = "    ERROR guardando pregunta en test_id={$test_id}";
       }
-
-      // Limpiar tests de diagnostico
-      delete_post_meta($test_id, '_gc_test_write');
-      delete_post_meta($test_id, '_gc_test_array');
 
       // Enlazar estacion -> prueba
       update_post_meta($station_id, 'gc_prueba_ref', (int)$test_id);
@@ -489,6 +469,7 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
   }
 
   fclose($fh);
+  if ( isset($clean_tmp) ) @unlink($clean_tmp);
 
   $num_stations = count($station_slugs_seen);
   update_post_meta($escenario_id, 'gc_num_estaciones', (int)$num_stations);
@@ -548,7 +529,12 @@ function gincana_core_delete_scenario_stations_and_tests($escenario_id) {
 
 function gincana_core_csv_cell($row, $index) {
   if ($index === null) return '';
-  return isset($row[$index]) ? trim((string)$row[$index]) : '';
+  $val = isset($row[$index]) ? trim((string)$row[$index]) : '';
+  // Asegurar UTF-8 válido eliminando bytes inválidos
+  if ( $val !== '' && ! mb_check_encoding($val, 'UTF-8') ) {
+    $val = mb_convert_encoding($val, 'UTF-8', 'Windows-1252');
+  }
+  return $val;
 }
 
 function gincana_core_find_station_by_slug_in_scenario($slug, $escenario_id, $order = 0) {
