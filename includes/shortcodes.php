@@ -697,39 +697,59 @@ add_action('init', function(){
         }
       }
     </style>
+    <?php
+    // Puntos del usuario (solo escenario adulto)
+    $tipo_escenario = get_post_meta($escenario_id, 'gc_tipo_escenario', true) ?: 'adulto';
+    $total_points = 0;
+    if ($user_id && $tipo_escenario === 'adulto') {
+      $pts_table = $wpdb->prefix . 'gincana_points_log';
+      $total_points = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COALESCE(SUM(points),0) FROM {$pts_table} WHERE user_id=%d AND escenario_id=%d",
+        $user_id, $escenario_id
+      ));
+    }
+    ?>
     <div id="<?php echo esc_attr($uid); ?>" class="gincana-itinerario et_pb_module" style="<?php echo esc_attr($stickyStyle); ?>background:#fff;padding:8px 4px;border-radius:10px;">
       <?php if ($a['title'] !== ''): ?>
         <div class="gqi-title" style="font-weight:600;margin-bottom:8px;text-align:center;"><?php echo esc_html($a['title']); ?></div>
       <?php endif; ?>
-      <div class="gqi-track" role="list" aria-label="Itinerario de estaciones">
-        <?php foreach ($est_ids as $i => $eid):
-          $order = (int) get_post_meta($eid, 'gc_orden', true) ?: ($i+1);
-          $title = get_the_title($eid) ?: ('Estación '.$order);
-          $url   = get_permalink($eid);
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div class="gqi-track" role="list" aria-label="Itinerario de estaciones" style="flex:1;min-width:0;">
+          <?php foreach ($est_ids as $i => $eid):
+            $order = (int) get_post_meta($eid, 'gc_orden', true) ?: ($i+1);
+            $title = get_the_title($eid) ?: ('Estación '.$order);
+            $url   = get_permalink($eid);
 
-          $is_current   = ($eid === $current_est_id);
-          $is_passed    = !empty($progress[$eid]['passed']);
-          $is_unlocked  = (!$is_passed && $eid === $next_unlocked_id);
+            $is_current   = ($eid === $current_est_id);
+            $is_passed    = !empty($progress[$eid]['passed']);
+            $is_unlocked  = (!$is_passed && $eid === $next_unlocked_id);
 
-          $bg   = $is_current ? '#2563eb' : ($is_passed ? '#16a34a' : ($is_unlocked ? '#f59e0b' : '#e2e8f0'));
-          $fg   = $is_current || $is_passed || $is_unlocked ? '#ffffff' : '#334155';
-          $ring = $is_current ? '0 0 0 3px rgba(37,99,235,0.25)' : 'none';
-          $title_attr = $title . ' (Orden ' . (int)$order . ')'
-                        . ($is_passed ? ' — Completada' : ($is_unlocked ? ' — Desbloqueada' : ' — Pendiente'));
-          $current_cls = $is_current ? ' is-current' : '';
+            $bg   = $is_current ? '#2563eb' : ($is_passed ? '#16a34a' : ($is_unlocked ? '#f59e0b' : '#e2e8f0'));
+            $fg   = $is_current || $is_passed || $is_unlocked ? '#ffffff' : '#334155';
+            $ring = $is_current ? '0 0 0 3px rgba(37,99,235,0.25)' : 'none';
+            $title_attr = $title . ' (Orden ' . (int)$order . ')'
+                          . ($is_passed ? ' — Completada' : ($is_unlocked ? ' — Desbloqueada' : ' — Pendiente'));
+            $current_cls = $is_current ? ' is-current' : '';
 
-          $circle_html = '<div class="gqi-step'.$current_cls.'" role="listitem" aria-label="'.esc_attr($title_attr).'"
-              style="background:'.$bg.';color:'.$fg.';box-shadow:'.$ring.';">
-                '.(int)$order.'
-              </div>';
+            $circle_html = '<div class="gqi-step'.$current_cls.'" role="listitem" aria-label="'.esc_attr($title_attr).'"
+                style="background:'.$bg.';color:'.$fg.';box-shadow:'.$ring.';">
+                  '.(int)$order.'
+                </div>';
 
-          $can_link = $linkify && ($is_passed || $is_unlocked || $is_current);
-          if ($can_link && $url) {
-            echo '<a href="'.esc_url($url).'" class="gqi-item" style="text-decoration:none" title="'.esc_attr($title).'">'.$circle_html.'</a>';
-          } else {
-            echo '<div class="gqi-item" title="'.esc_attr($title).'">'.$circle_html.'</div>';
-          }
-        endforeach; ?>
+            $can_link = $linkify && ($is_passed || $is_unlocked || $is_current);
+            if ($can_link && $url) {
+              echo '<a href="'.esc_url($url).'" class="gqi-item" style="text-decoration:none" title="'.esc_attr($title).'">'.$circle_html.'</a>';
+            } else {
+              echo '<div class="gqi-item" title="'.esc_attr($title).'">'.$circle_html.'</div>';
+            }
+          endforeach; ?>
+        </div>
+        <?php if ($user_id && $tipo_escenario === 'adulto'): ?>
+        <div style="flex-shrink:0;text-align:center;padding:4px 8px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:8px;color:#fff;line-height:1;">
+          <div style="font-size:16px;font-weight:800;"><?php echo (int)$total_points; ?></div>
+          <div style="font-size:8px;font-weight:600;opacity:0.85;text-transform:uppercase;letter-spacing:0.3px;">pts</div>
+        </div>
+        <?php endif; ?>
       </div>
     </div>
     <?php
