@@ -425,6 +425,7 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
       }
 
       update_post_meta($test_id, 'gc_preguntas', [ $pregunta ]);
+      $log[] = "    Pregunta guardada: " . mb_substr($pregunta['enunciado'], 0, 50) . " | Opciones: " . count($pregunta['opciones'] ?? []) . " | Correcta: " . ($correct_option ?: 'N/A');
 
       // Enlazar estacion -> prueba
       update_post_meta($station_id, 'gc_prueba_ref', (int)$test_id);
