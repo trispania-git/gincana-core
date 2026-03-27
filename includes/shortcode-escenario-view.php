@@ -400,8 +400,9 @@ add_shortcode('gincana_estaciones_lista', function($atts){
             <div class="gc-card-title"><?php echo esc_html($title); ?></div>
             <div class="gc-card-status <?php echo esc_attr($status_cls); ?>"><?php
               echo esc_html($status_text);
-              if ($is_passed && $tipo_escenario === 'adulto' && !empty($points_per_station[$eid])) {
-                echo ' · <strong>' . (int)$points_per_station[$eid] . ' pts</strong>';
+              if ($is_passed && $tipo_escenario === 'adulto') {
+                $eid_pts = isset($points_per_station[$eid]) ? (int)$points_per_station[$eid] : 0;
+                echo ' · <strong>' . $eid_pts . ' pts</strong>';
               }
             ?></div>
           </div>
