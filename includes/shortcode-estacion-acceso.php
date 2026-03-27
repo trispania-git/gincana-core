@@ -162,10 +162,23 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
     $test_id = (int) get_post_meta($station_id, 'gc_prueba_ref', true);
 
     if ($test_id <= 0) {
-        return gc_station_wrap_message('Esta estación no tiene una prueba enlazada.', 'error');
+        return gc_station_wrap_message('Esta estacion no tiene una prueba enlazada. (station_id='.$station_id.', gc_prueba_ref=vacio)', 'error');
     }
 
     $preguntas = get_post_meta($test_id, 'gc_preguntas', true);
+
+    // DEBUG temporal: mostrar info de diagnostico
+    if ( current_user_can('manage_options') && ( ! is_array($preguntas) || empty($preguntas[0]) ) ) {
+        $raw = get_post_meta($test_id, 'gc_preguntas', false);
+        $debug = '<br><small style="color:#666;">DEBUG (solo admin): station_id=' . $station_id
+               . ' | test_id=' . $test_id
+               . ' | post_exists=' . (get_post($test_id) ? 'si' : 'no')
+               . ' | meta_raw_count=' . count($raw)
+               . ' | type=' . gettype($preguntas)
+               . ' | val=' . esc_html(substr(print_r($preguntas, true), 0, 200))
+               . '</small>';
+        return gc_station_wrap_message('La prueba no tiene preguntas configuradas.' . $debug, 'error');
+    }
 
     if ( ! is_array($preguntas) || empty($preguntas[0]) || ! is_array($preguntas[0]) ) {
         return gc_station_wrap_message('La prueba no tiene preguntas configuradas.', 'error');
