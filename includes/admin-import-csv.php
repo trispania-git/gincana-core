@@ -221,10 +221,20 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
     return ['errors' => ['No se ha podido abrir el CSV.']];
   }
 
-  $header = fgetcsv($fh, 0, ',');
+  // Auto-detectar separador (coma o punto y coma)
+  $first_line = fgets($fh);
+  rewind($fh);
+  $sep = (substr_count($first_line, ';') > substr_count($first_line, ',')) ? ';' : ',';
+
+  $header = fgetcsv($fh, 0, $sep);
   if ( ! is_array($header) || empty($header) ) {
     fclose($fh);
     return ['errors' => ['El CSV está vacío o no tiene cabecera.']];
+  }
+
+  // Limpiar BOM UTF-8 del primer campo si existe
+  if (!empty($header[0])) {
+    $header[0] = preg_replace('/^\x{FEFF}/u', '', $header[0]);
   }
 
   $header = array_map(function($h){
@@ -253,7 +263,7 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
   $tests_updated = 0;
   $station_slugs_seen = [];
 
-  while ( ($row = fgetcsv($fh, 0, ',')) !== false ) {
+  while ( ($row = fgetcsv($fh, 0, $sep)) !== false ) {
     if ( ! is_array($row) || count(array_filter($row, fn($v)=>trim((string)$v)!=='')) === 0 ) continue;
 
     $rows++;
