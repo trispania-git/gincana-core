@@ -170,12 +170,21 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
     // DEBUG temporal: mostrar info de diagnostico
     if ( current_user_can('manage_options') && ( ! is_array($preguntas) || empty($preguntas[0]) ) ) {
         $raw = get_post_meta($test_id, 'gc_preguntas', false);
-        $debug = '<br><small style="color:#666;">DEBUG (solo admin): station_id=' . $station_id
-               . ' | test_id=' . $test_id
+        // Listar TODOS los meta keys de esta prueba
+        $all_meta = get_post_meta($test_id);
+        $meta_keys = is_array($all_meta) ? implode(', ', array_keys($all_meta)) : 'ninguno';
+        // Verificar prueba_ref inversa
+        $station_prueba_ref = get_post_meta($station_id, 'gc_prueba_ref', true);
+        $debug = '<br><small style="color:#666;">DEBUG (solo admin):<br>'
+               . 'station_id=' . $station_id . ' | gc_prueba_ref=' . $station_prueba_ref
+               . '<br>test_id=' . $test_id
                . ' | post_exists=' . (get_post($test_id) ? 'si' : 'no')
-               . ' | meta_raw_count=' . count($raw)
+               . ' | post_type=' . (get_post($test_id) ? get_post($test_id)->post_type : 'N/A')
+               . ' | post_title=' . esc_html(get_the_title($test_id))
+               . '<br>gc_preguntas raw_count=' . count($raw)
                . ' | type=' . gettype($preguntas)
-               . ' | val=' . esc_html(substr(print_r($preguntas, true), 0, 200))
+               . ' | val=' . esc_html(substr(print_r($preguntas, true), 0, 300))
+               . '<br>all_meta_keys: ' . esc_html($meta_keys)
                . '</small>';
         return gc_station_wrap_message('La prueba no tiene preguntas configuradas.' . $debug, 'error');
     }

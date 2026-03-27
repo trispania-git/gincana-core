@@ -424,8 +424,34 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
         $pregunta['respuesta_texto_correcta'] = '';
       }
 
-      update_post_meta($test_id, 'gc_preguntas', [ $pregunta ]);
-      $log[] = "    Pregunta guardada: " . mb_substr($pregunta['enunciado'], 0, 50) . " | Opciones: " . count($pregunta['opciones'] ?? []) . " | Correcta: " . ($correct_option ?: 'N/A');
+      // Guardar preguntas: borrar primero y luego añadir para evitar
+      // fallos silenciosos de update_post_meta con arrays serializados.
+      delete_post_meta($test_id, 'gc_preguntas');
+      $preguntas_value = [ $pregunta ];
+      $meta_result = add_post_meta($test_id, 'gc_preguntas', $preguntas_value, true);
+
+      // Verificar que realmente se guardó
+      $verify = get_post_meta($test_id, 'gc_preguntas', true);
+      if ( is_array($verify) && ! empty($verify) ) {
+        $log[] = "    Pregunta guardada OK (test_id={$test_id}): " . mb_substr($pregunta['enunciado'], 0, 50) . " | Opciones: " . count($pregunta['opciones'] ?? []) . " | Correcta: " . ($correct_option ?: 'N/A');
+      } else {
+        // Fallback: intentar con wpdb directamente
+        global $wpdb;
+        $serialized = maybe_serialize($preguntas_value);
+        $wpdb->delete($wpdb->postmeta, ['post_id' => $test_id, 'meta_key' => 'gc_preguntas']);
+        $wpdb->insert($wpdb->postmeta, [
+          'post_id'    => $test_id,
+          'meta_key'   => 'gc_preguntas',
+          'meta_value' => $serialized,
+        ]);
+        $verify2 = get_post_meta($test_id, 'gc_preguntas', true);
+        if ( is_array($verify2) && ! empty($verify2) ) {
+          $log[] = "    Pregunta guardada OK via wpdb (test_id={$test_id}): " . mb_substr($pregunta['enunciado'], 0, 50);
+        } else {
+          $errors[] = "Fila {$rows}: NO se pudo guardar gc_preguntas en prueba ID {$test_id}. meta_result=" . var_export($meta_result, true) . " | verify=" . var_export($verify, true);
+          $log[] = "    ERROR guardando pregunta en test_id={$test_id}";
+        }
+      }
 
       // Enlazar estacion -> prueba
       update_post_meta($station_id, 'gc_prueba_ref', (int)$test_id);
