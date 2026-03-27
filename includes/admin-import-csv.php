@@ -101,8 +101,12 @@ function gincana_core_render_import_csv_page() {
     echo '</ul></div>';
   }
 
-  if ( is_array($result) && empty($errors) ) {
-    echo '<div class="notice notice-success"><p><strong>Importación completada</strong></p></div>';
+  if ( is_array($result) ) {
+    if ( empty($errors) ) {
+      echo '<div class="notice notice-success"><p><strong>Importación completada</strong></p></div>';
+    } else {
+      echo '<div class="notice notice-warning"><p><strong>Importación completada con errores</strong></p></div>';
+    }
 
     echo '<h2>Resumen</h2>';
     echo '<ul style="margin-left:18px;list-style:disc;">';
@@ -118,8 +122,8 @@ function gincana_core_render_import_csv_page() {
     echo '</ul>';
 
     if ( ! empty($result['log']) ) {
-      echo '<h2>Log</h2>';
-      echo '<div style="background:#fff;border:1px solid #ccd0d4;padding:12px;max-height:320px;overflow:auto;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-size:12px;line-height:1.35;">';
+      echo '<h2>Log detallado</h2>';
+      echo '<div style="background:#fff;border:1px solid #ccd0d4;padding:12px;max-height:500px;overflow:auto;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;font-size:12px;line-height:1.35;">';
       foreach ($result['log'] as $line) echo esc_html($line) . "<br>";
       echo '</div>';
     }
