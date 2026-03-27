@@ -283,7 +283,7 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
     $station_slugs_seen[$station_slug] = true;
 
     // ===== 1) ESTACIÓN =====
-    $station_id = gincana_core_find_station_by_slug_in_scenario($station_slug, $escenario_id);
+    $station_id = gincana_core_find_station_by_slug_in_scenario($station_slug, $escenario_id, $station_order_int);
 
     if ( $station_id ) {
       wp_update_post([
@@ -497,9 +497,10 @@ function gincana_core_csv_cell($row, $index) {
   return isset($row[$index]) ? trim((string)$row[$index]) : '';
 }
 
-function gincana_core_find_station_by_slug_in_scenario($slug, $escenario_id) {
+function gincana_core_find_station_by_slug_in_scenario($slug, $escenario_id, $order = 0) {
   $slug = sanitize_title($slug);
 
+  // 1) Buscar por slug exacto
   $q = new WP_Query([
     'post_type'      => 'estacion',
     'post_status'    => 'any',
@@ -513,6 +514,24 @@ function gincana_core_find_station_by_slug_in_scenario($slug, $escenario_id) {
     'fields'         => 'ids',
     'no_found_rows'  => true,
   ]);
+
+  if ($q->have_posts()) return (int)$q->posts[0];
+
+  // 2) Fallback: buscar por gc_orden en el mismo escenario
+  if ($order > 0) {
+    $q2 = new WP_Query([
+      'post_type'      => 'estacion',
+      'post_status'    => 'any',
+      'posts_per_page' => 1,
+      'meta_query'     => [
+        ['key' => 'gc_escenario_ref', 'value' => (int)$escenario_id, 'compare' => '='],
+        ['key' => 'gc_orden', 'value' => (int)$order, 'compare' => '=', 'type' => 'NUMERIC'],
+      ],
+      'fields'         => 'ids',
+      'no_found_rows'  => true,
+    ]);
+    if ($q2->have_posts()) return (int)$q2->posts[0];
+  }
 
   return $q->have_posts() ? (int)$q->posts[0] : 0;
 }
