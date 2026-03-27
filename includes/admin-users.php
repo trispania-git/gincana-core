@@ -17,6 +17,40 @@ function gincana_core_users_cb(){
   $tbl_points = $wpdb->prefix . 'gincana_points_log';
   $tbl_prog   = $wpdb->prefix . 'gincana_user_progress';
 
+  // ====== Procesar acciones de borrado ======
+  if (isset($_POST['gc_reset_action']) && check_admin_referer('gc_reset_data')) {
+    $action      = sanitize_text_field($_POST['gc_reset_action']);
+    $reset_esc   = (int) ($_POST['gc_reset_escenario'] ?? 0);
+    $reset_user  = (int) ($_POST['gc_reset_user'] ?? 0);
+
+    $deleted_pts  = 0;
+    $deleted_prog = 0;
+
+    if ($action === 'reset_user_escenario' && $reset_user && $reset_esc) {
+      // Vaciar datos de UN usuario en UN escenario
+      $deleted_pts  = (int) $wpdb->query($wpdb->prepare(
+        "DELETE FROM $tbl_points WHERE user_id=%d AND escenario_id=%d", $reset_user, $reset_esc
+      ));
+      $deleted_prog = (int) $wpdb->query($wpdb->prepare(
+        "DELETE FROM $tbl_prog WHERE user_id=%d AND escenario_id=%d", $reset_user, $reset_esc
+      ));
+    } elseif ($action === 'reset_user_all' && $reset_user) {
+      // Vaciar TODOS los datos de un usuario
+      $deleted_pts  = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_points WHERE user_id=%d", $reset_user));
+      $deleted_prog = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_prog WHERE user_id=%d", $reset_user));
+    } elseif ($action === 'reset_escenario' && $reset_esc) {
+      // Vaciar TODOS los datos de un escenario (todos los usuarios)
+      $deleted_pts  = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_points WHERE escenario_id=%d", $reset_esc));
+      $deleted_prog = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_prog WHERE escenario_id=%d", $reset_esc));
+    }
+
+    if ($deleted_pts || $deleted_prog) {
+      echo '<div class="notice notice-success is-dismissible"><p>Datos eliminados: <strong>' . $deleted_pts . '</strong> registros de puntos y <strong>' . $deleted_prog . '</strong> registros de progreso.</p></div>';
+    } else {
+      echo '<div class="notice notice-warning is-dismissible"><p>No se encontraron datos que eliminar.</p></div>';
+    }
+  }
+
   // ====== Filtros ======
   $escenario_id = isset($_GET['esc']) ? (int) $_GET['esc'] : 0;
   $focus_user   = isset($_GET['user']) ? (int) $_GET['user'] : 0;
@@ -57,6 +91,17 @@ function gincana_core_users_cb(){
         <a class="button" href="<?php echo admin_url('admin.php?page=gincana-users'); ?>">Limpiar</a>
       <?php endif; ?>
     </form>
+
+    <?php if ($escenario_id && !$focus_user): ?>
+    <form method="post" style="margin:0 0 16px;" onsubmit="return confirm('¿Seguro? Esto eliminara TODOS los puntos y progreso de TODOS los usuarios en este escenario. Esta accion no se puede deshacer.');">
+      <?php wp_nonce_field('gc_reset_data'); ?>
+      <input type="hidden" name="gc_reset_action" value="reset_escenario" />
+      <input type="hidden" name="gc_reset_escenario" value="<?php echo (int)$escenario_id; ?>" />
+      <button type="submit" class="button" style="color:#dc2626;border-color:#dc2626;">
+        Vaciar datos del escenario &laquo;<?php echo esc_html(get_the_title($escenario_id)); ?>&raquo;
+      </button>
+    </form>
+    <?php endif; ?>
   <?php
 
   // ====== Vista detalle de un usuario ======
@@ -148,6 +193,28 @@ function gincana_core_users_cb(){
       echo '<p>No hay movimientos de puntos para este usuario.</p>';
     }
 
+    // Botones de accion
+    echo '<div style="margin-top:20px;padding:16px;border:1px solid #e2e8f0;border-radius:8px;background:#fefce8;">';
+    echo '<h3 style="margin:0 0 10px;color:#92400e;">Acciones</h3>';
+
+    if ($escenario_id) {
+      echo '<form method="post" style="display:inline;" onsubmit="return confirm(\'¿Seguro? Se eliminaran los puntos y progreso de este usuario en el escenario seleccionado.\');">';
+      wp_nonce_field('gc_reset_data');
+      echo '<input type="hidden" name="gc_reset_action" value="reset_user_escenario" />';
+      echo '<input type="hidden" name="gc_reset_escenario" value="'.(int)$escenario_id.'" />';
+      echo '<input type="hidden" name="gc_reset_user" value="'.(int)$focus_user.'" />';
+      echo '<button type="submit" class="button" style="color:#dc2626;border-color:#dc2626;">Vaciar datos de este usuario en &laquo;'.esc_html(get_the_title($escenario_id)).'&raquo;</button>';
+      echo '</form> ';
+    }
+
+    echo '<form method="post" style="display:inline;" onsubmit="return confirm(\'¿Seguro? Se eliminaran TODOS los puntos y progreso de este usuario en TODOS los escenarios. Esta accion no se puede deshacer.\');">';
+    wp_nonce_field('gc_reset_data');
+    echo '<input type="hidden" name="gc_reset_action" value="reset_user_all" />';
+    echo '<input type="hidden" name="gc_reset_user" value="'.(int)$focus_user.'" />';
+    echo '<button type="submit" class="button" style="color:#dc2626;border-color:#dc2626;">Vaciar TODOS los datos de este usuario</button>';
+    echo '</form>';
+    echo '</div>';
+
     echo '<p style="margin-top:16px;"><a class="button" href="'.admin_url('admin.php?page=gincana-users&esc='.$escenario_id).'">Volver</a></p>';
     echo '</div>'; // wrap
     return;
@@ -219,7 +286,7 @@ function gincana_core_users_cb(){
       <td style="text-align:right;">'.$pp.'</td>
       <td style="text-align:right;">'.$passed.'</td>
       <td style="text-align:right;">'.( is_null($avgms) ? '—' : (floor($avgms/1000).' s') ).'</td>
-      <td style="text-align:right;">
+      <td style="text-align:right;white-space:nowrap;">
         <a class="button" href="'.admin_url('admin.php?page=gincana-users&esc='.$escenario_id.'&user='.$uid).'">Ver detalle</a>
       </td>
     </tr>';
