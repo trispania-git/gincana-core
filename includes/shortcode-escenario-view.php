@@ -131,6 +131,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
   // ── Progreso del usuario ───────────────────────────────
   $user_id  = get_current_user_id();
   $progress = [];
+  $points_per_station = [];
   if ($user_id) {
     global $wpdb;
     $tbl = $wpdb->prefix . 'gincana_user_progress';
@@ -141,6 +142,18 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     ));
     foreach ($rows as $r) {
       $progress[(int)$r->estacion_id] = $r->status;
+    }
+
+    // Puntos por estación (solo adulto)
+    if ($tipo_escenario === 'adulto') {
+      $pts_tbl = $wpdb->prefix . 'gincana_points_log';
+      $pts_rows = $wpdb->get_results($wpdb->prepare(
+        "SELECT estacion_id, SUM(points) as pts FROM {$pts_tbl} WHERE user_id=%d AND escenario_id=%d AND estacion_id IN ($in) GROUP BY estacion_id",
+        $user_id, $escenario_id
+      ));
+      foreach ($pts_rows as $pr) {
+        $points_per_station[(int)$pr->estacion_id] = (int)$pr->pts;
+      }
     }
   }
 
@@ -385,7 +398,12 @@ add_shortcode('gincana_estaciones_lista', function($atts){
           </div>
           <div class="gc-card-body">
             <div class="gc-card-title"><?php echo esc_html($title); ?></div>
-            <div class="gc-card-status <?php echo esc_attr($status_cls); ?>"><?php echo esc_html($status_text); ?></div>
+            <div class="gc-card-status <?php echo esc_attr($status_cls); ?>"><?php
+              echo esc_html($status_text);
+              if ($is_passed && $tipo_escenario === 'adulto' && !empty($points_per_station[$eid])) {
+                echo ' · <strong>' . (int)$points_per_station[$eid] . ' pts</strong>';
+              }
+            ?></div>
           </div>
           <?php if ($tag === 'a'): ?>
             <svg class="gc-card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
