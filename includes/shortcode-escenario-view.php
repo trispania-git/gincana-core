@@ -293,7 +293,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
   <div id="<?php echo esc_attr($uid); ?>" style="width:95%;max-width:760px;margin:0 auto;">
 
     <!-- CTA motivacional -->
-    <div style="text-align:center;padding:16px 12px 20px;">
+    <div style="text-align:center;padding:16px 12px 20px;border:2px solid #2563eb;border-radius:14px;margin-bottom:20px;">
       <p style="margin:0;font-size:17px;font-weight:600;line-height:1.5;color:#1e293b;">
         <?php echo esc_html($cta_texto); ?>
       </p>
