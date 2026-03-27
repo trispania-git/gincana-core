@@ -76,6 +76,8 @@ function gc_shortcode_estacion_acceso() {
 
 function gc_render_infantil_station($station_id, $title, $escenario_id) {
     $nonce = function_exists('wp_create_nonce') ? wp_create_nonce('wp_rest') : '';
+    $label = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
+    $label_uc = mb_strtoupper(mb_substr($label, 0, 1)) . mb_substr($label, 1);
     ob_start();
     ?>
     <div class="gc-kids-station"
@@ -84,15 +86,15 @@ function gc_render_infantil_station($station_id, $title, $escenario_id) {
          data-started-at="<?php echo esc_attr( round(microtime(true) * 1000) ); ?>">
 
         <div style="padding:20px;border:1px solid #dcdcde;border-radius:14px;background:#fff;">
-            <h2 style="margin-top:0;">¡Puerta encontrada!</h2>
-            <p>Has encontrado la estación <strong><?php echo esc_html($title); ?></strong>.</p>
-            <p>Pulsa el botón para validarla y continuar.</p>
+            <h2 style="margin-top:0;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
+            <p>Has encontrado: <strong><?php echo esc_html($title); ?></strong>.</p>
+            <p>Pulsa el botón para validar y continuar.</p>
 
             <div style="margin-top:18px;">
                 <button type="button"
                         id="gc-kids-complete-btn"
-                        style="padding:12px 18px;border:0;border-radius:10px;background:#111827;color:#fff;cursor:pointer;">
-                    Validar estación
+                        style="width:100%;padding:14px 18px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-size:16px;font-weight:600;cursor:pointer;">
+                    Validar <?php echo esc_html($label); ?>
                 </button>
             </div>
 
@@ -111,12 +113,13 @@ function gc_render_infantil_station($station_id, $title, $escenario_id) {
         const btn = wrap.querySelector('#gc-kids-complete-btn');
         const msg = wrap.querySelector('#gc-kids-msg');
         const nonce = (window.wpApiSettings && window.wpApiSettings.nonce) || window.gincanaNonce || '<?php echo esc_js($nonce); ?>';
+        const label = <?php echo json_encode($label); ?>;
 
         if (!btn || !msg || !stationId) return;
 
         btn.addEventListener('click', async function(){
             btn.disabled = true;
-            msg.innerHTML = 'Validando estación...';
+            msg.innerHTML = 'Validando...';
 
             const timeMs = Math.max(0, Date.now() - startedAt);
 
@@ -137,13 +140,13 @@ function gc_render_infantil_station($station_id, $title, $escenario_id) {
                 const data = await res.json();
 
                 if (data && data.ok) {
-                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;">✅ Estación validada correctamente.</div>';
+                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;">✅ ' + label.charAt(0).toUpperCase() + label.slice(1) + ' validada correctamente.</div>';
 
                     setTimeout(function(){
                         window.location.href = <?php echo json_encode( get_permalink($escenario_id) ?: home_url('/') ); ?>;
                     }, 1600);
                 } else {
-                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">No se pudo validar la estación.</div>';
+                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">No se pudo validar.</div>';
                     btn.disabled = false;
                 }
 
@@ -160,9 +163,10 @@ function gc_render_infantil_station($station_id, $title, $escenario_id) {
 
 function gc_render_adulto_station($station_id, $title, $escenario_id) {
     $test_id = (int) get_post_meta($station_id, 'gc_prueba_ref', true);
+    $label   = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
 
     if ($test_id <= 0) {
-        return gc_station_wrap_message('Esta estacion no tiene una prueba enlazada. (station_id='.$station_id.', gc_prueba_ref=vacio)', 'error');
+        return gc_station_wrap_message('Este ' . $label . ' no tiene una prueba enlazada.', 'error');
     }
 
     $preguntas = get_post_meta($test_id, 'gc_preguntas', true);
@@ -176,7 +180,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
     $opciones  = isset($pregunta['opciones']) && is_array($pregunta['opciones']) ? $pregunta['opciones'] : [];
 
     if (empty($enunciado) || empty($opciones)) {
-        return gc_station_wrap_message('La prueba de esta estación no está lista para tipo test.', 'error');
+        return gc_station_wrap_message('La prueba de este ' . $label . ' no está lista.', 'error');
     }
 
     $nonce = function_exists('wp_create_nonce') ? wp_create_nonce('wp_rest') : '';
@@ -189,7 +193,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
          data-prueba-id="<?php echo esc_attr($test_id); ?>">
 
         <div style="padding:20px;border:1px solid #dcdcde;border-radius:14px;background:#fff;">
-            <h2 style="margin-top:0;">Pregunta de la estación</h2>
+            <h2 style="margin-top:0;">Pregunta del <?php echo esc_html($label); ?></h2>
             <p style="font-size:18px;line-height:1.5;"><strong><?php echo esc_html($enunciado); ?></strong></p>
 
             <form id="gc-adult-station-form">
@@ -206,7 +210,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
 
                 <div style="margin-top:18px;">
                     <button type="submit"
-                            style="padding:12px 18px;border:0;border-radius:10px;background:#111827;color:#fff;cursor:pointer;">
+                            style="width:100%;padding:14px 18px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-size:16px;font-weight:600;cursor:pointer;">
                         Responder
                     </button>
                 </div>
@@ -371,7 +375,8 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         echo '<div class="gc-station-content" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">';
         $render_content();
         echo '<div style="padding:20px;border:1px solid #e6f0e6;border-radius:14px;background:#f7fff7;text-align:center;">';
-        echo '<p style="margin:0 0 12px;font-size:16px;">&#10003; Ya has completado esta estacion.</p>';
+        $lbl = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
+        echo '<p style="margin:0 0 12px;font-size:16px;">&#10003; Ya has completado este ' . esc_html($lbl) . '.</p>';
         echo '<a href="' . esc_url($escenario_url) . '" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
         echo '</div>';
         echo '</div>';

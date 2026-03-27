@@ -309,14 +309,31 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       }
     </style>
 
-    <?php if ($user_id): ?>
-    <div class="gc-progress-wrap">
-      <div class="gc-progress-bar">
-        <div class="gc-progress-fill" style="width:<?php echo (int)$pct; ?>%;"></div>
+    <?php if ($user_id):
+      // Obtener puntos totales del usuario en este escenario
+      global $wpdb;
+      $points_table = $wpdb->prefix . 'gincana_points_log';
+      $total_points = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COALESCE(SUM(points),0) FROM {$points_table} WHERE user_id=%d AND escenario_id=%d",
+        $user_id, $escenario_id
+      ));
+    ?>
+    <!-- Barra de progreso + Puntos -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+      <div style="flex:1;min-width:0;">
+        <div class="gc-progress-bar">
+          <div class="gc-progress-fill" style="width:<?php echo (int)$pct; ?>%;"></div>
+        </div>
+        <div class="gc-progress-label">
+          <?php echo (int)$completed; ?>/<?php echo (int)$total; ?> <?php echo esc_html($label_estacion); ?>s
+        </div>
       </div>
-      <div class="gc-progress-label">
-        <?php echo (int)$completed; ?>/<?php echo (int)$total; ?> <?php echo esc_html($label_estacion); ?>s completadas
+      <?php if ($tipo_escenario === 'adulto'): ?>
+      <div style="flex-shrink:0;text-align:center;padding:8px 14px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:12px;color:#fff;min-width:70px;">
+        <div style="font-size:20px;font-weight:800;line-height:1.1;"><?php echo (int)$total_points; ?></div>
+        <div style="font-size:10px;font-weight:500;opacity:0.85;text-transform:uppercase;letter-spacing:0.5px;">puntos</div>
       </div>
+      <?php endif; ?>
     </div>
     <?php endif; ?>
 
