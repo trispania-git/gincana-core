@@ -20,11 +20,13 @@ add_action('add_meta_boxes', function () {
 function gc_render_escenario_metabox($post) {
     wp_nonce_field('gc_save_escenario_meta', 'gc_escenario_nonce');
 
-    $tipo        = get_post_meta($post->ID, 'gc_tipo_escenario', true) ?: 'adulto';
-    $descripcion = get_post_meta($post->ID, 'gc_descripcion', true);
-    $audio       = get_post_meta($post->ID, 'gc_audio', true);
-    $img1        = get_post_meta($post->ID, 'gc_img_1', true);
-    $img2        = get_post_meta($post->ID, 'gc_img_2', true);
+    $tipo            = get_post_meta($post->ID, 'gc_tipo_escenario', true) ?: 'adulto';
+    $label_estacion  = get_post_meta($post->ID, 'gc_label_estacion', true);
+    $cta_texto       = get_post_meta($post->ID, 'gc_cta_texto', true);
+    $descripcion     = get_post_meta($post->ID, 'gc_descripcion', true);
+    $audio           = get_post_meta($post->ID, 'gc_audio', true);
+    $img1            = get_post_meta($post->ID, 'gc_img_1', true);
+    $img2            = get_post_meta($post->ID, 'gc_img_2', true);
     ?>
     <table class="form-table">
         <tr>
@@ -38,6 +40,26 @@ function gc_render_escenario_metabox($post) {
                     Adulto: el QR de cada estacion abre una pregunta tipo test.<br>
                     Infantil: el QR de cada estacion valida que ha sido encontrada.
                 </p>
+            </td>
+        </tr>
+
+        <tr>
+            <th><label for="gc_label_estacion">Nombre de las paradas</label></th>
+            <td>
+                <input type="text" name="gc_label_estacion" id="gc_label_estacion"
+                       value="<?php echo esc_attr($label_estacion); ?>"
+                       placeholder="estacion" style="width:300px;" />
+                <p class="description">Nombre alternativo para "estacion" (ej: "puerta", "parada", "punto"). Se usa en la lista, el progreso, etc. Si se deja vacio se usa "estacion".</p>
+            </td>
+        </tr>
+
+        <tr>
+            <th><label for="gc_cta_texto">Texto CTA</label></th>
+            <td>
+                <input type="text" name="gc_cta_texto" id="gc_cta_texto"
+                       value="<?php echo esc_attr($cta_texto); ?>"
+                       placeholder="¿Te animas? ¡Comienza la aventura y completa las estaciones!" style="width:100%;" />
+                <p class="description">Texto motivacional que aparece antes de la lista de estaciones. Si se deja vacio se usa el texto por defecto.</p>
             </td>
         </tr>
 
@@ -95,6 +117,8 @@ add_action('save_post', function ($post_id) {
     }
 
     update_post_meta($post_id, 'gc_tipo_escenario', $tipo);
+    update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
+    update_post_meta($post_id, 'gc_cta_texto', sanitize_text_field($_POST['gc_cta_texto'] ?? ''));
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));

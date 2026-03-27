@@ -108,6 +108,8 @@ add_shortcode('gincana_estaciones_lista', function($atts){
   }
 
   $tipo_escenario = get_post_meta($escenario_id, 'gc_tipo_escenario', true) ?: 'adulto';
+  $label_estacion = gc_get_label_estacion($escenario_id);
+  $cta_texto      = gc_get_cta_texto($escenario_id);
 
   // ── Obtener estaciones ordenadas ───────────────────────
   $q = new WP_Query([
@@ -290,13 +292,30 @@ add_shortcode('gincana_estaciones_lista', function($atts){
 
   <div id="<?php echo esc_attr($uid); ?>" style="width:95%;max-width:760px;margin:0 auto;">
 
+    <!-- CTA motivacional -->
+    <div style="text-align:center;padding:16px 12px 20px;">
+      <p style="margin:0;font-size:17px;font-weight:600;line-height:1.5;color:#1e293b;">
+        <?php echo esc_html($cta_texto); ?>
+      </p>
+      <div style="margin-top:8px;color:#2563eb;font-size:28px;line-height:1;animation:gc-bounce 2s infinite;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+    </div>
+    <style>
+      @keyframes gc-bounce {
+        0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+        40% { transform: translateY(6px); }
+        60% { transform: translateY(3px); }
+      }
+    </style>
+
     <?php if ($user_id): ?>
     <div class="gc-progress-wrap">
       <div class="gc-progress-bar">
         <div class="gc-progress-fill" style="width:<?php echo (int)$pct; ?>%;"></div>
       </div>
       <div class="gc-progress-label">
-        <?php echo (int)$completed; ?>/<?php echo (int)$total; ?> estaciones completadas
+        <?php echo (int)$completed; ?>/<?php echo (int)$total; ?> <?php echo esc_html($label_estacion); ?>s completadas
       </div>
     </div>
     <?php endif; ?>
@@ -323,7 +342,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
           $icon_bg     = '#2563eb';
           $icon_fg     = '#ffffff';
           $icon_text   = (string)$order;
-          $status_text = ($tipo_escenario === 'infantil') ? 'Siguiente puerta' : 'Siguiente estacion';
+          $status_text = 'Siguiente ' . $label_estacion;
           $status_cls  = 'current';
           $card_cls    = 'is-current';
         } else {

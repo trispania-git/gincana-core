@@ -193,6 +193,28 @@ if ( ! function_exists('gincana_next_estacion_id') ) {
 }
 
 /**
+ * Devuelve el label personalizado para "estacion" de un escenario.
+ */
+if ( ! function_exists('gc_get_label_estacion') ) {
+  function gc_get_label_estacion($escenario_id) {
+    $label = get_post_meta((int)$escenario_id, 'gc_label_estacion', true);
+    return $label ? $label : 'estacion';
+  }
+}
+
+/**
+ * Devuelve el texto CTA de un escenario.
+ */
+if ( ! function_exists('gc_get_cta_texto') ) {
+  function gc_get_cta_texto($escenario_id) {
+    $cta = get_post_meta((int)$escenario_id, 'gc_cta_texto', true);
+    if ($cta) return $cta;
+    $label = gc_get_label_estacion($escenario_id);
+    return '¿Te animas? ¡Comienza la aventura y completa las ' . $label . 's!';
+  }
+}
+
+/**
  * Renderiza la barra de iconos de una estacion (audio + ubicacion).
  * Devuelve HTML. Usa SVGs inline para evitar dependencias.
  */
