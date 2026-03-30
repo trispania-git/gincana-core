@@ -183,12 +183,20 @@ add_shortcode('gincana_estaciones_lista', function($atts){
   ob_start(); ?>
 
   <style>
-    /* Evitar que Divi corte el contenido */
+    /* Evitar que Divi corte el contenido con alturas fijas */
     #<?php echo $uid; ?>,
     #<?php echo $uid; ?> .gc-cards,
     .et_pb_code_inner:has(#<?php echo $uid; ?>),
-    .et_pb_module:has(#<?php echo $uid; ?>) {
+    .et_pb_code:has(#<?php echo $uid; ?>),
+    .et_pb_module:has(#<?php echo $uid; ?>),
+    .et_pb_column:has(#<?php echo $uid; ?>),
+    .et_pb_row:has(#<?php echo $uid; ?>),
+    .et_pb_row_inner:has(#<?php echo $uid; ?>),
+    .et_pb_section:has(#<?php echo $uid; ?>) {
       overflow: visible !important;
+      height: auto !important;
+      max-height: none !important;
+      min-height: 0 !important;
     }
 
     #<?php echo $uid; ?> {
