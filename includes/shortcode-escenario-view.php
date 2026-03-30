@@ -133,28 +133,6 @@ add_shortcode('gincana_estaciones_lista', function($atts){
   $est_ids = array_map('intval', $q->posts);
   wp_reset_postdata();
 
-  // DEBUG (solo admin): verificar conteo de estaciones
-  if ( current_user_can('manage_options') && count($est_ids) < (int) get_post_meta($escenario_id, 'gc_num_estaciones', true) ) {
-    $expected = (int) get_post_meta($escenario_id, 'gc_num_estaciones', true);
-    // Buscar TODAS sin filtro de gc_orden para ver si falta alguna
-    $q_all = new WP_Query([
-      'post_type'      => 'estacion',
-      'post_status'    => 'any',
-      'posts_per_page' => -1,
-      'meta_query'     => [['key'=>'gc_escenario_ref','value'=>$escenario_id,'compare'=>'=']],
-      'fields'         => 'ids',
-      'no_found_rows'  => true,
-    ]);
-    $all_ids = array_map('intval', $q_all->posts);
-    $missing = array_diff($all_ids, $est_ids);
-    $debug_info = "DEBUG: esperadas={$expected} encontradas=" . count($est_ids) . " total_any=" . count($all_ids);
-    if (!empty($missing)) {
-      foreach ($missing as $mid) {
-        $debug_info .= " | falta ID={$mid} status=" . get_post_status($mid) . " orden=" . get_post_meta($mid, 'gc_orden', true);
-      }
-    }
-    echo '<div style="background:#fef3c7;border:1px solid #f59e0b;padding:8px 12px;border-radius:8px;margin-bottom:12px;font-size:12px;">' . esc_html($debug_info) . '</div>';
-  }
 
   // ── Progreso del usuario ───────────────────────────────
   $user_id  = get_current_user_id();
@@ -205,6 +183,14 @@ add_shortcode('gincana_estaciones_lista', function($atts){
   ob_start(); ?>
 
   <style>
+    /* Evitar que Divi corte el contenido */
+    #<?php echo $uid; ?>,
+    #<?php echo $uid; ?> .gc-cards,
+    .et_pb_code_inner:has(#<?php echo $uid; ?>),
+    .et_pb_module:has(#<?php echo $uid; ?>) {
+      overflow: visible !important;
+    }
+
     #<?php echo $uid; ?> {
       --gc-accent: #2563eb;
       --gc-success: #16a34a;
@@ -329,7 +315,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     }
   </style>
 
-  <div id="<?php echo esc_attr($uid); ?>" style="width:95%;max-width:760px;margin:0 auto;">
+  <div id="<?php echo esc_attr($uid); ?>" style="width:95%;max-width:760px;margin:0 auto;overflow:visible !important;">
 
     <!-- CTA motivacional -->
     <div style="text-align:center;padding:16px 12px 20px;border:2px solid #2563eb;border-radius:14px;margin-bottom:20px;">
