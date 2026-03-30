@@ -183,22 +183,6 @@ add_shortcode('gincana_estaciones_lista', function($atts){
   ob_start(); ?>
 
   <style>
-    /* Evitar que Divi corte el contenido con alturas fijas */
-    #<?php echo $uid; ?>,
-    #<?php echo $uid; ?> .gc-cards,
-    .et_pb_code_inner:has(#<?php echo $uid; ?>),
-    .et_pb_code:has(#<?php echo $uid; ?>),
-    .et_pb_module:has(#<?php echo $uid; ?>),
-    .et_pb_column:has(#<?php echo $uid; ?>),
-    .et_pb_row:has(#<?php echo $uid; ?>),
-    .et_pb_row_inner:has(#<?php echo $uid; ?>),
-    .et_pb_section:has(#<?php echo $uid; ?>) {
-      overflow: visible !important;
-      height: auto !important;
-      max-height: none !important;
-      min-height: 0 !important;
-    }
-
     #<?php echo $uid; ?> {
       --gc-accent: #2563eb;
       --gc-success: #16a34a;
@@ -324,7 +308,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     }
   </style>
 
-  <div id="<?php echo esc_attr($uid); ?>" style="width:95%;max-width:760px;margin:0 auto;overflow:visible !important;">
+  <div id="<?php echo esc_attr($uid); ?>" style="width:95%;max-width:760px;margin:0 auto;">
 
     <!-- CTA motivacional -->
     <div style="text-align:center;padding:16px 12px 20px;border:2px solid #2563eb;border-radius:14px;margin-bottom:20px;">
@@ -435,22 +419,6 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       <?php endforeach; ?>
     </div>
   </div>
-
-  <script>
-  (function(){
-    var el = document.getElementById('<?php echo esc_js($uid); ?>');
-    if (!el) return;
-    var p = el.parentElement;
-    while (p && p !== document.body) {
-      var s = p.style;
-      var cs = window.getComputedStyle(p);
-      if (cs.overflow === 'hidden' || cs.overflowY === 'hidden') s.overflow = 'visible';
-      if (cs.maxHeight !== 'none' && cs.maxHeight !== '') s.maxHeight = 'none';
-      if (cs.height && cs.height !== 'auto' && cs.height !== '0px' && p.scrollHeight > p.clientHeight) s.height = 'auto';
-      p = p.parentElement;
-    }
-  })();
-  </script>
 
   <?php
   return ob_get_clean();
