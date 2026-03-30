@@ -42,11 +42,33 @@ function gincana_core_users_cb(){
       // Vaciar TODOS los datos de un escenario (todos los usuarios)
       $deleted_pts  = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_points WHERE escenario_id=%d", $reset_esc));
       $deleted_prog = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_prog WHERE escenario_id=%d", $reset_esc));
+    } elseif ($action === 'clean_station_content' && $reset_esc) {
+      // Limpiar contenido falso/placeholder de estaciones de un escenario
+      $stations = get_posts([
+        'post_type'       => 'estacion',
+        'post_status'     => 'any',
+        'numberposts'     => -1,
+        'fields'          => 'ids',
+        'meta_query'      => [['key'=>'gc_escenario_ref','value'=>(int)$reset_esc,'compare'=>'=']],
+        'no_found_rows'   => true,
+        'suppress_filters'=> true,
+      ]);
+      $cleaned = 0;
+      $metas_to_clean = ['gc_descripcion','gc_audio','gc_maps_url','gc_img_1','gc_img_2'];
+      foreach ($stations as $sid) {
+        foreach ($metas_to_clean as $mk) {
+          delete_post_meta((int)$sid, $mk);
+        }
+        // También vaciar the_content por si tiene contenido Divi
+        wp_update_post(['ID' => (int)$sid, 'post_content' => '']);
+        $cleaned++;
+      }
+      echo '<div class="notice notice-success is-dismissible"><p>Contenido limpiado en <strong>' . $cleaned . '</strong> estaciones del escenario.</p></div>';
     }
 
-    if ($deleted_pts || $deleted_prog) {
+    if (in_array($action, ['reset_user_escenario','reset_user_all','reset_escenario']) && ($deleted_pts || $deleted_prog)) {
       echo '<div class="notice notice-success is-dismissible"><p>Datos eliminados: <strong>' . $deleted_pts . '</strong> registros de puntos y <strong>' . $deleted_prog . '</strong> registros de progreso.</p></div>';
-    } else {
+    } elseif (in_array($action, ['reset_user_escenario','reset_user_all','reset_escenario']) && !$deleted_pts && !$deleted_prog) {
       echo '<div class="notice notice-warning is-dismissible"><p>No se encontraron datos que eliminar.</p></div>';
     }
   }
@@ -93,14 +115,24 @@ function gincana_core_users_cb(){
     </form>
 
     <?php if ($escenario_id && !$focus_user): ?>
-    <form method="post" style="margin:0 0 16px;" onsubmit="return confirm('¿Seguro? Esto eliminara TODOS los puntos y progreso de TODOS los usuarios en este escenario. Esta accion no se puede deshacer.');">
-      <?php wp_nonce_field('gc_reset_data'); ?>
-      <input type="hidden" name="gc_reset_action" value="reset_escenario" />
-      <input type="hidden" name="gc_reset_escenario" value="<?php echo (int)$escenario_id; ?>" />
-      <button type="submit" class="button" style="color:#dc2626;border-color:#dc2626;">
-        Vaciar datos del escenario &laquo;<?php echo esc_html(get_the_title($escenario_id)); ?>&raquo;
-      </button>
-    </form>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin:0 0 16px;">
+      <form method="post" onsubmit="return confirm('¿Seguro? Esto eliminará TODOS los puntos y progreso de TODOS los usuarios en este escenario.');">
+        <?php wp_nonce_field('gc_reset_data'); ?>
+        <input type="hidden" name="gc_reset_action" value="reset_escenario" />
+        <input type="hidden" name="gc_reset_escenario" value="<?php echo (int)$escenario_id; ?>" />
+        <button type="submit" class="button" style="color:#dc2626;border-color:#dc2626;">
+          Vaciar datos del escenario &laquo;<?php echo esc_html(get_the_title($escenario_id)); ?>&raquo;
+        </button>
+      </form>
+      <form method="post" onsubmit="return confirm('¿Seguro? Esto borrará descripción, audio e imágenes de TODAS las estaciones de este escenario.');">
+        <?php wp_nonce_field('gc_reset_data'); ?>
+        <input type="hidden" name="gc_reset_action" value="clean_station_content" />
+        <input type="hidden" name="gc_reset_escenario" value="<?php echo (int)$escenario_id; ?>" />
+        <button type="submit" class="button" style="color:#b45309;border-color:#b45309;">
+          Limpiar contenido de estaciones &laquo;<?php echo esc_html(get_the_title($escenario_id)); ?>&raquo;
+        </button>
+      </form>
+    </div>
     <?php endif; ?>
   <?php
 
