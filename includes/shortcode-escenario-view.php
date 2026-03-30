@@ -114,10 +114,15 @@ add_shortcode('gincana_estaciones_lista', function($atts){
   // ── Obtener estaciones ordenadas ───────────────────────
   $q = new WP_Query([
     'post_type'      => 'estacion',
+    'post_status'    => 'publish',
     'posts_per_page' => -1,
     'orderby'        => 'meta_value_num',
     'order'          => 'ASC',
-    'meta_query'     => [['key'=>'gc_escenario_ref','value'=>$escenario_id,'compare'=>'=']],
+    'meta_query'     => [
+      'relation' => 'AND',
+      ['key'=>'gc_escenario_ref','value'=>$escenario_id,'compare'=>'='],
+      ['key'=>'gc_orden','compare'=>'EXISTS'],
+    ],
     'meta_key'       => 'gc_orden',
     'fields'         => 'ids',
     'no_found_rows'  => true,
@@ -127,6 +132,29 @@ add_shortcode('gincana_estaciones_lista', function($atts){
   }
   $est_ids = array_map('intval', $q->posts);
   wp_reset_postdata();
+
+  // DEBUG (solo admin): verificar conteo de estaciones
+  if ( current_user_can('manage_options') && count($est_ids) < (int) get_post_meta($escenario_id, 'gc_num_estaciones', true) ) {
+    $expected = (int) get_post_meta($escenario_id, 'gc_num_estaciones', true);
+    // Buscar TODAS sin filtro de gc_orden para ver si falta alguna
+    $q_all = new WP_Query([
+      'post_type'      => 'estacion',
+      'post_status'    => 'any',
+      'posts_per_page' => -1,
+      'meta_query'     => [['key'=>'gc_escenario_ref','value'=>$escenario_id,'compare'=>'=']],
+      'fields'         => 'ids',
+      'no_found_rows'  => true,
+    ]);
+    $all_ids = array_map('intval', $q_all->posts);
+    $missing = array_diff($all_ids, $est_ids);
+    $debug_info = "DEBUG: esperadas={$expected} encontradas=" . count($est_ids) . " total_any=" . count($all_ids);
+    if (!empty($missing)) {
+      foreach ($missing as $mid) {
+        $debug_info .= " | falta ID={$mid} status=" . get_post_status($mid) . " orden=" . get_post_meta($mid, 'gc_orden', true);
+      }
+    }
+    echo '<div style="background:#fef3c7;border:1px solid #f59e0b;padding:8px 12px;border-radius:8px;margin-bottom:12px;font-size:12px;">' . esc_html($debug_info) . '</div>';
+  }
 
   // ── Progreso del usuario ───────────────────────────────
   $user_id  = get_current_user_id();
