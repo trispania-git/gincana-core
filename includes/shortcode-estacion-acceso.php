@@ -349,6 +349,24 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     $img1        = get_post_meta($station_id, 'gc_img_1', true);
     $img2        = get_post_meta($station_id, 'gc_img_2', true);
     $is_logged   = is_user_logged_in();
+
+    // DEBUG (solo admin): mostrar qué estación se está resolviendo
+    if ( current_user_can('manage_options') ) {
+        $queried = get_queried_object_id();
+        $the_id  = get_the_ID();
+        echo '<div style="background:#fef3c7;border:1px solid #f59e0b;padding:8px 12px;border-radius:8px;margin-bottom:12px;font-size:11px;font-family:monospace;">'
+           . 'DEBUG: station_id=' . $station_id
+           . ' | queried_object=' . $queried
+           . ' | get_the_ID=' . $the_id
+           . ' | post_type=' . get_post_type($station_id)
+           . ' | title=' . esc_html($title)
+           . ' | escenario_id=' . $escenario_id
+           . ' | desc=' . (empty($descripcion) ? 'VACIO' : mb_substr(strip_tags($descripcion), 0, 50))
+           . ' | audio=' . (empty($audio) ? 'VACIO' : 'SI')
+           . ' | img1=' . (empty($img1) ? 'VACIO' : 'SI')
+           . ' | img2=' . (empty($img2) ? 'VACIO' : 'SI')
+           . '</div>';
+    }
     $user_id     = get_current_user_id();
 
     // Helper para renderizar contenido visual (titulo + iconos + descripcion + media)
