@@ -237,6 +237,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       display: flex;
       flex-direction: column;
       gap: 12px;
+      padding-bottom: 80px; /* espacio para barra sticky inferior */
     }
 
     /* Tarjeta */
