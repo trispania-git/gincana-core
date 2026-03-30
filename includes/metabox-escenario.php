@@ -44,12 +44,21 @@ function gc_render_escenario_metabox($post) {
         </tr>
 
         <tr>
-            <th><label for="gc_label_estacion">Nombre de las paradas</label></th>
+            <th><label for="gc_label_estacion">Nombre de las paradas (singular)</label></th>
             <td>
                 <input type="text" name="gc_label_estacion" id="gc_label_estacion"
                        value="<?php echo esc_attr($label_estacion); ?>"
-                       placeholder="estacion" style="width:300px;" />
-                <p class="description">Nombre alternativo para "estacion" (ej: "puerta", "parada", "punto"). Se usa en la lista, el progreso, etc. Si se deja vacio se usa "estacion".</p>
+                       placeholder="estación" style="width:200px;" />
+                <p class="description">Singular: "estación", "puerta", "paso", "parada"…</p>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="gc_label_estacion_plural">Nombre plural + artículo</label></th>
+            <td>
+                <input type="text" name="gc_label_estacion_plural" id="gc_label_estacion_plural"
+                       value="<?php echo esc_attr(get_post_meta($post->ID, 'gc_label_estacion_plural', true)); ?>"
+                       placeholder="las estaciones" style="width:300px;" />
+                <p class="description">Plural con artículo: "las estaciones", "las puertas", "los pasos". Se usa en el CTA y el progreso.</p>
             </td>
         </tr>
 
@@ -59,6 +68,7 @@ function gc_render_escenario_metabox($post) {
                 <input type="text" name="gc_cta_texto" id="gc_cta_texto"
                        value="<?php echo esc_attr($cta_texto); ?>"
                        placeholder="¿Te animas? ¡Comienza la aventura y completa las estaciones!" style="width:100%;" />
+                <p class="description">Si se deja vacío se genera automáticamente usando el plural configurado arriba.</p>
                 <p class="description">Texto motivacional que aparece antes de la lista de estaciones. Si se deja vacio se usa el texto por defecto.</p>
             </td>
         </tr>
@@ -118,6 +128,7 @@ add_action('save_post', function ($post_id) {
 
     update_post_meta($post_id, 'gc_tipo_escenario', $tipo);
     update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
+    update_post_meta($post_id, 'gc_label_estacion_plural', sanitize_text_field($_POST['gc_label_estacion_plural'] ?? ''));
     update_post_meta($post_id, 'gc_cta_texto', sanitize_text_field($_POST['gc_cta_texto'] ?? ''));
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));

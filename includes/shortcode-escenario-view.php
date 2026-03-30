@@ -107,9 +107,10 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     return '<p>No se pudo determinar el escenario.</p>';
   }
 
-  $tipo_escenario = get_post_meta($escenario_id, 'gc_tipo_escenario', true) ?: 'adulto';
-  $label_estacion = gc_get_label_estacion($escenario_id);
-  $cta_texto      = gc_get_cta_texto($escenario_id);
+  $tipo_escenario       = get_post_meta($escenario_id, 'gc_tipo_escenario', true) ?: 'adulto';
+  $label_estacion       = gc_get_label_estacion($escenario_id);
+  $label_estacion_plural = gc_get_label_estacion_plural($escenario_id);
+  $cta_texto            = gc_get_cta_texto($escenario_id);
 
   // ── Obtener estaciones ordenadas ───────────────────────
   $q = new WP_Query([
@@ -343,7 +344,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
           <div class="gc-progress-fill" style="width:<?php echo (int)$pct; ?>%;"></div>
         </div>
         <div class="gc-progress-label">
-          <?php echo (int)$completed; ?>/<?php echo (int)$total; ?> <?php echo esc_html($label_estacion); ?>s
+          <?php echo (int)$completed; ?>/<?php echo (int)$total; ?> <?php echo esc_html($label_estacion_plural); ?>
         </div>
       </div>
       <div style="flex-shrink:0;text-align:center;padding:8px 14px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:12px;color:#fff;min-width:70px;">

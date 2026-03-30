@@ -203,14 +203,24 @@ if ( ! function_exists('gc_get_label_estacion') ) {
 }
 
 /**
+ * Devuelve el label plural con artículo (ej: "las estaciones", "los pasos").
+ */
+if ( ! function_exists('gc_get_label_estacion_plural') ) {
+  function gc_get_label_estacion_plural($escenario_id) {
+    $plural = get_post_meta((int)$escenario_id, 'gc_label_estacion_plural', true);
+    return $plural ? $plural : 'las estaciones';
+  }
+}
+
+/**
  * Devuelve el texto CTA de un escenario.
  */
 if ( ! function_exists('gc_get_cta_texto') ) {
   function gc_get_cta_texto($escenario_id) {
     $cta = get_post_meta((int)$escenario_id, 'gc_cta_texto', true);
     if ($cta) return $cta;
-    $label = gc_get_label_estacion($escenario_id);
-    return '¿Te animas? ¡Comienza la aventura y completa las ' . $label . 's!';
+    $plural = gc_get_label_estacion_plural($escenario_id);
+    return '¿Te animas? ¡Comienza la aventura y completa ' . $plural . '!';
   }
 }
 
