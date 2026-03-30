@@ -427,6 +427,22 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     </div>
   </div>
 
+  <script>
+  (function(){
+    var el = document.getElementById('<?php echo esc_js($uid); ?>');
+    if (!el) return;
+    var p = el.parentElement;
+    while (p && p !== document.body) {
+      var s = p.style;
+      var cs = window.getComputedStyle(p);
+      if (cs.overflow === 'hidden' || cs.overflowY === 'hidden') s.overflow = 'visible';
+      if (cs.maxHeight !== 'none' && cs.maxHeight !== '') s.maxHeight = 'none';
+      if (cs.height && cs.height !== 'auto' && cs.height !== '0px' && p.scrollHeight > p.clientHeight) s.height = 'auto';
+      p = p.parentElement;
+    }
+  })();
+  </script>
+
   <?php
   return ob_get_clean();
 });
