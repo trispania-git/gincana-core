@@ -50,7 +50,7 @@ add_shortcode('gincana_escenario_contenido', function($atts){
 
     <?php if ($audio): ?>
       <div style="margin:0 0 16px;">
-        <audio controls style="width:100%;"><source src="<?php echo esc_url($audio); ?>">Tu navegador no soporta audio HTML5.</audio>
+        <?php echo gc_render_action_icons($audio, ''); ?>
       </div>
     <?php endif; ?>
 
