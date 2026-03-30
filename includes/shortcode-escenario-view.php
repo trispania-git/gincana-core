@@ -144,16 +144,14 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       $progress[(int)$r->estacion_id] = $r->status;
     }
 
-    // Puntos por estación (solo adulto)
-    if ($tipo_escenario === 'adulto') {
-      $pts_tbl = $wpdb->prefix . 'gincana_points_log';
-      $pts_rows = $wpdb->get_results($wpdb->prepare(
-        "SELECT estacion_id, SUM(points) as pts FROM {$pts_tbl} WHERE user_id=%d AND escenario_id=%d AND estacion_id IN ($in) GROUP BY estacion_id",
-        $user_id, $escenario_id
-      ));
-      foreach ($pts_rows as $pr) {
-        $points_per_station[(int)$pr->estacion_id] = (int)$pr->pts;
-      }
+    // Puntos por estación
+    $pts_tbl = $wpdb->prefix . 'gincana_points_log';
+    $pts_rows = $wpdb->get_results($wpdb->prepare(
+      "SELECT estacion_id, SUM(points) as pts FROM {$pts_tbl} WHERE user_id=%d AND escenario_id=%d AND estacion_id IN ($in) GROUP BY estacion_id",
+      $user_id, $escenario_id
+    ));
+    foreach ($pts_rows as $pr) {
+      $points_per_station[(int)$pr->estacion_id] = (int)$pr->pts;
     }
   }
 
@@ -341,12 +339,10 @@ add_shortcode('gincana_estaciones_lista', function($atts){
           <?php echo (int)$completed; ?>/<?php echo (int)$total; ?> <?php echo esc_html($label_estacion); ?>s
         </div>
       </div>
-      <?php if ($tipo_escenario === 'adulto'): ?>
       <div style="flex-shrink:0;text-align:center;padding:8px 14px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:12px;color:#fff;min-width:70px;">
         <div style="font-size:20px;font-weight:800;line-height:1.1;"><?php echo (int)$total_points; ?></div>
         <div style="font-size:10px;font-weight:500;opacity:0.85;text-transform:uppercase;letter-spacing:0.5px;">puntos</div>
       </div>
-      <?php endif; ?>
     </div>
     <?php endif; ?>
 
@@ -400,7 +396,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
             <div class="gc-card-title"><?php echo esc_html($title); ?></div>
             <div class="gc-card-status <?php echo esc_attr($status_cls); ?>"><?php
               echo esc_html($status_text);
-              if ($is_passed && $tipo_escenario === 'adulto') {
+              if ($is_passed) {
                 $eid_pts = isset($points_per_station[$eid]) ? (int)$points_per_station[$eid] : 0;
                 echo ' · <strong>' . $eid_pts . ' pts</strong>';
               }
