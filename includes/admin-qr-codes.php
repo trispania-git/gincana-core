@@ -111,8 +111,8 @@ function gincana_core_render_qr_codes_page() {
           $title = get_the_title($sid) ?: ($label . ' ' . $order);
           $qr_url = function_exists('gc_get_station_entry_url') ? gc_get_station_entry_url($sid) : '';
           $pista  = get_post_meta($sid, 'gc_pista_busqueda', true);
-          // Google Charts QR API (gratuita, sin dependencias)
-          $qr_img = 'https://chart.googleapis.com/chart?cht=qr&chs=' . $qr_size . 'x' . $qr_size . '&chl=' . urlencode($qr_url) . '&choe=UTF-8';
+          // QR Server API (gratuita, sin dependencias)
+          $qr_img = 'https://api.qrserver.com/v1/create-qr-code/?size=' . $qr_size . 'x' . $qr_size . '&data=' . urlencode($qr_url) . '&format=png&margin=8';
         ?>
           <div class="gc-qr-card">
             <div class="gc-qr-card-header">
