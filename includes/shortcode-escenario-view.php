@@ -435,6 +435,29 @@ add_shortcode('gincana_estaciones_lista', function($atts){
         </<?php echo $tag; ?>>
 
       <?php endforeach; ?>
+
+      <?php
+        $ranking_url_bottom = get_post_meta($escenario_id, 'gc_ranking_url', true);
+        if ($ranking_url_bottom):
+      ?>
+      <a href="<?php echo esc_url($ranking_url_bottom); ?>" class="gc-ranking-card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border:2px solid #d97706;border-radius:var(--gc-radius);text-decoration:none;color:#78350f;transition:transform 0.2s,box-shadow 0.2s;">
+        <div style="flex-shrink:0;width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.12);">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C7 4 7 7 7 7"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5C17 4 17 7 17 7"/><path d="M4 22h16"/><path d="M10 22V8a4 4 0 0 0-4-4H6a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4h0a4 4 0 0 0-4 4v14"/><path d="M8 22h8"/><path d="M12 17v5"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:16px;font-weight:700;line-height:1.3;">Consulta el ranking</div>
+          <div style="font-size:13px;opacity:0.85;margin-top:2px;">Mira tu posición y compara con otros jugadores</div>
+        </div>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#78350f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </a>
+      <style>
+        #<?php echo $uid; ?> .gc-ranking-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 16px rgba(245,158,11,0.35);
+        }
+      </style>
+      <?php endif; ?>
+
     </div>
   </div>
 
