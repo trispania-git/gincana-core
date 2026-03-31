@@ -59,8 +59,8 @@ add_filter('query_vars', function($vars){
 add_filter('post_type_link', function($permalink, $post, $leavename = false, $sample = false){
   if ($post->post_type !== 'estacion') return $permalink;
 
-  // No reemplazar nada en admin/Builder para no romper previews
-  if ( is_admin() || (function_exists('gincana_is_divi_builder') && gincana_is_divi_builder()) ) {
+  // No reemplazar en el Builder de Divi para no romper previews
+  if ( function_exists('gincana_is_divi_builder') && gincana_is_divi_builder() ) {
     return $permalink;
   }
 
