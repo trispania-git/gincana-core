@@ -172,9 +172,65 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
     update_post_meta($post_id, 'gc_label_estacion_plural', sanitize_text_field($_POST['gc_label_estacion_plural'] ?? ''));
     update_post_meta($post_id, 'gc_cta_texto', sanitize_text_field($_POST['gc_cta_texto'] ?? ''));
-    update_post_meta($post_id, 'gc_ranking_url', esc_url_raw($_POST['gc_ranking_url'] ?? ''));
+    // Ranking URL: si viene del formulario, guardarla. Si no, auto-crear página.
+    $ranking_url_manual = esc_url_raw($_POST['gc_ranking_url'] ?? '');
+    if ($ranking_url_manual) {
+        update_post_meta($post_id, 'gc_ranking_url', $ranking_url_manual);
+    }
+
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));
     update_post_meta($post_id, 'gc_img_2', esc_url_raw($_POST['gc_img_2'] ?? ''));
+
+    // Auto-crear página de ranking si no existe
+    gc_maybe_create_ranking_page($post_id);
 });
+
+/**
+ * Crea automáticamente una página de ranking para un escenario.
+ * Solo si el escenario está publicado y no tiene ya una página de ranking.
+ */
+function gc_maybe_create_ranking_page($escenario_id) {
+    // Solo para escenarios publicados
+    if (get_post_status($escenario_id) !== 'publish') return;
+
+    // Si ya tiene URL de ranking, no crear
+    $existing_url = get_post_meta($escenario_id, 'gc_ranking_url', true);
+    if (!empty($existing_url)) return;
+
+    // Verificar que no exista ya una página con el meta enlazado
+    $existing_page = get_posts([
+        'post_type'      => 'page',
+        'post_status'    => 'any',
+        'posts_per_page' => 1,
+        'meta_query'     => [['key' => '_gc_ranking_escenario_id', 'value' => (int)$escenario_id, 'compare' => '=']],
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+    ]);
+
+    if (!empty($existing_page)) {
+        // Ya existe pero no estaba enlazada, re-enlazar
+        update_post_meta($escenario_id, 'gc_ranking_url', get_permalink($existing_page[0]));
+        return;
+    }
+
+    $esc_title = get_the_title($escenario_id);
+    $page_title = 'Ranking — ' . $esc_title;
+    $page_slug  = 'ranking-' . sanitize_title($esc_title);
+
+    $page_id = wp_insert_post([
+        'post_type'    => 'page',
+        'post_status'  => 'publish',
+        'post_title'   => $page_title,
+        'post_name'    => $page_slug,
+        'post_content' => '[gincana_ranking escenario="' . (int)$escenario_id . '"]',
+    ], true);
+
+    if (!is_wp_error($page_id) && $page_id) {
+        // Marcar la página como ranking de este escenario
+        update_post_meta($page_id, '_gc_ranking_escenario_id', (int)$escenario_id);
+        // Guardar la URL en el escenario
+        update_post_meta($escenario_id, 'gc_ranking_url', get_permalink($page_id));
+    }
+}
