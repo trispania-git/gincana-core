@@ -500,9 +500,24 @@ add_action('init', function(){
       }
     }
 
+    // Datos del escenario para cabecera
+    $esc_title = get_the_title($escenario_id);
+    $esc_url   = get_permalink($escenario_id);
+
     ob_start(); ?>
-    <div class="gincana-ranking et_pb_module">
-      <h3 style="margin-bottom:10px;"><?php echo esc_html($title); ?></h3>
+    <div class="gincana-ranking et_pb_module" style="width:95%;max-width:760px;margin:0 auto;">
+
+      <!-- Cabecera -->
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:14px;font-weight:600;color:#2563eb;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C7 4 7 7 7 7"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5C17 4 17 7 17 7"/><path d="M4 22h16"/><path d="M10 22V8a4 4 0 0 0-4-4H6a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4h0a4 4 0 0 0-4 4v14"/></svg>
+          Ranking
+        </div>
+        <h2 style="margin:0;font-size:24px;font-weight:700;color:#1e293b;line-height:1.3;">
+          <?php echo esc_html($esc_title); ?>
+        </h2>
+      </div>
+
       <table class="gincana-ranking-table" style="width:100%;border-collapse:collapse;">
         <thead>
           <tr>
@@ -565,6 +580,14 @@ add_action('init', function(){
         }
       }
       ?>
+
+      <!-- Enlace volver al escenario -->
+      <div style="text-align:center;margin-top:24px;">
+        <a href="<?php echo esc_url($esc_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid #e2e8f0;border-radius:10px;color:#2563eb;text-decoration:none;font-weight:600;font-size:14px;transition:background 0.2s,border-color 0.2s;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Volver al escenario
+        </a>
+      </div>
     </div>
     <?php
     return ob_get_clean();
