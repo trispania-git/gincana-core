@@ -45,7 +45,8 @@ function gc_get_station_entry_url($post_id) {
 function gc_render_estacion_metabox($post) {
     wp_nonce_field('gc_save_estacion_meta', 'gc_estacion_nonce');
 
-    $descripcion = get_post_meta($post->ID, 'gc_descripcion', true);
+    $descripcion     = get_post_meta($post->ID, 'gc_descripcion', true);
+    $pista_busqueda  = get_post_meta($post->ID, 'gc_pista_busqueda', true);
     $audio    = get_post_meta($post->ID, 'gc_audio', true);
     $maps_url = get_post_meta($post->ID, 'gc_maps_url', true);
     $img1     = get_post_meta($post->ID, 'gc_img_1', true);
@@ -74,6 +75,16 @@ function gc_render_estacion_metabox($post) {
                 ]);
                 ?>
                 <p class="description">Texto descriptivo del lugar (historia, curiosidades...). Se muestra al jugador en la pagina de la estacion.</p>
+            </td>
+        </tr>
+
+        <tr>
+            <th><label for="gc_pista_busqueda">Pista para encontrar</label></th>
+            <td>
+                <input type="text" name="gc_pista_busqueda" id="gc_pista_busqueda"
+                       value="<?php echo esc_attr($pista_busqueda); ?>"
+                       style="width:100%;" placeholder="Ej: Busca cerca de la fuente del jardín..." />
+                <p class="description">Pista que ayuda al jugador a encontrar el QR en el lugar. Se muestra en escenarios infantiles cuando acceden desde la lista (sin QR).</p>
             </td>
         </tr>
 
@@ -139,6 +150,7 @@ add_action('save_post', function ($post_id) {
     if ( ! current_user_can('edit_post', $post_id) ) return;
 
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
+    update_post_meta($post_id, 'gc_pista_busqueda', sanitize_text_field($_POST['gc_pista_busqueda'] ?? ''));
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
     update_post_meta($post_id, 'gc_maps_url', esc_url_raw($_POST['gc_maps_url'] ?? ''));
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));

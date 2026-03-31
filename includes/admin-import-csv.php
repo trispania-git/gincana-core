@@ -194,7 +194,7 @@ castillo,Castillo,2,p2,Segunda prueba,texto,30,2,,texto,¿2+2?,,,,,,4,Texto cult
   echo '<ul style="margin-left:18px;list-style:disc;">';
   echo '<li><strong>Obligatorios:</strong> station_slug, station_title, station_order</li>';
   echo '<li><strong>Opcionales (prueba):</strong> test_slug, test_title, test_type, question_type, question_text, option_1..4, correct_option, correct_text, time_limit_s, max_attempts</li>';
-  echo '<li><strong>Opcionales (estacion):</strong> block_hint, station_description, station_maps_url, station_audio, station_img_1, station_img_2</li>';
+  echo '<li><strong>Opcionales (estacion):</strong> block_hint, station_hint, station_description, station_maps_url, station_audio, station_img_1, station_img_2</li>';
   echo '<li><em>Si no incluyes test_slug y test_title, solo se crean/actualizan las estaciones sin pruebas.</em></li>';
   echo '</ul>';
   echo '<p><strong>correct_option</strong> usa valores 1, 2, 3 o 4. En preguntas de texto, usa <strong>correct_text</strong>.</p>';
@@ -341,6 +341,10 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
       if ($block_hint !== '') {
         update_post_meta($station_id, 'gc_pista_bloqueo', $block_hint);
       }
+    }
+    if ( isset($idx['station_hint']) ) {
+      $hint = gincana_core_csv_cell($row, $idx['station_hint']);
+      if ($hint !== '') update_post_meta($station_id, 'gc_pista_busqueda', sanitize_text_field($hint));
     }
 
     // Campos opcionales de contenido de estacion

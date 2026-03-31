@@ -64,7 +64,7 @@ function gc_shortcode_estacion_acceso() {
     }
 
     if ($tipo_escenario === 'infantil') {
-        echo gc_render_infantil_station($station_id, $title, $escenario_id);
+        echo gc_render_infantil_station_qr($station_id, $title, $escenario_id);
     } else {
         echo gc_render_adulto_station($station_id, $title, $escenario_id);
     }
@@ -74,31 +74,25 @@ function gc_shortcode_estacion_acceso() {
     return ob_get_clean();
 }
 
-function gc_render_infantil_station($station_id, $title, $escenario_id) {
+/**
+ * Infantil — acceso por QR: auto-validación (escanear QR = prueba de estar ahí).
+ */
+function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
     $nonce = function_exists('wp_create_nonce') ? wp_create_nonce('wp_rest') : '';
     $label = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
     $label_uc = mb_strtoupper(mb_substr($label, 0, 1)) . mb_substr($label, 1);
+    $escenario_url = get_permalink($escenario_id) ?: home_url('/');
     ob_start();
     ?>
     <div class="gc-kids-station"
          data-station-id="<?php echo esc_attr($station_id); ?>"
-         data-escenario-id="<?php echo esc_attr($escenario_id); ?>"
-         data-started-at="<?php echo esc_attr( round(microtime(true) * 1000) ); ?>">
+         data-escenario-id="<?php echo esc_attr($escenario_id); ?>">
 
-        <div style="padding:20px;border:1px solid #dcdcde;border-radius:14px;background:#fff;">
-            <h2 style="margin-top:0;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
-            <p>Has encontrado: <strong><?php echo esc_html($title); ?></strong>.</p>
-            <p>Pulsa el botón para validar y continuar.</p>
-
-            <div style="margin-top:18px;">
-                <button type="button"
-                        id="gc-kids-complete-btn"
-                        style="width:100%;padding:14px 18px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-size:16px;font-weight:600;cursor:pointer;">
-                    Validar <?php echo esc_html($label); ?>
-                </button>
-            </div>
-
-            <div id="gc-kids-msg" style="margin-top:16px;"></div>
+        <div style="padding:24px 20px;border-radius:14px;background:#ecfdf3;border:2px solid #16a34a;text-align:center;">
+            <div style="font-size:48px;margin-bottom:8px;">🎉</div>
+            <h2 style="margin:0 0 8px;color:#146c2e;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
+            <p style="margin:0 0 4px;font-size:16px;"><strong><?php echo esc_html($title); ?></strong></p>
+            <p id="gc-kids-msg" style="margin:12px 0 0;font-size:15px;color:#146c2e;">Validando...</p>
         </div>
     </div>
 
@@ -106,57 +100,58 @@ function gc_render_infantil_station($station_id, $title, $escenario_id) {
     (function(){
         const wrap = document.currentScript ? document.currentScript.previousElementSibling : null;
         if (!wrap) return;
-
         const stationId = parseInt(wrap.dataset.stationId, 10);
-        const escenarioId = parseInt(wrap.dataset.escenarioId, 10);
-        const startedAt = parseInt(wrap.dataset.startedAt, 10) || Date.now();
-        const btn = wrap.querySelector('#gc-kids-complete-btn');
         const msg = wrap.querySelector('#gc-kids-msg');
         const nonce = (window.wpApiSettings && window.wpApiSettings.nonce) || window.gincanaNonce || '<?php echo esc_js($nonce); ?>';
-        const label = <?php echo json_encode($label); ?>;
+        if (!stationId || !msg) return;
 
-        if (!btn || !msg || !stationId) return;
-
-        btn.addEventListener('click', async function(){
-            btn.disabled = true;
-            msg.innerHTML = 'Validando...';
-
-            const timeMs = Math.max(0, Date.now() - startedAt);
-
+        (async function(){
             try {
                 const res = await fetch('/wp-json/gincana/v1/progress/skip', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-WP-Nonce': nonce
-                    },
+                    headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
                     credentials: 'same-origin',
-                    body: JSON.stringify({
-                        estacion_id: stationId,
-                        time_ms: timeMs
-                    })
+                    body: JSON.stringify({ estacion_id: stationId, time_ms: 0 })
                 });
-
                 const data = await res.json();
-
                 if (data && data.ok) {
-                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;">✅ ' + label.charAt(0).toUpperCase() + label.slice(1) + ' validada correctamente.</div>';
-
-                    setTimeout(function(){
-                        window.location.href = <?php echo json_encode( get_permalink($escenario_id) ?: home_url('/') ); ?>;
-                    }, 1600);
+                    msg.innerHTML = '✅ ¡Validada! Redirigiendo...';
+                    setTimeout(function(){ window.location.href = <?php echo json_encode($escenario_url); ?>; }, 1800);
                 } else {
-                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">No se pudo validar.</div>';
-                    btn.disabled = false;
+                    msg.innerHTML = '⚠️ No se pudo validar. Inténtalo de nuevo.';
                 }
-
             } catch (err) {
-                msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">Error: ' + err.message + '</div>';
-                btn.disabled = false;
+                msg.innerHTML = '⚠️ Error: ' + err.message;
             }
-        });
+        })();
     })();
     </script>
+    <?php
+    return ob_get_clean();
+}
+
+/**
+ * Infantil — acceso directo (sin QR): muestra pista para encontrar el QR.
+ */
+function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
+    $label = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
+    $pista = get_post_meta($station_id, 'gc_pista_busqueda', true);
+
+    ob_start();
+    ?>
+    <div style="padding:24px 20px;border-radius:14px;background:#fffbeb;border:2px solid #f59e0b;text-align:center;">
+        <div style="font-size:48px;margin-bottom:8px;">🔍</div>
+        <h3 style="margin:0 0 8px;color:#92400e;">¡Busca el código QR!</h3>
+        <p style="margin:0 0 12px;font-size:15px;color:#78350f;">
+            Para validar esta <?php echo esc_html($label); ?>, necesitas encontrar y escanear el código QR en el lugar.
+        </p>
+        <?php if ($pista): ?>
+        <div style="margin:16px 0 0;padding:14px 16px;border-radius:10px;background:#fff;border:1px dashed #f59e0b;">
+            <p style="margin:0;font-size:13px;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">💡 Pista</p>
+            <p style="margin:6px 0 0;font-size:15px;color:#451a03;"><?php echo esc_html($pista); ?></p>
+        </div>
+        <?php endif; ?>
+    </div>
     <?php
     return ob_get_clean();
 }
@@ -350,23 +345,6 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     $img2        = get_post_meta($station_id, 'gc_img_2', true);
     $is_logged   = is_user_logged_in();
 
-    // DEBUG (solo admin): mostrar qué estación se está resolviendo
-    if ( current_user_can('manage_options') ) {
-        $queried = get_queried_object_id();
-        $the_id  = get_the_ID();
-        echo '<div style="background:#fef3c7;border:1px solid #f59e0b;padding:8px 12px;border-radius:8px;margin-bottom:12px;font-size:11px;font-family:monospace;">'
-           . 'DEBUG: station_id=' . $station_id
-           . ' | queried_object=' . $queried
-           . ' | get_the_ID=' . $the_id
-           . ' | post_type=' . get_post_type($station_id)
-           . ' | title=' . esc_html($title)
-           . ' | escenario_id=' . $escenario_id
-           . ' | desc=' . (empty($descripcion) ? 'VACIO' : mb_substr(strip_tags($descripcion), 0, 50))
-           . ' | audio=' . (empty($audio) ? 'VACIO' : 'SI')
-           . ' | img1=' . (empty($img1) ? 'VACIO' : 'SI')
-           . ' | img2=' . (empty($img2) ? 'VACIO' : 'SI')
-           . '</div>';
-    }
     $user_id     = get_current_user_id();
 
     // Helper para renderizar contenido visual (titulo + iconos + descripcion + media)
@@ -407,22 +385,26 @@ add_shortcode('gincana_estacion_contenido', function($atts){
 
     $render_content();
 
-    // Si no esta logueado: mostrar CTA de login en vez del quiz/validacion
+    // Si no esta logueado
     if (!$is_logged) {
+        // Infantil: mostrar pista + CTA login
+        if ($tipo_escenario === 'infantil') {
+            echo gc_render_infantil_station_pista($station_id, $title, $escenario_id);
+        }
         $login_url    = wp_login_url(get_permalink($station_id));
         $register_url = wp_registration_url();
-        echo '<div style="padding:20px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;text-align:center;">';
+        echo '<div style="padding:20px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;text-align:center;margin-top:16px;">';
         echo '<p style="margin:0 0 6px;font-size:16px;font-weight:600;">¿Quieres participar en la gimkana?</p>';
-        echo '<p style="margin:0 0 16px;font-size:14px;color:#64748b;">Inicia sesion o registrate para jugar y acumular puntos.</p>';
+        echo '<p style="margin:0 0 16px;font-size:14px;color:#64748b;">Inicia sesión o regístrate para jugar y acumular puntos.</p>';
         echo '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">';
-        echo '<a href="' . esc_url($login_url) . '" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Iniciar sesion</a>';
+        echo '<a href="' . esc_url($login_url) . '" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Iniciar sesión</a>';
         echo '<a href="' . esc_url($register_url) . '" style="display:inline-block;padding:12px 24px;border:2px solid #2563eb;border-radius:10px;background:#fff;color:#2563eb;text-decoration:none;font-weight:600;">Registrarse</a>';
         echo '</div>';
         echo '</div>';
     } else {
-        // Logueado: mostrar quiz o validacion
+        // Logueado: mostrar quiz o pista para buscar QR
         if ($tipo_escenario === 'infantil') {
-            echo gc_render_infantil_station($station_id, $title, $escenario_id);
+            echo gc_render_infantil_station_pista($station_id, $title, $escenario_id);
         } else {
             echo gc_render_adulto_station($station_id, $title, $escenario_id);
         }
