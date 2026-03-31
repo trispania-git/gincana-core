@@ -1,0 +1,170 @@
+<?php
+if ( ! defined('ABSPATH') ) exit;
+
+/**
+ * Mobile Gate: bloquea acceso desde escritorio en el frontend.
+ *
+ * - Solo actúa si la opción gc_mobile_only está activada.
+ * - No afecta: admin, REST API, AJAX, login, cron, CLI, feeds.
+ * - Detección: User-Agent (PHP) + viewport JS como respaldo.
+ */
+
+add_action('template_redirect', function () {
+
+    // Solo si está activado
+    if (get_option('gc_mobile_only', '0') !== '1') return;
+
+    // No bloquear admin, REST, AJAX, cron, CLI, login
+    if (is_admin()) return;
+    if (defined('REST_REQUEST') && REST_REQUEST) return;
+    if (defined('DOING_AJAX') && DOING_AJAX) return;
+    if (defined('DOING_CRON') && DOING_CRON) return;
+    if (defined('WP_CLI') && WP_CLI) return;
+    if (is_feed()) return;
+
+    // No bloquear login/registro
+    global $pagenow;
+    if (in_array($pagenow, ['wp-login.php', 'wp-register.php'], true)) return;
+
+    // Detectar móvil/tablet por User-Agent
+    $ua = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+    if (gc_is_mobile_ua($ua)) return; // Es móvil, dejar pasar
+
+    // Es escritorio: mostrar página de bloqueo
+    gc_render_mobile_only_page();
+    exit;
+});
+
+/**
+ * Detecta si el User-Agent es de un dispositivo móvil o tablet.
+ */
+function gc_is_mobile_ua($ua) {
+    if (empty($ua)) return false;
+
+    $mobile_patterns = [
+        'Mobile', 'Android', 'iPhone', 'iPad', 'iPod',
+        'webOS', 'BlackBerry', 'Opera Mini', 'Opera Mobi',
+        'IEMobile', 'Windows Phone', 'Silk', 'Kindle',
+    ];
+
+    foreach ($mobile_patterns as $pattern) {
+        if (stripos($ua, $pattern) !== false) return true;
+    }
+
+    return false;
+}
+
+/**
+ * Renderiza la página de "solo móvil".
+ */
+function gc_render_mobile_only_page() {
+    $custom_msg = get_option('gc_mobile_only_message', '');
+    $message = $custom_msg ?: 'Esta experiencia ha sido diseñada para disfrutarse desde tu teléfono móvil. Escanea el código QR o abre esta web desde tu smartphone para participar.';
+    $site_name = get_bloginfo('name');
+    $site_url = home_url('/');
+
+    // No cachear esta respuesta
+    nocache_headers();
+    header('Content-Type: text/html; charset=utf-8');
+    ?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo esc_html($site_name); ?> — Solo para móvil</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 50%, #bfdbfe 100%);
+            color: #1e293b;
+            padding: 32px;
+        }
+        .gc-mobile-gate {
+            max-width: 520px;
+            text-align: center;
+            background: #fff;
+            border-radius: 24px;
+            padding: 48px 36px;
+            box-shadow: 0 8px 32px rgba(37,99,235,0.12);
+        }
+        .gc-mobile-gate .gc-icon {
+            margin-bottom: 24px;
+        }
+        .gc-mobile-gate h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #1e293b;
+        }
+        .gc-mobile-gate .gc-subtitle {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2563eb;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
+        }
+        .gc-mobile-gate p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #475569;
+            margin-bottom: 24px;
+        }
+        .gc-mobile-gate .gc-qr-hint {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 24px;
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 14px;
+            font-size: 14px;
+            color: #64748b;
+        }
+        .gc-mobile-gate .gc-url {
+            margin-top: 20px;
+            font-size: 13px;
+            color: #94a3b8;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="gc-mobile-gate">
+        <div class="gc-icon">
+            <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                <line x1="12" y1="18" x2="12.01" y2="18"/>
+            </svg>
+        </div>
+        <div class="gc-subtitle"><?php echo esc_html($site_name); ?></div>
+        <h1>Experiencia solo para móvil</h1>
+        <p><?php echo wp_kses_post(nl2br($message)); ?></p>
+        <div class="gc-qr-hint">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            Abre la web desde tu smartphone
+        </div>
+        <div class="gc-url"><?php echo esc_html($site_url); ?></div>
+    </div>
+
+    <!-- Respaldo JS: si la ventana es estrecha (tablet en vertical), dejar pasar -->
+    <script>
+    (function(){
+        if (window.innerWidth <= 1024) {
+            document.body.innerHTML = '';
+            window.location.reload();
+        }
+    })();
+    </script>
+</body>
+</html>
+    <?php
+}

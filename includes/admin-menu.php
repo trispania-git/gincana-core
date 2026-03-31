@@ -70,10 +70,44 @@ function gincana_core_dashboard_cb(){
 }
 
 function gincana_core_settings_cb(){
+  // Guardar ajustes
+  if (isset($_POST['gc_settings_nonce']) && wp_verify_nonce($_POST['gc_settings_nonce'], 'gc_save_settings')) {
+    update_option('gc_mobile_only', isset($_POST['gc_mobile_only']) ? '1' : '0');
+    update_option('gc_mobile_only_message', wp_kses_post($_POST['gc_mobile_only_message'] ?? ''));
+    echo '<div class="notice notice-success"><p>Ajustes guardados.</p></div>';
+  }
+
+  $mobile_only = get_option('gc_mobile_only', '0');
+  $mobile_msg  = get_option('gc_mobile_only_message', '');
   ?>
   <div class="wrap">
-    <h1>Ajustes (próximamente)</h1>
-    <p>Aquí añadiremos opciones como: tramos de tiempo, bonus primer intento, límite ranking, modo URLs, etc.</p>
+    <h1>Ajustes de Gincana Core</h1>
+
+    <form method="post">
+      <?php wp_nonce_field('gc_save_settings', 'gc_settings_nonce'); ?>
+
+      <table class="form-table">
+        <tr>
+          <th>Acceso solo desde móvil</th>
+          <td>
+            <label style="display:inline-flex;gap:8px;align-items:center;">
+              <input type="checkbox" name="gc_mobile_only" value="1" <?php checked($mobile_only, '1'); ?> />
+              <span>Mostrar aviso a usuarios de escritorio en el frontend</span>
+            </label>
+            <p class="description">Si se activa, los visitantes desde ordenador verán un mensaje indicando que la web es solo para móvil. El panel de administración (backend) no se ve afectado.</p>
+          </td>
+        </tr>
+        <tr>
+          <th><label for="gc_mobile_only_message">Mensaje personalizado</label></th>
+          <td>
+            <textarea name="gc_mobile_only_message" id="gc_mobile_only_message" rows="4" style="width:100%;max-width:600px;"><?php echo esc_textarea($mobile_msg); ?></textarea>
+            <p class="description">Mensaje que verán los usuarios de escritorio. Si se deja vacío se usa el texto por defecto.</p>
+          </td>
+        </tr>
+      </table>
+
+      <?php submit_button('Guardar ajustes'); ?>
+    </form>
   </div>
   <?php
 }
