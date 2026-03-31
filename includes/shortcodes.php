@@ -760,8 +760,7 @@ add_action('init', function(){
                   '.(int)$order.'
                 </div>';
 
-            $can_link = $linkify && ($is_passed || $is_unlocked || $is_current);
-            if ($can_link && $url) {
+            if ($url) {
               echo '<a href="'.esc_url($url).'" class="gqi-item" style="text-decoration:none" title="'.esc_attr($title).'">'.$circle_html.'</a>';
             } else {
               echo '<div class="gqi-item" title="'.esc_attr($title).'">'.$circle_html.'</div>';
