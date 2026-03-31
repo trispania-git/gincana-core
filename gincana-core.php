@@ -36,6 +36,7 @@ require_once GINCANA_CORE_PATH . 'includes/shortcode-header-nav.php';
 require_once GINCANA_CORE_PATH . 'includes/restrict-dashboard.php';
 
 require_once GINCANA_CORE_PATH . 'includes/admin-import-csv.php';
+require_once GINCANA_CORE_PATH . 'includes/admin-qr-codes.php';
 require_once GINCANA_CORE_PATH . 'includes/admin-data-loader.php';
 
 // Hooks de activación/desactivación
