@@ -188,6 +188,27 @@ add_action('save_post', function ($post_id) {
 });
 
 /**
+ * Migración: crear páginas de ranking para escenarios existentes (una sola vez).
+ */
+add_action('admin_init', function () {
+    if (get_option('gc_ranking_pages_migrated')) return;
+
+    $escenarios = get_posts([
+        'post_type'      => 'escenario',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+    ]);
+
+    foreach ($escenarios as $esc_id) {
+        gc_maybe_create_ranking_page((int) $esc_id);
+    }
+
+    update_option('gc_ranking_pages_migrated', '1');
+});
+
+/**
  * Crea automáticamente una página de ranking para un escenario.
  * Solo si el escenario está publicado y no tiene ya una página de ranking.
  */
