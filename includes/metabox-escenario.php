@@ -21,6 +21,8 @@ function gc_render_escenario_metabox($post) {
     wp_nonce_field('gc_save_escenario_meta', 'gc_escenario_nonce');
 
     $tipo            = get_post_meta($post->ID, 'gc_tipo_escenario', true) ?: 'adulto';
+    $mostrar_puntos  = get_post_meta($post->ID, 'gc_mostrar_puntos', true);
+    if ($mostrar_puntos === '') $mostrar_puntos = '1'; // default activo
     $label_estacion  = get_post_meta($post->ID, 'gc_label_estacion', true);
     $cta_texto       = get_post_meta($post->ID, 'gc_cta_texto', true);
     $descripcion     = get_post_meta($post->ID, 'gc_descripcion', true);
@@ -40,6 +42,17 @@ function gc_render_escenario_metabox($post) {
                     Adulto: el QR de cada estacion abre una pregunta tipo test.<br>
                     Infantil: el QR de cada estacion valida que ha sido encontrada.
                 </p>
+            </td>
+        </tr>
+
+        <tr>
+            <th>Mostrar puntos</th>
+            <td>
+                <label style="display:inline-flex;gap:8px;align-items:center;">
+                    <input type="checkbox" name="gc_mostrar_puntos" value="1" <?php checked($mostrar_puntos, '1'); ?> />
+                    <span>Mostrar puntuación a los jugadores</span>
+                </label>
+                <p class="description">Si se desactiva, no se muestran puntos en la lista de estaciones, la barra de progreso ni el itinerario. Útil para escenarios infantiles sin sistema de puntos.</p>
             </td>
         </tr>
 
@@ -127,6 +140,7 @@ add_action('save_post', function ($post_id) {
     }
 
     update_post_meta($post_id, 'gc_tipo_escenario', $tipo);
+    update_post_meta($post_id, 'gc_mostrar_puntos', isset($_POST['gc_mostrar_puntos']) ? '1' : '0');
     update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
     update_post_meta($post_id, 'gc_label_estacion_plural', sanitize_text_field($_POST['gc_label_estacion_plural'] ?? ''));
     update_post_meta($post_id, 'gc_cta_texto', sanitize_text_field($_POST['gc_cta_texto'] ?? ''));

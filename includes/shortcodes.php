@@ -699,8 +699,9 @@ add_action('init', function(){
     </style>
     <?php
     // Puntos del usuario
+    $show_points = function_exists('gc_show_points') ? gc_show_points($escenario_id) : true;
     $total_points = 0;
-    if ($user_id) {
+    if ($user_id && $show_points) {
       $pts_table = $wpdb->prefix . 'gincana_points_log';
       $total_points = (int) $wpdb->get_var($wpdb->prepare(
         "SELECT COALESCE(SUM(points),0) FROM {$pts_table} WHERE user_id=%d AND escenario_id=%d",
@@ -743,7 +744,7 @@ add_action('init', function(){
             }
           endforeach; ?>
         </div>
-        <?php if ($user_id): ?>
+        <?php if ($user_id && $show_points): ?>
         <div style="flex-shrink:0;text-align:center;padding:4px 8px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:8px;color:#fff;line-height:1;">
           <div style="font-size:16px;font-weight:800;"><?php echo (int)$total_points; ?></div>
           <div style="font-size:8px;font-weight:600;opacity:0.85;text-transform:uppercase;letter-spacing:0.3px;">pts</div>

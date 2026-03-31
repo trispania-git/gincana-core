@@ -193,6 +193,16 @@ if ( ! function_exists('gincana_next_estacion_id') ) {
 }
 
 /**
+ * ¿Debe mostrarse la puntuación en este escenario?
+ */
+if ( ! function_exists('gc_show_points') ) {
+  function gc_show_points($escenario_id) {
+    $val = get_post_meta((int)$escenario_id, 'gc_mostrar_puntos', true);
+    return ($val === '' || $val === '1'); // default: sí
+  }
+}
+
+/**
  * Devuelve el label personalizado para "estacion" de un escenario.
  */
 if ( ! function_exists('gc_get_label_estacion') ) {

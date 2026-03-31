@@ -111,6 +111,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
   $label_estacion       = gc_get_label_estacion($escenario_id);
   $label_estacion_plural = gc_get_label_estacion_plural($escenario_id);
   $cta_texto            = gc_get_cta_texto($escenario_id);
+  $show_points          = gc_show_points($escenario_id);
 
   // ── Obtener estaciones ordenadas ───────────────────────
   $q = new WP_Query([
@@ -329,13 +330,15 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     </style>
 
     <?php if ($user_id):
-      // Obtener puntos totales del usuario en este escenario
-      global $wpdb;
-      $points_table = $wpdb->prefix . 'gincana_points_log';
-      $total_points = (int) $wpdb->get_var($wpdb->prepare(
-        "SELECT COALESCE(SUM(points),0) FROM {$points_table} WHERE user_id=%d AND escenario_id=%d",
-        $user_id, $escenario_id
-      ));
+      $total_points = 0;
+      if ($show_points) {
+        global $wpdb;
+        $points_table = $wpdb->prefix . 'gincana_points_log';
+        $total_points = (int) $wpdb->get_var($wpdb->prepare(
+          "SELECT COALESCE(SUM(points),0) FROM {$points_table} WHERE user_id=%d AND escenario_id=%d",
+          $user_id, $escenario_id
+        ));
+      }
     ?>
     <!-- Barra de progreso + Puntos -->
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
@@ -347,10 +350,12 @@ add_shortcode('gincana_estaciones_lista', function($atts){
           <?php echo (int)$completed; ?>/<?php echo (int)$total; ?> <?php echo esc_html($label_estacion_plural); ?>
         </div>
       </div>
+      <?php if ($show_points): ?>
       <div style="flex-shrink:0;text-align:center;padding:8px 14px;background:linear-gradient(135deg,#2563eb,#1d4ed8);border-radius:12px;color:#fff;min-width:70px;">
         <div style="font-size:20px;font-weight:800;line-height:1.1;"><?php echo (int)$total_points; ?></div>
         <div style="font-size:10px;font-weight:500;opacity:0.85;text-transform:uppercase;letter-spacing:0.5px;">puntos</div>
       </div>
+      <?php endif; ?>
     </div>
     <?php endif; ?>
 
@@ -404,7 +409,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
             <div class="gc-card-title"><?php echo esc_html($title); ?></div>
             <div class="gc-card-status <?php echo esc_attr($status_cls); ?>"><?php
               echo esc_html($status_text);
-              if ($is_passed) {
+              if ($is_passed && $show_points) {
                 $eid_pts = isset($points_per_station[$eid]) ? (int)$points_per_station[$eid] : 0;
                 echo ' · <strong>' . $eid_pts . ' pts</strong>';
               }
