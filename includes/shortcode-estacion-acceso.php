@@ -264,7 +264,21 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
          data-escenario-id="<?php echo esc_attr($escenario_id); ?>"
          data-prueba-id="<?php echo esc_attr($test_id); ?>">
 
-        <div style="padding:20px;border:1px solid #dcdcde;border-radius:14px;background:#fff;">
+        <!-- CTA desafío (visible por defecto) -->
+        <div id="gc-challenge-cta" style="padding:24px 20px;border:2px solid #2563eb;border-radius:14px;background:linear-gradient(135deg,#eff6ff,#dbeafe);text-align:center;">
+            <div style="font-size:40px;margin-bottom:12px;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <h3 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1e293b;">¿Preparado para el desafío?</h3>
+            <p style="margin:0 0 18px;font-size:15px;color:#475569;line-height:1.5;">Pon a prueba tus conocimientos sobre este lugar. ¡Solo tienes una oportunidad!</p>
+            <button type="button" id="gc-start-challenge"
+                    style="padding:14px 32px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:background 0.2s,transform 0.2s;">
+                ¡Acepto el desafío!
+            </button>
+        </div>
+
+        <!-- Quiz (oculto hasta pulsar) -->
+        <div id="gc-quiz-panel" style="display:none;padding:20px;border:1px solid #dcdcde;border-radius:14px;background:#fff;">
             <h2 style="margin-top:0;">Pregunta del <?php echo esc_html($label); ?></h2>
             <p style="font-size:18px;line-height:1.5;"><strong><?php echo esc_html($enunciado); ?></strong></p>
 
@@ -297,6 +311,20 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
         const wrap = document.currentScript ? document.currentScript.previousElementSibling : null;
         if (!wrap) return;
 
+        const cta = wrap.querySelector('#gc-challenge-cta');
+        const panel = wrap.querySelector('#gc-quiz-panel');
+        const startBtn = wrap.querySelector('#gc-start-challenge');
+
+        // Revelar quiz al pulsar
+        if (startBtn && cta && panel) {
+            startBtn.addEventListener('click', function(){
+                cta.style.display = 'none';
+                panel.style.display = 'block';
+                panel.scrollIntoView({behavior:'smooth', block:'center'});
+                startedAt = Date.now();
+            });
+        }
+
         const stationId = parseInt(wrap.dataset.stationId, 10);
         const escenarioId = parseInt(wrap.dataset.escenarioId, 10);
         const pruebaId = parseInt(wrap.dataset.pruebaId, 10);
@@ -306,7 +334,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
 
         if (!form || !msg || !stationId || !pruebaId) return;
 
-        const startedAt = Date.now();
+        let startedAt = null;
 
         form.addEventListener('submit', async function(e){
             e.preventDefault();
