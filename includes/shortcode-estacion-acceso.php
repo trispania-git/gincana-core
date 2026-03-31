@@ -49,12 +49,16 @@ function gc_shortcode_estacion_acceso() {
 
     $descripcion = get_post_meta($station_id, 'gc_descripcion', true);
 
+    // Ocultar el título de la página WordPress ("acceso-estacion") y cambiar título del navegador
+    echo '<style>.entry-title, .page-title, .et_pb_post_title, .et_pb_title_container { display:none !important; }</style>';
+    echo '<script>document.title = ' . json_encode(esc_html($title) . ' — ' . esc_html($esc_title)) . ';</script>';
+
     echo '<div class="gc-station-access" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">';
 
     // Cabecera: escenario + nº estación + nombre
-    echo '<p style="margin:0 0 4px;font-size:13px;color:#64748b;font-weight:500;">' . esc_html($esc_title) . '</p>';
+    echo '<h3 style="margin:0 0 6px;font-size:18px;font-weight:600;color:#2563eb;line-height:1.3;">' . esc_html($esc_title) . '</h3>';
     echo '<h2 style="margin:0 0 8px;font-size:22px;font-weight:700;line-height:1.3;">';
-    if ($orden) echo '<span style="color:#2563eb;">' . $orden . '.</span> ';
+    if ($orden) echo '<span style="color:#64748b;">' . $orden . '.</span> ';
     echo esc_html($title) . '</h2>';
 
     echo gc_render_action_icons($audio, $maps_url);
