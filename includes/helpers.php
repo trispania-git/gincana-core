@@ -203,6 +203,35 @@ if ( ! function_exists('gc_show_points') ) {
 }
 
 /**
+ * Devuelve el tipo de QR de un escenario: 'enlace' o 'validacion'.
+ */
+if ( ! function_exists('gc_get_tipo_qr') ) {
+  function gc_get_tipo_qr($escenario_id) {
+    $val = get_post_meta((int)$escenario_id, 'gc_tipo_qr', true);
+    return in_array($val, ['enlace', 'validacion'], true) ? $val : 'enlace';
+  }
+}
+
+/**
+ * Devuelve la URL QR de una estación según el tipo de QR del escenario.
+ * - 'enlace': permalink de la estación
+ * - 'validacion': URL con token para validar presencia
+ */
+if ( ! function_exists('gc_get_qr_url') ) {
+  function gc_get_qr_url($station_id, $escenario_id = 0) {
+    if (!$escenario_id) {
+      $escenario_id = (int) get_post_meta((int)$station_id, 'gc_escenario_ref', true);
+    }
+    $tipo_qr = gc_get_tipo_qr($escenario_id);
+    if ($tipo_qr === 'enlace') {
+      return get_permalink((int)$station_id);
+    }
+    // validacion: URL con token
+    return function_exists('gc_get_station_entry_url') ? gc_get_station_entry_url((int)$station_id) : get_permalink((int)$station_id);
+  }
+}
+
+/**
  * Devuelve el label personalizado para "estacion" de un escenario.
  */
 if ( ! function_exists('gc_get_label_estacion') ) {

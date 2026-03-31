@@ -88,19 +88,28 @@ function gincana_core_render_qr_codes_page() {
       if (empty($stations)):
         echo '<div class="notice notice-warning"><p>Este escenario no tiene estaciones.</p></div>';
       else:
-        // Asegurar que todas tengan token QR
-        foreach ($stations as $sid) {
-          $token = get_post_meta((int)$sid, 'gc_qr_token', true);
-          if (empty($token) && function_exists('gc_generate_station_token')) {
-            $token = gc_generate_station_token((int)$sid);
-            update_post_meta((int)$sid, 'gc_qr_token', $token);
-            update_post_meta((int)$sid, 'gc_qr_url', gc_get_station_entry_url((int)$sid));
+        $tipo_qr = function_exists('gc_get_tipo_qr') ? gc_get_tipo_qr($selected_esc) : 'enlace';
+
+        // Asegurar que todas tengan token QR (necesario para modo validación)
+        if ($tipo_qr === 'validacion') {
+          foreach ($stations as $sid) {
+            $token = get_post_meta((int)$sid, 'gc_qr_token', true);
+            if (empty($token) && function_exists('gc_generate_station_token')) {
+              $token = gc_generate_station_token((int)$sid);
+              update_post_meta((int)$sid, 'gc_qr_token', $token);
+              update_post_meta((int)$sid, 'gc_qr_url', gc_get_station_entry_url((int)$sid));
+            }
           }
         }
+
+        $tipo_qr_label = ($tipo_qr === 'validacion') ? 'Validación (con token)' : 'Enlace directo';
     ?>
 
-      <div class="gc-qr-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h2 style="margin:0;"><?php echo esc_html($esc_title); ?> — <?php echo count($stations); ?> <?php echo esc_html($label); ?>s</h2>
+      <div class="gc-qr-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+        <div>
+          <h2 style="margin:0;"><?php echo esc_html($esc_title); ?> — <?php echo count($stations); ?> <?php echo esc_html($label); ?>s</h2>
+          <p style="margin:4px 0 0;font-size:13px;color:#64748b;">Tipo de QR: <strong><?php echo esc_html($tipo_qr_label); ?></strong></p>
+        </div>
         <button type="button" class="button button-primary" onclick="window.print();">🖨️ Imprimir QR</button>
       </div>
 
@@ -109,7 +118,7 @@ function gincana_core_render_qr_codes_page() {
           $sid   = (int) $sid;
           $order = (int) get_post_meta($sid, 'gc_orden', true);
           $title = get_the_title($sid) ?: ($label . ' ' . $order);
-          $qr_url = function_exists('gc_get_station_entry_url') ? gc_get_station_entry_url($sid) : '';
+          $qr_url = function_exists('gc_get_qr_url') ? gc_get_qr_url($sid, $selected_esc) : get_permalink($sid);
           $pista  = get_post_meta($sid, 'gc_pista_busqueda', true);
           // QR Server API (gratuita, sin dependencias)
           $qr_img = 'https://api.qrserver.com/v1/create-qr-code/?size=' . $qr_size . 'x' . $qr_size . '&data=' . urlencode($qr_url) . '&format=png&margin=8';

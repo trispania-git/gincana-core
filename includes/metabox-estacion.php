@@ -118,19 +118,34 @@ function gc_render_estacion_metabox($post) {
             </td>
         </tr>
 
+        <?php
+        $escenario_ref = (int) get_post_meta($post->ID, 'gc_escenario_ref', true);
+        $tipo_qr = ($escenario_ref && function_exists('gc_get_tipo_qr')) ? gc_get_tipo_qr($escenario_ref) : 'enlace';
+        $qr_url_final = ($tipo_qr === 'enlace') ? get_permalink($post->ID) : $qr_url;
+        ?>
+
+        <?php if ($tipo_qr === 'validacion'): ?>
         <tr>
             <th>Token QR</th>
             <td>
                 <code><?php echo esc_html($token); ?></code>
-                <p class="description">Se genera automáticamente y se usa para validar el acceso por QR.</p>
+                <p class="description">Se genera automáticamente. Se usa en modo "QR de validación".</p>
             </td>
         </tr>
+        <?php endif; ?>
 
         <tr>
             <th>URL QR</th>
             <td>
-                <input type="text" readonly value="<?php echo esc_attr($qr_url); ?>" style="width:100%;background:#f6f7f7;" />
-                <p class="description">Esta es la URL que debes convertir en QR.</p>
+                <input type="text" readonly value="<?php echo esc_attr($qr_url_final); ?>" style="width:100%;background:#f6f7f7;" />
+                <p class="description">
+                    <?php if ($tipo_qr === 'validacion'): ?>
+                        <strong>Modo validación:</strong> URL con token. El jugador debe escanear el QR in situ.
+                    <?php else: ?>
+                        <strong>Modo enlace:</strong> redirige a la página de la estación.
+                    <?php endif; ?>
+                    <br>Configurable desde el escenario (campo "Tipo de QR").
+                </p>
             </td>
         </tr>
 

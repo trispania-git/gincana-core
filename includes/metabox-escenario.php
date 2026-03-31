@@ -21,6 +21,7 @@ function gc_render_escenario_metabox($post) {
     wp_nonce_field('gc_save_escenario_meta', 'gc_escenario_nonce');
 
     $tipo            = get_post_meta($post->ID, 'gc_tipo_escenario', true) ?: 'adulto';
+    $tipo_qr         = get_post_meta($post->ID, 'gc_tipo_qr', true) ?: 'enlace';
     $mostrar_puntos  = get_post_meta($post->ID, 'gc_mostrar_puntos', true);
     if ($mostrar_puntos === '') $mostrar_puntos = '1'; // default activo
     $label_estacion  = get_post_meta($post->ID, 'gc_label_estacion', true);
@@ -41,6 +42,20 @@ function gc_render_escenario_metabox($post) {
                 <p class="description">
                     Adulto: el QR de cada estacion abre una pregunta tipo test.<br>
                     Infantil: el QR de cada estacion valida que ha sido encontrada.
+                </p>
+            </td>
+        </tr>
+
+        <tr>
+            <th><label for="gc_tipo_qr">Tipo de QR</label></th>
+            <td>
+                <select name="gc_tipo_qr" id="gc_tipo_qr">
+                    <option value="enlace" <?php selected($tipo_qr, 'enlace'); ?>>Enlace directo a la estación</option>
+                    <option value="validacion" <?php selected($tipo_qr, 'validacion'); ?>>Validación (requiere escanear QR in situ)</option>
+                </select>
+                <p class="description">
+                    <strong>Enlace:</strong> el QR lleva directamente a la página de la estación. Ideal para escenarios con pruebas (quiz).<br>
+                    <strong>Validación:</strong> el QR valida que el jugador está en el lugar. Ideal para escenarios de búsqueda (infantil).
                 </p>
             </td>
         </tr>
@@ -140,6 +155,9 @@ add_action('save_post', function ($post_id) {
     }
 
     update_post_meta($post_id, 'gc_tipo_escenario', $tipo);
+    $tipo_qr = sanitize_text_field($_POST['gc_tipo_qr'] ?? 'enlace');
+    if ( ! in_array($tipo_qr, ['enlace', 'validacion'], true) ) $tipo_qr = 'enlace';
+    update_post_meta($post_id, 'gc_tipo_qr', $tipo_qr);
     update_post_meta($post_id, 'gc_mostrar_puntos', isset($_POST['gc_mostrar_puntos']) ? '1' : '0');
     update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
     update_post_meta($post_id, 'gc_label_estacion_plural', sanitize_text_field($_POST['gc_label_estacion_plural'] ?? ''));
