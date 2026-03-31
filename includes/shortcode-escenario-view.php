@@ -359,6 +359,18 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     </div>
     <?php endif; ?>
 
+    <?php
+      $ranking_url = get_post_meta($escenario_id, 'gc_ranking_url', true);
+      if ($ranking_url):
+    ?>
+    <div style="text-align:center;margin-bottom:16px;">
+      <a href="<?php echo esc_url($ranking_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:2px solid #2563eb;border-radius:10px;color:#2563eb;text-decoration:none;font-weight:600;font-size:15px;transition:background 0.2s,color 0.2s;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15l-2 5l9-11h-5l2-5l-9 11h5z"/></svg>
+        Ver ranking
+      </a>
+    </div>
+    <?php endif; ?>
+
     <div class="gc-cards">
       <?php foreach ($est_ids as $i => $eid):
         $order  = (int) get_post_meta($eid, 'gc_orden', true) ?: ($i + 1);

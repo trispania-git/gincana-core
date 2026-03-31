@@ -102,6 +102,16 @@ function gc_render_escenario_metabox($post) {
         </tr>
 
         <tr>
+            <th><label for="gc_ranking_url">Página de ranking</label></th>
+            <td>
+                <input type="url" name="gc_ranking_url" id="gc_ranking_url"
+                       value="<?php echo esc_attr(get_post_meta($post->ID, 'gc_ranking_url', true)); ?>"
+                       placeholder="https://gymkanaonline.com/ranking-ulpiano/" style="width:100%;" />
+                <p class="description">URL de la página con el shortcode <code>[gincana_ranking]</code>. Si se rellena, aparece un enlace en la página del escenario.</p>
+            </td>
+        </tr>
+
+        <tr>
             <th><label for="gc_descripcion">Descripcion</label></th>
             <td>
                 <?php
@@ -162,6 +172,7 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
     update_post_meta($post_id, 'gc_label_estacion_plural', sanitize_text_field($_POST['gc_label_estacion_plural'] ?? ''));
     update_post_meta($post_id, 'gc_cta_texto', sanitize_text_field($_POST['gc_cta_texto'] ?? ''));
+    update_post_meta($post_id, 'gc_ranking_url', esc_url_raw($_POST['gc_ranking_url'] ?? ''));
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));
