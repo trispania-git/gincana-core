@@ -491,7 +491,6 @@ add_action('init', function(){
 
     // 3) Render tabla
     $current_user_id = get_current_user_id();
-    $title = $a['title'] !== '' ? sanitize_text_field($a['title']) : ('Ranking del escenario #'.$escenario_id);
 
     $inTop = false;
     if ($current_user_id) {
@@ -505,6 +504,8 @@ add_action('init', function(){
     $esc_url   = get_permalink($escenario_id);
 
     ob_start(); ?>
+    <style>.gincana-ranking-page .entry-title, .gincana-ranking-page .page-title, .gincana-ranking-page .et_pb_post_title { display:none !important; }</style>
+    <script>document.body.classList.add('gincana-ranking-page');</script>
     <div class="gincana-ranking et_pb_module" style="width:95%;max-width:760px;margin:0 auto;">
 
       <!-- Cabecera -->
