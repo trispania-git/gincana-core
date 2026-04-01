@@ -142,67 +142,83 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
         return ob_get_clean();
     }
 
+    // ¿Requiere prueba este escenario?
+    $requiere_prueba = get_post_meta($escenario_id, 'gc_requiere_prueba', true);
+    $con_prueba = ($requiere_prueba === '1');
+
     ob_start();
     ?>
-    <div class="gc-kids-station"
-         data-station-id="<?php echo esc_attr($station_id); ?>"
-         data-escenario-id="<?php echo esc_attr($escenario_id); ?>">
-
-        <div style="padding:24px 20px;border-radius:14px;background:#ecfdf3;border:2px solid #16a34a;text-align:center;">
-            <div style="margin-bottom:8px;"><img src="https://gymkanaonline.com/wp-content/uploads/2026/03/puerta_encontrada.png" alt="" style="width:80px;height:auto;" /></div>
-            <h2 style="margin:0 0 8px;color:#146c2e;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
-            <p style="margin:0 0 16px;font-size:15px;color:#334155;">
-                Has encontrado <strong><?php echo esc_html($title); ?></strong>.
-            </p>
-
-            <button type="button" id="gc-kids-complete-btn"
-                    style="width:100%;max-width:320px;padding:16px 24px;border:0;border-radius:12px;background:#16a34a;color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:transform 0.1s;">
-                ¡Completar <?php echo esc_html($label); ?>!
-            </button>
-
-            <div id="gc-kids-msg" style="margin-top:16px;"></div>
-            <a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:14px;font-size:14px;color:#64748b;text-decoration:underline;">← Volver al escenario</a>
-        </div>
+    <div style="padding:24px 20px;border-radius:14px;background:#ecfdf3;border:2px solid #16a34a;text-align:center;margin-bottom:<?php echo $con_prueba ? '16' : '0'; ?>px;">
+        <div style="margin-bottom:8px;"><img src="https://gymkanaonline.com/wp-content/uploads/2026/03/puerta_encontrada.png" alt="" style="width:80px;height:auto;" /></div>
+        <h2 style="margin:0 0 8px;color:#146c2e;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
+        <p style="margin:0;font-size:15px;color:#334155;">
+            Has encontrado <strong><?php echo esc_html($title); ?></strong>.
+        </p>
     </div>
 
-    <script>
-    (function(){
-        const wrap = document.currentScript ? document.currentScript.previousElementSibling : null;
-        if (!wrap) return;
-        const stationId = parseInt(wrap.dataset.stationId, 10);
-        const btn = wrap.querySelector('#gc-kids-complete-btn');
-        const msg = wrap.querySelector('#gc-kids-msg');
-        const nonce = (window.wpApiSettings && window.wpApiSettings.nonce) || window.gincanaNonce || '<?php echo esc_js($nonce); ?>';
-        if (!stationId || !btn || !msg) return;
+    <?php if ($con_prueba): ?>
+        <!-- Infantil + prueba: mostrar pregunta después del mensaje de encontrado -->
+        <?php echo gc_render_adulto_station($station_id, $title, $escenario_id); ?>
+    <?php else: ?>
+        <!-- Infantil sin prueba: botón directo de completar -->
+        <div class="gc-kids-station"
+             data-station-id="<?php echo esc_attr($station_id); ?>"
+             data-escenario-id="<?php echo esc_attr($escenario_id); ?>">
 
-        btn.addEventListener('click', async function(){
-            btn.disabled = true;
-            btn.textContent = 'Validando...';
-            try {
-                const res = await fetch('/wp-json/gincana/v1/progress/skip', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-                    credentials: 'same-origin',
-                    body: JSON.stringify({ estacion_id: stationId, time_ms: 0 })
-                });
-                const data = await res.json();
-                if (data && data.ok) {
-                    btn.style.display = 'none';
-                    msg.innerHTML = '<div style="padding:16px;border-radius:12px;background:#dcfce7;border:1px solid #16a34a;color:#146c2e;font-size:16px;font-weight:600;">✅ ¡<?php echo esc_html($label_uc); ?> completada!</div>'
-                        + '<a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:14px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
-                } else {
-                    msg.innerHTML = '<div style="padding:14px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">⚠️ No se pudo validar. Inténtalo de nuevo.</div>';
+            <div style="text-align:center;margin-top:16px;">
+                <button type="button" id="gc-kids-complete-btn"
+                        style="width:100%;max-width:320px;padding:16px 24px;border:0;border-radius:12px;background:#16a34a;color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:transform 0.1s;">
+                    ¡Completar <?php echo esc_html($label); ?>!
+                </button>
+
+                <div id="gc-kids-msg" style="margin-top:16px;"></div>
+                <a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:14px;font-size:14px;color:#64748b;text-decoration:underline;">← Volver al escenario</a>
+            </div>
+        </div>
+
+        <script>
+        (function(){
+            const wrap = document.querySelector('.gc-kids-station');
+            if (!wrap) return;
+            const stationId = parseInt(wrap.dataset.stationId, 10);
+            const btn = wrap.querySelector('#gc-kids-complete-btn');
+            const msg = wrap.querySelector('#gc-kids-msg');
+            const nonce = (window.wpApiSettings && window.wpApiSettings.nonce) || window.gincanaNonce || '<?php echo esc_js($nonce); ?>';
+            if (!stationId || !btn || !msg) return;
+
+            btn.addEventListener('click', async function(){
+                btn.disabled = true;
+                btn.textContent = 'Validando...';
+                try {
+                    const res = await fetch('/wp-json/gincana/v1/progress/skip', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ estacion_id: stationId, time_ms: 0 })
+                    });
+                    const data = await res.json();
+                    if (data && data.ok) {
+                        btn.style.display = 'none';
+                        msg.innerHTML = '<div style="padding:16px;border-radius:12px;background:#dcfce7;border:1px solid #16a34a;color:#146c2e;font-size:16px;font-weight:600;">✅ ¡<?php echo esc_html(mb_strtoupper(mb_substr($label, 0, 1)) . mb_substr($label, 1)); ?> completada!</div>'
+                            + '<a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:14px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
+                    } else {
+                        msg.innerHTML = '<div style="padding:14px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">No se pudo validar. Inténtalo de nuevo.</div>';
+                        btn.disabled = false;
+                        btn.textContent = '¡Completar <?php echo esc_js($label); ?>!';
+                    }
+                } catch (err) {
+                    msg.innerHTML = '<div style="padding:14px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">Error: ' + err.message + '</div>';
                     btn.disabled = false;
                     btn.textContent = '¡Completar <?php echo esc_js($label); ?>!';
                 }
-            } catch (err) {
-                msg.innerHTML = '<div style="padding:14px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">⚠️ Error: ' + err.message + '</div>';
-                btn.disabled = false;
-                btn.textContent = '¡Completar <?php echo esc_js($label); ?>!';
-            }
-        });
-    })();
-    </script>
+            });
+        })();
+        </script>
+    <?php endif; ?>
+
+    <div style="text-align:center;margin-top:12px;">
+        <a href="<?php echo esc_url($escenario_url); ?>" style="font-size:14px;color:#64748b;text-decoration:underline;">← Volver al escenario</a>
+    </div>
     <?php
     return ob_get_clean();
 }
@@ -530,11 +546,21 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         echo '</div>';
         echo '</div>';
     } else {
-        // Logueado: mostrar quiz o pista para buscar QR
+        // Logueado: mostrar contenido según tipo de escenario + prueba
+        $requiere_prueba = get_post_meta($escenario_id, 'gc_requiere_prueba', true);
+
         if ($tipo_escenario === 'infantil') {
+            // Infantil: siempre mostrar pista (buscar QR)
             echo gc_render_infantil_station_pista($station_id, $title, $escenario_id);
+            // Si también requiere prueba, mostrar el quiz debajo de la pista
+            if ($requiere_prueba === '1') {
+                echo gc_render_adulto_station($station_id, $title, $escenario_id);
+            }
         } else {
-            echo gc_render_adulto_station($station_id, $title, $escenario_id);
+            // Adulto: mostrar quiz si hay prueba
+            if ($requiere_prueba === '1' || $requiere_prueba === '') {
+                echo gc_render_adulto_station($station_id, $title, $escenario_id);
+            }
         }
     }
 
