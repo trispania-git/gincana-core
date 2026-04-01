@@ -170,7 +170,7 @@ function gincana_core_render_import_csv_page() {
   echo '<th scope="row"><label for="gincana_csv_file">Fichero CSV</label></th>';
   echo '<td>';
   echo '<input type="file" name="gincana_csv_file" id="gincana_csv_file" accept=".csv,text/csv" required />';
-  echo '<p class="description">Obligatorias: <code>station_slug, station_title, station_order</code>. Opcionales: test_slug, test_title (si se incluyen, se crean pruebas).</p>';
+  echo '<p class="description">Obligatorias: <code>station_title, station_order</code>. Opcionales: station_slug (se genera del titulo), test_slug, test_title (si se incluyen, se crean pruebas).</p>';
   echo '</td>';
   echo '</tr>';
 
@@ -192,7 +192,7 @@ castillo,Castillo,2,p2,Segunda prueba,texto,30,2,,texto,¿2+2?,,,,,,4,Texto cult
 
   echo '<h3>Campos de estacion</h3>';
   echo '<ul style="margin-left:18px;list-style:disc;">';
-  echo '<li><strong>Obligatorios:</strong> station_slug, station_title, station_order</li>';
+  echo '<li><strong>Obligatorios:</strong> station_title, station_order (station_slug se auto-genera del titulo si no se incluye)</li>';
   echo '<li><strong>Opcionales (prueba):</strong> test_slug, test_title, test_type, question_type, question_text, option_1..4, correct_option, correct_text, time_limit_s, max_attempts</li>';
   echo '<li><strong>Opcionales (estacion):</strong> block_hint, station_hint, station_description, station_maps_url, station_audio, station_img_1, station_img_2</li>';
   echo '<li><em>Si no incluyes test_slug y test_title, solo se crean/actualizan las estaciones sin pruebas.</em></li>';
@@ -264,13 +264,15 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
     return strtolower(trim((string)$h));
   }, $header);
 
-  $required = ['station_slug','station_title','station_order'];
+  $required = ['station_title','station_order'];
   foreach ($required as $req) {
     if ( ! in_array($req, $header, true) ) {
       $errors[] = 'Falta la columna obligatoria: '.$req;
     }
   }
-  $has_test_cols = in_array('test_slug', $header, true) && in_array('test_title', $header, true);
+  // Detectar si hay columnas de prueba (basta con question_text o test_title)
+  $has_test_cols = in_array('test_title', $header, true)
+                || in_array('question_text', $header, true);
 
   if ( ! empty($errors) ) {
     fclose($fh);
@@ -297,9 +299,14 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
     $test_slug     = gincana_core_csv_cell($row, $idx['test_slug']     ?? null);
     $test_title    = gincana_core_csv_cell($row, $idx['test_title']    ?? null);
 
-    if ( $station_slug === '' || $station_title === '' || $station_order === '' ) {
-      $errors[] = "Fila {$rows}: faltan datos obligatorios (station_slug, station_title, station_order).";
+    if ( $station_title === '' || $station_order === '' ) {
+      $errors[] = "Fila {$rows}: faltan datos obligatorios (station_title, station_order).";
       continue;
+    }
+
+    // Auto-generar slug del título si no viene
+    if ( $station_slug === '' ) {
+      $station_slug = sanitize_title($station_title);
     }
 
     $station_order_int = max(1, (int) $station_order);
@@ -370,6 +377,15 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
     }
 
     // ===== 2) PRUEBA (solo si hay datos de test) =====
+    // Auto-generar test_title y test_slug si no vienen pero hay pregunta
+    $question_text_check = gincana_core_csv_cell($row, $idx['question_text'] ?? null);
+    if ( $has_test_cols && $test_title === '' && $question_text_check !== '' ) {
+      $test_title = 'Prueba — ' . $station_title;
+    }
+    if ( $test_title !== '' && $test_slug === '' ) {
+      $test_slug = sanitize_title($test_title);
+    }
+
     if ( $has_test_cols && $test_slug !== '' && $test_title !== '' ) {
 
       $test_id = gincana_core_find_test_by_slug($test_slug);
