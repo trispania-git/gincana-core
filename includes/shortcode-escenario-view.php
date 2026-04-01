@@ -458,6 +458,164 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       </style>
       <?php endif; ?>
 
+      <?php
+      // === Panel de acción final (foto, etc.) ===
+      if ($user_id && $completed === $total && $total > 0):
+        $accion_final = gc_get_accion_final($escenario_id);
+
+        if ($accion_final === 'subir_foto'):
+          $foto_texto = gc_get_foto_texto($escenario_id);
+          $existing_photo_id = gc_user_has_final_photo($user_id, $escenario_id);
+          $nonce_foto = wp_create_nonce('wp_rest');
+      ?>
+      <div id="gc-foto-final" style="margin-top:8px;padding:24px 20px;border:2px solid #16a34a;border-radius:var(--gc-radius);background:linear-gradient(135deg,#f0fdf4,#dcfce7);text-align:center;">
+        <?php if ($existing_photo_id): ?>
+          <!-- Ya subió la foto -->
+          <div style="font-size:40px;margin-bottom:12px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <h3 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#14532d;">¡Aventura completada!</h3>
+          <p style="margin:0 0 16px;font-size:15px;color:#166534;">Tu foto ha sido registrada. ¡Enhorabuena!</p>
+          <img src="<?php echo esc_url(wp_get_attachment_image_url($existing_photo_id, 'medium')); ?>" alt="Tu foto final"
+               style="max-width:280px;width:100%;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);" />
+        <?php else: ?>
+          <!-- Pedir foto -->
+          <div style="font-size:40px;margin-bottom:12px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+          <h3 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#14532d;">¡Has completado todas las estaciones!</h3>
+          <p style="margin:0 0 18px;font-size:15px;color:#166534;line-height:1.5;"><?php echo esc_html($foto_texto); ?></p>
+
+          <div id="gc-foto-upload-area">
+            <label for="gc-foto-input" style="display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border:0;border-radius:12px;background:#16a34a;color:#fff;font-size:16px;font-weight:700;cursor:pointer;transition:background 0.2s;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Hacer foto
+            </label>
+            <input type="file" id="gc-foto-input" accept="image/*" capture="environment" style="display:none;" />
+          </div>
+
+          <!-- Preview + confirmar -->
+          <div id="gc-foto-preview" style="display:none;margin-top:16px;">
+            <img id="gc-foto-preview-img" src="" alt="Vista previa"
+                 style="max-width:280px;width:100%;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);margin-bottom:14px;" />
+            <div style="display:flex;gap:10px;justify-content:center;">
+              <button type="button" id="gc-foto-confirm"
+                      style="padding:12px 24px;border:0;border-radius:10px;background:#16a34a;color:#fff;font-size:15px;font-weight:600;cursor:pointer;">
+                Enviar foto
+              </button>
+              <button type="button" id="gc-foto-retry"
+                      style="padding:12px 24px;border:1px solid #d1d5db;border-radius:10px;background:#fff;color:#374151;font-size:15px;font-weight:600;cursor:pointer;">
+                Repetir
+              </button>
+            </div>
+          </div>
+
+          <!-- Mensaje de estado -->
+          <div id="gc-foto-msg" style="margin-top:14px;"></div>
+
+          <!-- Spinner -->
+          <div id="gc-foto-loading" style="display:none;margin-top:16px;">
+            <div style="display:inline-block;width:32px;height:32px;border:3px solid #d1fae5;border-top-color:#16a34a;border-radius:50%;animation:gc-spin 0.7s linear infinite;"></div>
+            <p style="margin:8px 0 0;font-size:14px;color:#166534;">Subiendo foto...</p>
+          </div>
+          <style>@keyframes gc-spin { to { transform: rotate(360deg); } }</style>
+
+          <script>
+          (function(){
+            var input = document.getElementById('gc-foto-input');
+            var preview = document.getElementById('gc-foto-preview');
+            var previewImg = document.getElementById('gc-foto-preview-img');
+            var uploadArea = document.getElementById('gc-foto-upload-area');
+            var confirmBtn = document.getElementById('gc-foto-confirm');
+            var retryBtn = document.getElementById('gc-foto-retry');
+            var msg = document.getElementById('gc-foto-msg');
+            var loading = document.getElementById('gc-foto-loading');
+            var selectedFile = null;
+
+            if (!input) return;
+
+            input.addEventListener('change', function(){
+              if (!this.files || !this.files[0]) return;
+              selectedFile = this.files[0];
+              var reader = new FileReader();
+              reader.onload = function(e){
+                previewImg.src = e.target.result;
+                uploadArea.style.display = 'none';
+                preview.style.display = 'block';
+                msg.innerHTML = '';
+              };
+              reader.readAsDataURL(selectedFile);
+            });
+
+            retryBtn.addEventListener('click', function(){
+              selectedFile = null;
+              preview.style.display = 'none';
+              uploadArea.style.display = 'block';
+              input.value = '';
+            });
+
+            confirmBtn.addEventListener('click', async function(){
+              if (!selectedFile) return;
+
+              confirmBtn.disabled = true;
+              retryBtn.style.display = 'none';
+              loading.style.display = 'block';
+              msg.innerHTML = '';
+
+              var formData = new FormData();
+              formData.append('photo', selectedFile);
+              formData.append('escenario_id', '<?php echo (int)$escenario_id; ?>');
+
+              try {
+                var nonce = (window.wpApiSettings && window.wpApiSettings.nonce) || window.gincanaNonce || '<?php echo esc_js($nonce_foto); ?>';
+                var res = await fetch('/wp-json/gincana/v1/photo/upload', {
+                  method: 'POST',
+                  headers: { 'X-WP-Nonce': nonce },
+                  credentials: 'same-origin',
+                  body: formData
+                });
+
+                var data = await res.json();
+                loading.style.display = 'none';
+
+                if (data && data.ok) {
+                  preview.style.display = 'none';
+                  document.getElementById('gc-foto-final').innerHTML =
+                    '<div style="font-size:40px;margin-bottom:12px;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>' +
+                    '<h3 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#14532d;">¡Aventura completada!</h3>' +
+                    '<p style="margin:0 0 16px;font-size:15px;color:#166534;">Tu foto ha sido registrada. ¡Enhorabuena!</p>' +
+                    '<img src="' + (data.thumbnail_url || previewImg.src) + '" style="max-width:280px;width:100%;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);" />';
+                } else {
+                  msg.innerHTML = '<div style="padding:12px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;">Error: ' + (data.error || 'No se pudo subir la foto') + '</div>';
+                  confirmBtn.disabled = false;
+                  retryBtn.style.display = '';
+                }
+              } catch(err) {
+                loading.style.display = 'none';
+                msg.innerHTML = '<div style="padding:12px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;">Error de conexión: ' + err.message + '</div>';
+                confirmBtn.disabled = false;
+                retryBtn.style.display = '';
+              }
+            });
+          })();
+          </script>
+        <?php endif; ?>
+      </div>
+
+      <?php elseif ($accion_final === 'ninguna' && $completed === $total && $total > 0): ?>
+        <!-- Completado sin acción final -->
+        <div style="margin-top:8px;padding:20px;border:2px solid #16a34a;border-radius:var(--gc-radius);background:linear-gradient(135deg,#f0fdf4,#dcfce7);text-align:center;">
+          <div style="font-size:40px;margin-bottom:8px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <h3 style="margin:0 0 4px;font-size:20px;font-weight:700;color:#14532d;">¡Enhorabuena!</h3>
+          <p style="margin:0;font-size:15px;color:#166534;">Has completado todas <?php echo esc_html($label_estacion_plural); ?>.</p>
+        </div>
+      <?php
+        endif;
+      endif;
+      ?>
+
     </div>
   </div>
 

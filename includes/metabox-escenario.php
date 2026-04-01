@@ -72,6 +72,48 @@ function gc_render_escenario_metabox($post) {
         </tr>
 
         <tr>
+            <th><label for="gc_requiere_prueba">Prueba en cada estación</label></th>
+            <td>
+                <?php $requiere_prueba = get_post_meta($post->ID, 'gc_requiere_prueba', true); if ($requiere_prueba === '') $requiere_prueba = '1'; ?>
+                <label style="display:inline-flex;gap:8px;align-items:center;">
+                    <input type="checkbox" name="gc_requiere_prueba" value="1" <?php checked($requiere_prueba, '1'); ?> />
+                    <span>Cada estación tiene una prueba/pregunta que resolver</span>
+                </label>
+                <p class="description">Si se desactiva, las estaciones se completan sin pregunta (ej: escenarios infantiles donde solo hay que encontrar el QR).</p>
+            </td>
+        </tr>
+
+        <tr>
+            <th><label for="gc_accion_final">Acción al completar</label></th>
+            <td>
+                <?php $accion_final = get_post_meta($post->ID, 'gc_accion_final', true) ?: 'ninguna'; ?>
+                <select name="gc_accion_final" id="gc_accion_final">
+                    <option value="ninguna" <?php selected($accion_final, 'ninguna'); ?>>Ninguna — solo mensaje de enhorabuena</option>
+                    <option value="subir_foto" <?php selected($accion_final, 'subir_foto'); ?>>Subir foto — el jugador debe hacer una foto para completar</option>
+                </select>
+                <p class="description">Acción que se pide al jugador tras completar todas las estaciones. Se puede ampliar en el futuro (vídeo, formulario, etc.).</p>
+            </td>
+        </tr>
+
+        <tr id="gc_foto_texto_row" style="<?php echo $accion_final !== 'subir_foto' ? 'display:none;' : ''; ?>">
+            <th><label for="gc_foto_texto">Texto para la foto</label></th>
+            <td>
+                <?php $foto_texto = get_post_meta($post->ID, 'gc_foto_texto', true); ?>
+                <input type="text" name="gc_foto_texto" id="gc_foto_texto"
+                       value="<?php echo esc_attr($foto_texto); ?>"
+                       placeholder="¡Hazte una foto en la plaza para completar la aventura!" style="width:100%;" />
+                <p class="description">Mensaje motivacional que verá el jugador cuando deba subir su foto.</p>
+            </td>
+        </tr>
+        <script>
+        document.getElementById('gc_accion_final').addEventListener('change', function(){
+            document.getElementById('gc_foto_texto_row').style.display = this.value === 'subir_foto' ? '' : 'none';
+        });
+        </script>
+
+        <tr><th colspan="2"><hr style="margin:8px 0;"><strong style="font-size:14px;">Personalización</strong></th></tr>
+
+        <tr>
             <th><label for="gc_label_estacion">Nombre de las paradas (singular)</label></th>
             <td>
                 <input type="text" name="gc_label_estacion" id="gc_label_estacion"
@@ -169,6 +211,13 @@ add_action('save_post', function ($post_id) {
     if ( ! in_array($tipo_qr, ['enlace', 'validacion'], true) ) $tipo_qr = 'enlace';
     update_post_meta($post_id, 'gc_tipo_qr', $tipo_qr);
     update_post_meta($post_id, 'gc_mostrar_puntos', isset($_POST['gc_mostrar_puntos']) ? '1' : '0');
+    update_post_meta($post_id, 'gc_requiere_prueba', isset($_POST['gc_requiere_prueba']) ? '1' : '0');
+
+    $accion_final = sanitize_text_field($_POST['gc_accion_final'] ?? 'ninguna');
+    if (!in_array($accion_final, ['ninguna', 'subir_foto'], true)) $accion_final = 'ninguna';
+    update_post_meta($post_id, 'gc_accion_final', $accion_final);
+    update_post_meta($post_id, 'gc_foto_texto', sanitize_text_field($_POST['gc_foto_texto'] ?? ''));
+
     update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
     update_post_meta($post_id, 'gc_label_estacion_plural', sanitize_text_field($_POST['gc_label_estacion_plural'] ?? ''));
     update_post_meta($post_id, 'gc_cta_texto', sanitize_text_field($_POST['gc_cta_texto'] ?? ''));

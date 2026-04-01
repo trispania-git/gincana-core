@@ -232,4 +232,104 @@ add_action('rest_api_init', function(){
     }
   ]);
 
+  // =========================================================
+  // POST /wp-json/gincana/v1/photo/upload
+  // Sube la foto final del jugador para un escenario
+  // =========================================================
+  register_rest_route('gincana/v1','/photo/upload',[
+    'methods'  => 'POST',
+    'permission_callback' => function(){ return is_user_logged_in(); },
+    'callback' => function(WP_REST_Request $req){
+      $user_id      = get_current_user_id();
+      $escenario_id = (int) $req->get_param('escenario_id');
+
+      if (!$escenario_id) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'missing_escenario_id'], 400);
+      }
+
+      // Verificar que el escenario requiere foto
+      $accion = get_post_meta($escenario_id, 'gc_accion_final', true);
+      if ($accion !== 'subir_foto') {
+        return new WP_REST_Response(['ok'=>false,'error'=>'foto_not_required'], 400);
+      }
+
+      // Verificar que ya completó todas las estaciones
+      global $wpdb;
+      $progress_table = $wpdb->prefix . 'gincana_user_progress';
+
+      $total_est = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->posts} p
+         INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'gc_escenario_ref' AND pm.meta_value = %d
+         WHERE p.post_type = 'estacion' AND p.post_status = 'publish'",
+        $escenario_id
+      ));
+
+      $completed = (int) $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $progress_table WHERE user_id = %d AND escenario_id = %d AND status = 'passed'",
+        $user_id, $escenario_id
+      ));
+
+      if ($completed < $total_est) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'not_all_completed','completed'=>$completed,'total'=>$total_est], 400);
+      }
+
+      // Verificar que no haya subido foto ya
+      if (function_exists('gc_user_has_final_photo') && gc_user_has_final_photo($user_id, $escenario_id)) {
+        return new WP_REST_Response(['ok'=>true,'already_uploaded'=>true], 200);
+      }
+
+      // Procesar la foto
+      $files = $req->get_file_params();
+      if (empty($files['photo'])) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'no_file'], 400);
+      }
+
+      $file = $files['photo'];
+
+      // Validar tipo
+      $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+      if (!in_array($file['type'], $allowed, true)) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'invalid_type','allowed'=>$allowed], 400);
+      }
+
+      // Validar tamaño (max 10MB)
+      if ($file['size'] > 10 * 1024 * 1024) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'file_too_large','max_mb'=>10], 400);
+      }
+
+      require_once ABSPATH . 'wp-admin/includes/image.php';
+      require_once ABSPATH . 'wp-admin/includes/file.php';
+      require_once ABSPATH . 'wp-admin/includes/media.php';
+
+      // Subir a media library
+      $user = get_user_by('id', $user_id);
+      $esc_title = get_the_title($escenario_id);
+      $display_name = $user ? $user->display_name : 'Usuario ' . $user_id;
+
+      $_FILES['photo'] = $file;
+      $attachment_id = media_handle_upload('photo', 0, [
+        'post_title' => 'Foto final — ' . $display_name . ' — ' . $esc_title,
+      ]);
+
+      if (is_wp_error($attachment_id)) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'upload_failed','message'=>$attachment_id->get_error_message()], 500);
+      }
+
+      // Marcar con meta para identificar
+      update_post_meta($attachment_id, '_gc_foto_final_escenario', (int)$escenario_id);
+      update_post_meta($attachment_id, '_gc_foto_final_user', (int)$user_id);
+
+      // Asignar autor
+      wp_update_post(['ID' => $attachment_id, 'post_author' => $user_id]);
+
+      $thumb_url = wp_get_attachment_image_url($attachment_id, 'medium');
+
+      return new WP_REST_Response([
+        'ok'            => true,
+        'attachment_id'  => $attachment_id,
+        'thumbnail_url'  => $thumb_url,
+      ], 200);
+    }
+  ]);
+
 });

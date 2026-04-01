@@ -264,6 +264,44 @@ if ( ! function_exists('gc_get_cta_texto') ) {
 }
 
 /**
+ * Devuelve la acción final del escenario: 'ninguna', 'subir_foto', etc.
+ */
+if ( ! function_exists('gc_get_accion_final') ) {
+  function gc_get_accion_final($escenario_id) {
+    $val = get_post_meta((int)$escenario_id, 'gc_accion_final', true);
+    return $val ?: 'ninguna';
+  }
+}
+
+/**
+ * Devuelve el texto motivacional para la foto final.
+ */
+if ( ! function_exists('gc_get_foto_texto') ) {
+  function gc_get_foto_texto($escenario_id) {
+    $txt = get_post_meta((int)$escenario_id, 'gc_foto_texto', true);
+    return $txt ?: '¡Hazte una foto para completar la aventura!';
+  }
+}
+
+/**
+ * Comprueba si el usuario ya subió su foto final para un escenario.
+ */
+if ( ! function_exists('gc_user_has_final_photo') ) {
+  function gc_user_has_final_photo($user_id, $escenario_id) {
+    $photos = get_posts([
+      'post_type'      => 'attachment',
+      'post_status'    => 'inherit',
+      'posts_per_page' => 1,
+      'author'         => (int)$user_id,
+      'meta_query'     => [['key' => '_gc_foto_final_escenario', 'value' => (int)$escenario_id]],
+      'fields'         => 'ids',
+      'no_found_rows'  => true,
+    ]);
+    return !empty($photos) ? (int)$photos[0] : 0;
+  }
+}
+
+/**
  * Renderiza la barra de iconos de una estacion (audio + ubicacion).
  * Devuelve HTML. Usa SVGs inline para evitar dependencias.
  */
