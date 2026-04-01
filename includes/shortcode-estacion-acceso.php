@@ -83,13 +83,23 @@ function gc_shortcode_estacion_acceso() {
             echo gc_render_infantil_station_qr($station_id, $title, $escenario_id);
         }
     } else {
-        // Adulto: comprobar si requiere prueba
-        $requiere_prueba = get_post_meta($escenario_id, 'gc_requiere_prueba', true);
-        if ($requiere_prueba === '1') {
+        // Adulto: acceso via QR — depende del tipo de QR
+        $tipo_qr = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';
+
+        if ($tipo_qr === 'validacion_quiz') {
+            // QR valida mediante quiz
             echo gc_render_adulto_station($station_id, $title, $escenario_id);
-        } else {
-            // Adulto sin prueba: botón directo de completar (como QR validación)
+        } elseif ($tipo_qr === 'validacion_boton' || $tipo_qr === 'validacion') {
+            // QR valida con botón (presencia)
             echo gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id);
+        } else {
+            // QR = enlace: depende de si requiere prueba
+            $requiere_prueba = get_post_meta($escenario_id, 'gc_requiere_prueba', true);
+            if ($requiere_prueba === '1') {
+                echo gc_render_adulto_station($station_id, $title, $escenario_id);
+            } else {
+                echo gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id);
+            }
         }
     }
 
@@ -665,8 +675,8 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         $tipo_qr = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';
         $requiere_prueba = get_post_meta($escenario_id, 'gc_requiere_prueba', true);
 
-        if ($tipo_qr === 'validacion') {
-            // QR obligatorio: solo mostrar pista para buscar el QR
+        if ($tipo_qr === 'validacion_boton' || $tipo_qr === 'validacion_quiz' || $tipo_qr === 'validacion') {
+            // QR obligatorio (botón o quiz): solo mostrar pista para buscar el QR
             echo gc_render_infantil_station_pista($station_id, $title, $escenario_id);
         } else {
             // QR como enlace: mostrar quiz/completar directamente

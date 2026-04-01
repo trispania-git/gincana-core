@@ -203,19 +203,21 @@ if ( ! function_exists('gc_show_points') ) {
 }
 
 /**
- * Devuelve el tipo de QR de un escenario: 'enlace' o 'validacion'.
+ * Devuelve el tipo de QR de un escenario: 'enlace', 'validacion_boton' o 'validacion_quiz'.
+ * Compatibilidad: el antiguo 'validacion' se trata como 'validacion_boton'.
  */
 if ( ! function_exists('gc_get_tipo_qr') ) {
   function gc_get_tipo_qr($escenario_id) {
     $val = get_post_meta((int)$escenario_id, 'gc_tipo_qr', true);
-    return in_array($val, ['enlace', 'validacion'], true) ? $val : 'enlace';
+    if ($val === 'validacion') $val = 'validacion_boton'; // migración automática
+    return in_array($val, ['enlace', 'validacion_boton', 'validacion_quiz'], true) ? $val : 'enlace';
   }
 }
 
 /**
  * Devuelve la URL QR de una estación según el tipo de QR del escenario.
  * - 'enlace': permalink de la estación
- * - 'validacion': URL con token para validar presencia
+ * - 'validacion_boton' / 'validacion_quiz': URL con token para validar
  */
 if ( ! function_exists('gc_get_qr_url') ) {
   function gc_get_qr_url($station_id, $escenario_id = 0) {
@@ -226,7 +228,7 @@ if ( ! function_exists('gc_get_qr_url') ) {
     if ($tipo_qr === 'enlace') {
       return get_permalink((int)$station_id);
     }
-    // validacion: URL con token
+    // validacion_boton o validacion_quiz: URL con token
     return function_exists('gc_get_station_entry_url') ? gc_get_station_entry_url((int)$station_id) : get_permalink((int)$station_id);
   }
 }

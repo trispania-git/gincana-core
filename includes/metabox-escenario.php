@@ -185,12 +185,19 @@ function gc_render_escenario_metabox($post) {
                     <div class="gc-wiz-card-title">QR = Enlace directo</div>
                     <div class="gc-wiz-card-desc">El QR lleva a la pagina de la estacion</div>
                 </div>
-                <div class="gc-wiz-card <?php echo $tipo_qr === 'validacion' ? 'selected' : ''; ?>" data-value="validacion" data-field="gc_tipo_qr">
+                <div class="gc-wiz-card <?php echo $tipo_qr === 'validacion_boton' ? 'selected' : ''; ?>" data-value="validacion_boton" data-field="gc_tipo_qr">
                     <div class="gc-wiz-card-icon">
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     </div>
-                    <div class="gc-wiz-card-title">QR = Validacion</div>
-                    <div class="gc-wiz-card-desc">El QR valida presencia in situ</div>
+                    <div class="gc-wiz-card-title">QR = Validacion (boton)</div>
+                    <div class="gc-wiz-card-desc">El QR valida presencia con un boton de confirmar</div>
+                </div>
+                <div class="gc-wiz-card <?php echo $tipo_qr === 'validacion_quiz' ? 'selected' : ''; ?>" data-value="validacion_quiz" data-field="gc_tipo_qr">
+                    <div class="gc-wiz-card-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <div class="gc-wiz-card-title">QR = Validacion (quiz)</div>
+                    <div class="gc-wiz-card-desc">El QR lleva a una pregunta que valida la estacion</div>
                 </div>
             </div>
             <input type="hidden" name="gc_tipo_qr" id="gc_tipo_qr" value="<?php echo esc_attr($tipo_qr); ?>" />
@@ -443,16 +450,16 @@ function gc_render_escenario_metabox($post) {
                 document.getElementById('gc_tipo_escenario').value = val;
                 // Presets inteligentes
                 if (val === 'infantil') {
-                    document.getElementById('gc_tipo_qr').value = 'validacion';
+                    document.getElementById('gc_tipo_qr').value = 'validacion_boton';
                     document.getElementById('gc_requiere_prueba').checked = false;
                     document.getElementById('gc_mostrar_puntos').checked = false;
-                    updateQrCards('validacion');
+                    updateQrCards('validacion_boton');
                     document.getElementById('gc-origen-preguntas-section').style.display = 'none';
                 } else {
-                    document.getElementById('gc_tipo_qr').value = 'enlace';
+                    document.getElementById('gc_tipo_qr').value = 'validacion_quiz';
                     document.getElementById('gc_requiere_prueba').checked = true;
                     document.getElementById('gc_mostrar_puntos').checked = true;
-                    updateQrCards('enlace');
+                    updateQrCards('validacion_quiz');
                     document.getElementById('gc-origen-preguntas-section').style.display = '';
                 }
             });
@@ -469,7 +476,16 @@ function gc_render_escenario_metabox($post) {
             card.addEventListener('click', function() {
                 wizard.querySelectorAll('[data-field="gc_tipo_qr"]').forEach(function(c) { c.classList.remove('selected'); });
                 this.classList.add('selected');
-                document.getElementById('gc_tipo_qr').value = this.dataset.value;
+                var val = this.dataset.value;
+                document.getElementById('gc_tipo_qr').value = val;
+                // validacion_quiz requiere prueba obligatoriamente
+                if (val === 'validacion_quiz') {
+                    document.getElementById('gc_requiere_prueba').checked = true;
+                    document.getElementById('gc-origen-preguntas-section').style.display = '';
+                } else if (val === 'validacion_boton') {
+                    document.getElementById('gc_requiere_prueba').checked = false;
+                    document.getElementById('gc-origen-preguntas-section').style.display = 'none';
+                }
             });
         });
 
