@@ -209,8 +209,8 @@ function gc_render_escenario_metabox($post) {
                 <input type="checkbox" name="gc_mostrar_puntos" value="1" id="gc_mostrar_puntos" <?php checked($mostrar_puntos, '1'); ?> />
                 <span class="gc-switch"></span>
                 <div>
-                    <div class="gc-toggle-label">Mostrar puntuacion a los jugadores</div>
-                    <div class="gc-toggle-desc">Desactiva para escenarios sin sistema de puntos</div>
+                    <div class="gc-toggle-label">Gamificacion (puntos y ranking)</div>
+                    <div class="gc-toggle-desc">Desactiva para escenarios sin puntuacion ni clasificacion</div>
                 </div>
             </label>
 
