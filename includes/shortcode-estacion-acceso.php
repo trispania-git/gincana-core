@@ -127,7 +127,7 @@ function gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id)
         ob_start();
         ?>
         <div style="padding:24px 20px;border-radius:14px;background:#eff6ff;border:2px solid #2563eb;text-align:center;">
-            <div style="font-size:48px;margin-bottom:8px;">📍</div>
+            <div style="margin-bottom:8px;"><?php echo gc_get_img_encontrada($escenario_id); ?></div>
             <h2 style="margin:0 0 8px;color:#1e40af;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
             <p style="margin:0 0 16px;font-size:15px;color:#334155;">
                 Has llegado a <strong><?php echo esc_html($title); ?></strong>. Inicia sesión para validarla.
@@ -161,7 +161,7 @@ function gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id)
          data-station-id="<?php echo esc_attr($station_id); ?>"
          data-escenario-id="<?php echo esc_attr($escenario_id); ?>"
          style="padding:24px 20px;border-radius:14px;background:#eff6ff;border:2px solid #2563eb;text-align:center;">
-        <div style="font-size:48px;margin-bottom:8px;">📍</div>
+        <div style="margin-bottom:8px;"><?php echo gc_get_img_encontrada($escenario_id); ?></div>
         <h2 style="margin:0 0 8px;color:#1e40af;">¡Has llegado a <?php echo esc_html($title); ?>!</h2>
         <p style="margin:0 0 16px;font-size:15px;color:#334155;">
             Pulsa el botón para validar esta <?php echo esc_html($label); ?>.
@@ -229,7 +229,7 @@ function gc_render_infantil_station_qr_no_login($station_id, $title, $escenario_
     ob_start();
     ?>
     <div style="padding:24px 20px;border-radius:14px;background:#ecfdf3;border:2px solid #16a34a;text-align:center;">
-        <div style="margin-bottom:8px;"><img src="https://gymkanaonline.com/wp-content/uploads/2026/03/puerta_encontrada.png" alt="" style="width:80px;height:auto;" /></div>
+        <div style="margin-bottom:8px;"><?php echo gc_get_img_encontrada($escenario_id); ?></div>
         <h2 style="margin:0 0 8px;color:#146c2e;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
         <p style="margin:0 0 16px;font-size:15px;color:#334155;">
             Has encontrado <strong><?php echo esc_html($title); ?></strong>, pero necesitas iniciar sesión para validarla y acumular puntos.
@@ -274,7 +274,7 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
     ob_start();
     ?>
     <div style="padding:24px 20px;border-radius:14px;background:#ecfdf3;border:2px solid #16a34a;text-align:center;margin-bottom:<?php echo $con_prueba ? '16' : '0'; ?>px;">
-        <div style="margin-bottom:8px;"><img src="https://gymkanaonline.com/wp-content/uploads/2026/03/puerta_encontrada.png" alt="" style="width:80px;height:auto;" /></div>
+        <div style="margin-bottom:8px;"><?php echo gc_get_img_encontrada($escenario_id); ?></div>
         <h2 style="margin:0 0 8px;color:#146c2e;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
         <p style="margin:0;font-size:15px;color:#334155;">
             Has encontrado <strong><?php echo esc_html($title); ?></strong>.

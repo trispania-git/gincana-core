@@ -39,6 +39,7 @@ function gc_render_escenario_metabox($post) {
     $audio           = get_post_meta($post->ID, 'gc_audio', true);
     $img1            = get_post_meta($post->ID, 'gc_img_1', true);
     $img2            = get_post_meta($post->ID, 'gc_img_2', true);
+    $img_encontrada  = get_post_meta($post->ID, 'gc_img_encontrada', true);
     ?>
 
     <style>
@@ -392,6 +393,12 @@ function gc_render_escenario_metabox($post) {
                 </div>
             </div>
 
+            <div class="gc-wiz-field" style="margin-top:16px;">
+                <label>Imagen de estacion encontrada</label>
+                <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Se muestra al escanear un QR de validacion. Si no se sube ninguna, se usa un icono por defecto.</p>
+                <?php gc_render_media_field('gc_img_encontrada', $img_encontrada, 'image', 'Seleccionar imagen'); ?>
+            </div>
+
             <div class="gc-wiz-nav">
                 <button type="button" class="gc-wiz-btn gc-wiz-btn-prev" data-prev="4">&larr; Anterior</button>
                 <div style="font-size:13px;color:#64748b;display:flex;align-items:center;gap:6px;">
@@ -566,6 +573,7 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));
     update_post_meta($post_id, 'gc_img_2', esc_url_raw($_POST['gc_img_2'] ?? ''));
+    update_post_meta($post_id, 'gc_img_encontrada', esc_url_raw($_POST['gc_img_encontrada'] ?? ''));
 
     // Auto-crear página de ranking si no existe
     gc_maybe_create_ranking_page($post_id);

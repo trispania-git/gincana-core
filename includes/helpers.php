@@ -234,6 +234,20 @@ if ( ! function_exists('gc_get_qr_url') ) {
 }
 
 /**
+ * Devuelve el HTML de imagen de "estación encontrada" para un escenario.
+ * Si el escenario tiene gc_img_encontrada, usa esa. Si no, un icono por defecto.
+ */
+if ( ! function_exists('gc_get_img_encontrada') ) {
+  function gc_get_img_encontrada($escenario_id, $size = 80) {
+    $url = get_post_meta((int)$escenario_id, 'gc_img_encontrada', true);
+    if ($url) {
+      return '<img src="' . esc_url($url) . '" alt="" style="width:' . (int)$size . 'px;height:auto;" />';
+    }
+    return '<span style="font-size:' . (int)$size . 'px;line-height:1;">📍</span>';
+  }
+}
+
+/**
  * Devuelve el label personalizado para "estacion" de un escenario.
  */
 if ( ! function_exists('gc_get_label_estacion') ) {
