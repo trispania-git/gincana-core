@@ -31,7 +31,38 @@ function gc_render_prueba_metabox($post) {
 
     if (!is_array($preguntas)) $preguntas = [];
     ?>
+    <?php
+    // Detectar si esta prueba se usa como pool en algún escenario
+    $pool_escenarios = get_posts([
+        'post_type'      => 'escenario',
+        'post_status'    => 'any',
+        'posts_per_page' => -1,
+        'meta_query'     => [['key' => 'gc_pool_prueba_ref', 'value' => $post->ID, 'compare' => '=']],
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+    ]);
+    $is_pool = !empty($pool_escenarios);
+    ?>
+
+    <?php if ($is_pool): ?>
+    <div style="padding:14px 16px;border-radius:10px;background:#f5f3ff;border:1px solid #c4b5fd;margin-bottom:16px;display:flex;gap:10px;align-items:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 12l-4-4-4 4"/><path d="M12 16V8"/></svg>
+        <div>
+            <strong style="color:#5b21b6;">Esta prueba se usa como pool aleatorio</strong>
+            <div style="font-size:12px;color:#6d28d9;margin-top:2px;">
+                Escenario<?php echo count($pool_escenarios) > 1 ? 's' : ''; ?>:
+                <?php
+                foreach ($pool_escenarios as $pe_id) {
+                    echo '<a href="' . esc_url(get_edit_post_link($pe_id)) . '">' . esc_html(get_the_title($pe_id)) . '</a> ';
+                }
+                ?>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <table class="form-table">
+        <?php if (!$is_pool): ?>
         <tr>
             <th><label>Estacion enlazada</label></th>
             <td>
@@ -40,10 +71,11 @@ function gc_render_prueba_metabox($post) {
                         <?php echo esc_html(get_the_title((int)$estacion_ref) ?: '#'.$estacion_ref); ?>
                     </a>
                 <?php else: ?>
-                    <span style="color:#999;">Sin estacion enlazada</span>
+                    <span style="color:#999;">Sin estacion enlazada — puede usarse como pool desde un escenario</span>
                 <?php endif; ?>
             </td>
         </tr>
+        <?php endif; ?>
         <tr>
             <th><label for="gc_tipo">Tipo de prueba</label></th>
             <td>
