@@ -538,7 +538,7 @@ add_action('save_post', function ($post_id) {
 
     update_post_meta($post_id, 'gc_tipo_escenario', $tipo);
     $tipo_qr = sanitize_text_field($_POST['gc_tipo_qr'] ?? 'enlace');
-    if ( ! in_array($tipo_qr, ['enlace', 'validacion'], true) ) $tipo_qr = 'enlace';
+    if ( ! in_array($tipo_qr, ['enlace', 'validacion_boton', 'validacion_quiz'], true) ) $tipo_qr = 'enlace';
     update_post_meta($post_id, 'gc_tipo_qr', $tipo_qr);
     update_post_meta($post_id, 'gc_mostrar_puntos', isset($_POST['gc_mostrar_puntos']) ? '1' : '0');
     update_post_meta($post_id, 'gc_requiere_prueba', isset($_POST['gc_requiere_prueba']) ? '1' : '0');
