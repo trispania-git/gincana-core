@@ -234,20 +234,40 @@ function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
 }
 
 function gc_render_adulto_station($station_id, $title, $escenario_id) {
-    $test_id = (int) get_post_meta($station_id, 'gc_prueba_ref', true);
     $label   = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
+    $user_id = get_current_user_id();
 
-    if ($test_id <= 0) {
-        return gc_station_wrap_message('Este ' . $label . ' no tiene una prueba enlazada.', 'error');
+    // Determinar origen de la pregunta: por estación o pool
+    $origen = function_exists('gc_get_origen_preguntas') ? gc_get_origen_preguntas($escenario_id) : 'por_estacion';
+
+    $test_id   = 0;
+    $pregunta  = null;
+    $q_index   = 0;
+
+    if ($origen === 'pool' && function_exists('gc_get_pool_question')) {
+        // Pool aleatorio
+        $pool_data = gc_get_pool_question($user_id, $escenario_id, $station_id);
+        if ($pool_data) {
+            $test_id  = $pool_data['prueba_id'];
+            $pregunta = $pool_data['pregunta'];
+            $q_index  = $pool_data['index'];
+        }
+    } else {
+        // Por estación (comportamiento original)
+        $test_id = (int) get_post_meta($station_id, 'gc_prueba_ref', true);
+        if ($test_id > 0) {
+            $preguntas = get_post_meta($test_id, 'gc_preguntas', true);
+            if (is_array($preguntas) && !empty($preguntas[0]) && is_array($preguntas[0])) {
+                $pregunta = $preguntas[0];
+                $q_index  = 0;
+            }
+        }
     }
 
-    $preguntas = get_post_meta($test_id, 'gc_preguntas', true);
-
-    if ( ! is_array($preguntas) || empty($preguntas[0]) || ! is_array($preguntas[0]) ) {
-        return gc_station_wrap_message('La prueba no tiene preguntas configuradas.', 'error');
+    if (!$test_id || !$pregunta) {
+        return gc_station_wrap_message('Este ' . $label . ' no tiene una prueba configurada.', 'error');
     }
 
-    $pregunta  = $preguntas[0];
     $enunciado = isset($pregunta['enunciado']) ? $pregunta['enunciado'] : '';
     $opciones  = isset($pregunta['opciones']) && is_array($pregunta['opciones']) ? $pregunta['opciones'] : [];
 
@@ -262,7 +282,8 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
     <div class="gc-adult-station"
          data-station-id="<?php echo esc_attr($station_id); ?>"
          data-escenario-id="<?php echo esc_attr($escenario_id); ?>"
-         data-prueba-id="<?php echo esc_attr($test_id); ?>">
+         data-prueba-id="<?php echo esc_attr($test_id); ?>"
+         data-q-index="<?php echo esc_attr($q_index); ?>">
 
         <!-- CTA desafío (visible por defecto) -->
         <div id="gc-challenge-cta" style="padding:24px 20px;border:2px solid #2563eb;border-radius:14px;background:linear-gradient(135deg,#eff6ff,#dbeafe);text-align:center;">
@@ -328,6 +349,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
         const stationId = parseInt(wrap.dataset.stationId, 10);
         const escenarioId = parseInt(wrap.dataset.escenarioId, 10);
         const pruebaId = parseInt(wrap.dataset.pruebaId, 10);
+        const qIndex = parseInt(wrap.dataset.qIndex || '0', 10);
         const form = wrap.querySelector('#gc-adult-station-form');
         const msg = wrap.querySelector('#gc-adult-msg');
         const nonce = (window.wpApiSettings && window.wpApiSettings.nonce) || window.gincanaNonce || '<?php echo esc_js($nonce); ?>';
@@ -359,7 +381,8 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
                     body: JSON.stringify({
                         prueba_id: pruebaId,
                         answers: [answerIndex],
-                        time_ms: timeMs
+                        time_ms: timeMs,
+                        q_index: qIndex
                     })
                 });
 

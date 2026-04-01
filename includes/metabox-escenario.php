@@ -27,6 +27,8 @@ function gc_render_escenario_metabox($post) {
     if ($mostrar_puntos === '') $mostrar_puntos = '1';
     $requiere_prueba = get_post_meta($post->ID, 'gc_requiere_prueba', true);
     if ($requiere_prueba === '') $requiere_prueba = '1';
+    $origen_preguntas = get_post_meta($post->ID, 'gc_origen_preguntas', true) ?: 'por_estacion';
+    $pool_prueba_ref  = (int) get_post_meta($post->ID, 'gc_pool_prueba_ref', true);
     $accion_final    = get_post_meta($post->ID, 'gc_accion_final', true) ?: 'ninguna';
     $foto_texto      = get_post_meta($post->ID, 'gc_foto_texto', true);
     $label_estacion  = get_post_meta($post->ID, 'gc_label_estacion', true);
@@ -212,6 +214,57 @@ function gc_render_escenario_metabox($post) {
                 </div>
             </label>
 
+            <!-- Origen de preguntas (solo visible si requiere prueba) -->
+            <div id="gc-origen-preguntas-section" style="margin-top:20px;padding-top:16px;border-top:1px solid #e2e8f0;<?php echo $requiere_prueba !== '1' ? 'display:none;' : ''; ?>">
+                <div style="font-size:13px;font-weight:600;color:#334155;margin-bottom:10px;">¿De donde salen las preguntas?</div>
+                <div class="gc-wiz-cards">
+                    <div class="gc-wiz-card <?php echo $origen_preguntas === 'por_estacion' ? 'selected' : ''; ?>" data-value="por_estacion" data-field="gc_origen_preguntas">
+                        <div class="gc-wiz-card-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                        </div>
+                        <div class="gc-wiz-card-title">Por estacion</div>
+                        <div class="gc-wiz-card-desc">Cada estacion tiene su propia pregunta especifica</div>
+                    </div>
+                    <div class="gc-wiz-card <?php echo $origen_preguntas === 'pool' ? 'selected' : ''; ?>" data-value="pool" data-field="gc_origen_preguntas">
+                        <div class="gc-wiz-card-icon">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M16 12l-4-4-4 4"/><path d="M12 16V8"/></svg>
+                        </div>
+                        <div class="gc-wiz-card-title">Pool aleatorio</div>
+                        <div class="gc-wiz-card-desc">Preguntas genericas que se asignan al azar (sin repetir)</div>
+                    </div>
+                </div>
+                <input type="hidden" name="gc_origen_preguntas" id="gc_origen_preguntas" value="<?php echo esc_attr($origen_preguntas); ?>" />
+
+                <!-- Selector de prueba-pool (solo si pool) -->
+                <div id="gc-pool-selector" class="gc-wiz-conditional" style="<?php echo $origen_preguntas !== 'pool' ? 'display:none;' : ''; ?>">
+                    <div class="gc-wiz-field" style="margin:0;">
+                        <label for="gc_pool_prueba_ref">Prueba con el pool de preguntas</label>
+                        <select name="gc_pool_prueba_ref" id="gc_pool_prueba_ref" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+                            <option value="">— Seleccionar prueba —</option>
+                            <?php
+                            $pruebas = get_posts([
+                                'post_type'      => 'prueba',
+                                'post_status'    => 'publish',
+                                'posts_per_page' => -1,
+                                'orderby'        => 'title',
+                                'order'          => 'ASC',
+                            ]);
+                            foreach ($pruebas as $pr) {
+                                $n_pregs = 0;
+                                $pregs = get_post_meta($pr->ID, 'gc_preguntas', true);
+                                if (is_array($pregs)) $n_pregs = count($pregs);
+                                $sel = selected($pool_prueba_ref, $pr->ID, false);
+                                echo '<option value="' . (int)$pr->ID . '" ' . $sel . '>'
+                                     . esc_html($pr->post_title) . ' (' . $n_pregs . ' preguntas)'
+                                     . '</option>';
+                            }
+                            ?>
+                        </select>
+                        <div class="gc-hint">Elige una prueba que contenga todas las preguntas del pool. Se asignaran al azar en cada estacion.</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="gc-wiz-nav">
                 <button type="button" class="gc-wiz-btn gc-wiz-btn-prev" data-prev="1">&larr; Anterior</button>
                 <button type="button" class="gc-wiz-btn gc-wiz-btn-next" data-next="3">Siguiente &rarr;</button>
@@ -393,13 +446,14 @@ function gc_render_escenario_metabox($post) {
                     document.getElementById('gc_tipo_qr').value = 'validacion';
                     document.getElementById('gc_requiere_prueba').checked = false;
                     document.getElementById('gc_mostrar_puntos').checked = false;
-                    // Actualizar cards de QR
                     updateQrCards('validacion');
+                    document.getElementById('gc-origen-preguntas-section').style.display = 'none';
                 } else {
                     document.getElementById('gc_tipo_qr').value = 'enlace';
                     document.getElementById('gc_requiere_prueba').checked = true;
                     document.getElementById('gc_mostrar_puntos').checked = true;
                     updateQrCards('enlace');
+                    document.getElementById('gc-origen-preguntas-section').style.display = '';
                 }
             });
         });
@@ -417,6 +471,22 @@ function gc_render_escenario_metabox($post) {
                 this.classList.add('selected');
                 document.getElementById('gc_tipo_qr').value = this.dataset.value;
             });
+        });
+
+        // Step 2: origen preguntas
+        wizard.querySelectorAll('[data-field="gc_origen_preguntas"]').forEach(function(card) {
+            card.addEventListener('click', function() {
+                wizard.querySelectorAll('[data-field="gc_origen_preguntas"]').forEach(function(c) { c.classList.remove('selected'); });
+                this.classList.add('selected');
+                var val = this.dataset.value;
+                document.getElementById('gc_origen_preguntas').value = val;
+                document.getElementById('gc-pool-selector').style.display = val === 'pool' ? '' : 'none';
+            });
+        });
+
+        // Toggle prueba: mostrar/ocultar sección origen preguntas
+        document.getElementById('gc_requiere_prueba').addEventListener('change', function() {
+            document.getElementById('gc-origen-preguntas-section').style.display = this.checked ? '' : 'none';
         });
 
         // Step 3: accion final
@@ -456,6 +526,11 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_tipo_qr', $tipo_qr);
     update_post_meta($post_id, 'gc_mostrar_puntos', isset($_POST['gc_mostrar_puntos']) ? '1' : '0');
     update_post_meta($post_id, 'gc_requiere_prueba', isset($_POST['gc_requiere_prueba']) ? '1' : '0');
+
+    $origen_preguntas = sanitize_text_field($_POST['gc_origen_preguntas'] ?? 'por_estacion');
+    if (!in_array($origen_preguntas, ['por_estacion', 'pool'], true)) $origen_preguntas = 'por_estacion';
+    update_post_meta($post_id, 'gc_origen_preguntas', $origen_preguntas);
+    update_post_meta($post_id, 'gc_pool_prueba_ref', (int)($_POST['gc_pool_prueba_ref'] ?? 0));
 
     $accion_final = sanitize_text_field($_POST['gc_accion_final'] ?? 'ninguna');
     if (!in_array($accion_final, ['ninguna', 'subir_foto'], true)) $accion_final = 'ninguna';

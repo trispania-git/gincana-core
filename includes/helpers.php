@@ -264,6 +264,75 @@ if ( ! function_exists('gc_get_cta_texto') ) {
 }
 
 /**
+ * Devuelve el origen de las preguntas: 'por_estacion' o 'pool'.
+ */
+if ( ! function_exists('gc_get_origen_preguntas') ) {
+  function gc_get_origen_preguntas($escenario_id) {
+    $val = get_post_meta((int)$escenario_id, 'gc_origen_preguntas', true);
+    return in_array($val, ['por_estacion', 'pool'], true) ? $val : 'por_estacion';
+  }
+}
+
+/**
+ * Obtiene una pregunta aleatoria del pool para un usuario en un escenario/estación.
+ * Devuelve array con 'index', 'pregunta', 'prueba_id' o null si no hay preguntas disponibles.
+ * Guarda la asignación en user meta para no repetir.
+ */
+if ( ! function_exists('gc_get_pool_question') ) {
+  function gc_get_pool_question($user_id, $escenario_id, $station_id) {
+    $pool_prueba_id = (int) get_post_meta($escenario_id, 'gc_pool_prueba_ref', true);
+    if (!$pool_prueba_id) return null;
+
+    $preguntas = get_post_meta($pool_prueba_id, 'gc_preguntas', true);
+    if (!is_array($preguntas) || empty($preguntas)) return null;
+
+    // Obtener asignaciones previas de este usuario en este escenario
+    $meta_key = 'gc_pool_assigned_' . (int)$escenario_id;
+    $assigned = get_user_meta($user_id, $meta_key, true);
+    if (!is_array($assigned)) $assigned = [];
+
+    // ¿Ya tiene asignada una pregunta para esta estación?
+    $station_key = (string)(int)$station_id;
+    if (isset($assigned[$station_key])) {
+      $idx = (int) $assigned[$station_key];
+      if (isset($preguntas[$idx])) {
+        return [
+          'index'     => $idx,
+          'pregunta'  => $preguntas[$idx],
+          'prueba_id' => $pool_prueba_id,
+        ];
+      }
+    }
+
+    // Índices ya usados por este usuario
+    $used_indices = array_map('intval', array_values($assigned));
+
+    // Índices disponibles
+    $available = [];
+    foreach ($preguntas as $i => $p) {
+      if (!in_array((int)$i, $used_indices, true)) {
+        $available[] = (int)$i;
+      }
+    }
+
+    if (empty($available)) return null; // Pool agotado
+
+    // Elegir al azar
+    $rand_idx = $available[array_rand($available)];
+
+    // Guardar asignación
+    $assigned[$station_key] = $rand_idx;
+    update_user_meta($user_id, $meta_key, $assigned);
+
+    return [
+      'index'     => $rand_idx,
+      'pregunta'  => $preguntas[$rand_idx],
+      'prueba_id' => $pool_prueba_id,
+    ];
+  }
+}
+
+/**
  * Devuelve la acción final del escenario: 'ninguna', 'subir_foto', etc.
  */
 if ( ! function_exists('gc_get_accion_final') ) {

@@ -99,6 +99,7 @@ add_action('rest_api_init', function(){
       $prueba_id = (int) $req->get_param('prueba_id');
       $answers   = (array) $req->get_param('answers');
       $time_ms   = (int) $req->get_param('time_ms');
+      $q_index   = $req->get_param('q_index'); // null si no viene (modo normal)
 
       if (!$prueba_id) {
         return new WP_REST_Response(['ok'=>false,'error'=>'missing_prueba_id'], 400);
@@ -125,10 +126,23 @@ add_action('rest_api_init', function(){
         return preg_replace('/\s+/', ' ', $s);
       };
 
+      // Si viene q_index, solo validar ESA pregunta (modo pool)
+      // Si no, validar todas (modo normal por estación)
+      $pregs_to_check = $pregs;
+      $answers_to_check = $answers;
+      if ($q_index !== null && is_numeric($q_index)) {
+        $qi = (int)$q_index;
+        if (!isset($pregs[$qi])) {
+          return new WP_REST_Response(['ok'=>false,'error'=>'invalid_q_index'], 400);
+        }
+        $pregs_to_check = [$pregs[$qi]];
+        $answers_to_check = [isset($answers[0]) ? $answers[0] : null];
+      }
+
       $all_ok = true;
-      foreach ($pregs as $i => $p) {
+      foreach ($pregs_to_check as $i => $p) {
         $tipo = !empty($p['tipo']) ? $p['tipo'] : $tipo_global;
-        $ans  = array_key_exists($i, $answers) ? $answers[$i] : null;
+        $ans  = array_key_exists($i, $answers_to_check) ? $answers_to_check[$i] : null;
 
         if ($tipo === 'texto') {
           $correcta = $norm($p['respuesta_texto_correcta'] ?? '');
