@@ -9,6 +9,55 @@ if ( ! defined('ABSPATH') ) exit;
  * - Preguntas con opciones
  */
 
+/**
+ * Desactivar validación ACF "required" en el campo "Estación vinculada"
+ * para permitir crear pruebas-pool sin estación enlazada.
+ */
+add_filter('acf/validate_value', function ($valid, $value, $field, $input_name) {
+    // Solo nos interesa el campo de estación ref en pruebas
+    if (!$valid || $valid !== true) return $valid;
+
+    $label = $field['label'] ?? '';
+    $name  = $field['name'] ?? '';
+
+    // Coincide con el campo ACF de estación (por nombre o label)
+    if (
+        $name === 'gc_estacion_ref' ||
+        $name === 'estacion_vinculada' ||
+        stripos($label, 'vinculada') !== false ||
+        stripos($label, 'estacion') !== false
+    ) {
+        // Si estamos editando una prueba, hacerlo opcional
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        if ($screen && $screen->post_type === 'prueba') {
+            return true; // siempre válido, no required
+        }
+    }
+    return $valid;
+}, 10, 4);
+
+/**
+ * Alternativa: quitar "required" del campo ACF antes de renderizar
+ */
+add_filter('acf/load_field', function ($field) {
+    if (!is_admin()) return $field;
+
+    $name  = $field['name'] ?? '';
+    $label = $field['label'] ?? '';
+
+    if (
+        $name === 'gc_estacion_ref' ||
+        $name === 'estacion_vinculada' ||
+        stripos($label, 'vinculada') !== false
+    ) {
+        $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+        if ($screen && $screen->post_type === 'prueba') {
+            $field['required'] = 0;
+        }
+    }
+    return $field;
+});
+
 add_action('add_meta_boxes', function () {
     add_meta_box(
         'gc_prueba_config',
