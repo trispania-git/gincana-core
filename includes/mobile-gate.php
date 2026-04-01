@@ -6,15 +6,38 @@ if ( ! defined('ABSPATH') ) exit;
  *
  * - Solo actúa si la opción gc_mobile_only está activada.
  * - No afecta: admin, REST API, AJAX, login, cron, CLI, feeds.
- * - Detección: User-Agent (PHP) + viewport JS como respaldo.
+ * - URL secreta configurable para bypass (setea cookie de 30 días).
+ * - Detección: User-Agent (PHP).
  */
 
+// === 1. Interceptar la URL secreta de bypass (antes de template_redirect) ===
+add_action('init', function () {
+    if (get_option('gc_mobile_only', '0') !== '1') return;
+
+    $bypass_slug = get_option('gc_mobile_bypass_slug', 'accesogymk');
+    if (empty($bypass_slug)) return;
+
+    // Detectar si la URL actual coincide con el slug de bypass
+    $request_path = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+
+    if ($request_path === $bypass_slug) {
+        // Setear cookie de bypass (30 días)
+        setcookie('gc_desktop_bypass', '1', time() + (30 * DAY_IN_SECONDS), COOKIEPATH, COOKIE_DOMAIN, is_ssl(), true);
+        $_COOKIE['gc_desktop_bypass'] = '1'; // Disponible de inmediato
+
+        // Redirigir a home o wp-admin
+        wp_safe_redirect(admin_url());
+        exit;
+    }
+});
+
+// === 2. Bloqueo en template_redirect (solo frontend) ===
 add_action('template_redirect', function () {
 
     // Solo si está activado
     if (get_option('gc_mobile_only', '0') !== '1') return;
 
-    // No bloquear admin, REST, AJAX, cron, CLI, login
+    // No bloquear admin, REST, AJAX, cron, CLI
     if (is_admin()) return;
     if (defined('REST_REQUEST') && REST_REQUEST) return;
     if (defined('DOING_AJAX') && DOING_AJAX) return;
@@ -22,15 +45,23 @@ add_action('template_redirect', function () {
     if (defined('WP_CLI') && WP_CLI) return;
     if (is_feed()) return;
 
-    // No bloquear login/registro
+    // No bloquear login/registro (doble check por URI)
     global $pagenow;
     if (in_array($pagenow, ['wp-login.php', 'wp-register.php'], true)) return;
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    if (strpos($uri, 'wp-login') !== false || strpos($uri, 'wp-admin') !== false) return;
+
+    // Cookie de bypass: si la tiene, dejar pasar
+    if (!empty($_COOKIE['gc_desktop_bypass'])) return;
+
+    // Usuarios logueados con rol admin/editor: dejar pasar siempre
+    if (is_user_logged_in() && current_user_can('edit_posts')) return;
 
     // Detectar móvil/tablet por User-Agent
     $ua = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
-    if (gc_is_mobile_ua($ua)) return; // Es móvil, dejar pasar
+    if (gc_is_mobile_ua($ua)) return;
 
-    // Es escritorio: mostrar página de bloqueo
+    // Es escritorio sin bypass: mostrar página de bloqueo
     gc_render_mobile_only_page();
     exit;
 });
@@ -63,7 +94,6 @@ function gc_render_mobile_only_page() {
     $site_name = get_bloginfo('name');
     $site_url = home_url('/');
 
-    // No cachear esta respuesta
     nocache_headers();
     header('Content-Type: text/html; charset=utf-8');
     ?>
@@ -93,46 +123,12 @@ function gc_render_mobile_only_page() {
             padding: 48px 36px;
             box-shadow: 0 8px 32px rgba(37,99,235,0.12);
         }
-        .gc-mobile-gate .gc-icon {
-            margin-bottom: 24px;
-        }
-        .gc-mobile-gate h1 {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            color: #1e293b;
-        }
-        .gc-mobile-gate .gc-subtitle {
-            font-size: 14px;
-            font-weight: 600;
-            color: #2563eb;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 8px;
-        }
-        .gc-mobile-gate p {
-            font-size: 16px;
-            line-height: 1.6;
-            color: #475569;
-            margin-bottom: 24px;
-        }
-        .gc-mobile-gate .gc-qr-hint {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            padding: 14px 24px;
-            background: #f8fafc;
-            border: 1px dashed #cbd5e1;
-            border-radius: 14px;
-            font-size: 14px;
-            color: #64748b;
-        }
-        .gc-mobile-gate .gc-url {
-            margin-top: 20px;
-            font-size: 13px;
-            color: #94a3b8;
-            word-break: break-all;
-        }
+        .gc-mobile-gate .gc-icon { margin-bottom: 24px; }
+        .gc-mobile-gate h1 { font-size: 24px; font-weight: 700; margin-bottom: 12px; color: #1e293b; }
+        .gc-mobile-gate .gc-subtitle { font-size: 14px; font-weight: 600; color: #2563eb; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+        .gc-mobile-gate p { font-size: 16px; line-height: 1.6; color: #475569; margin-bottom: 24px; }
+        .gc-mobile-gate .gc-qr-hint { display: inline-flex; align-items: center; gap: 10px; padding: 14px 24px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 14px; font-size: 14px; color: #64748b; }
+        .gc-mobile-gate .gc-url { margin-top: 20px; font-size: 13px; color: #94a3b8; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -154,16 +150,6 @@ function gc_render_mobile_only_page() {
         </div>
         <div class="gc-url"><?php echo esc_html($site_url); ?></div>
     </div>
-
-    <!-- Respaldo JS: si la ventana es estrecha (tablet en vertical), dejar pasar -->
-    <script>
-    (function(){
-        if (window.innerWidth <= 1024) {
-            document.body.innerHTML = '';
-            window.location.reload();
-        }
-    })();
-    </script>
 </body>
 </html>
     <?php

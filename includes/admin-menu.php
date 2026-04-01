@@ -74,11 +74,14 @@ function gincana_core_settings_cb(){
   if (isset($_POST['gc_settings_nonce']) && wp_verify_nonce($_POST['gc_settings_nonce'], 'gc_save_settings')) {
     update_option('gc_mobile_only', isset($_POST['gc_mobile_only']) ? '1' : '0');
     update_option('gc_mobile_only_message', wp_kses_post($_POST['gc_mobile_only_message'] ?? ''));
+    $slug = sanitize_title($_POST['gc_mobile_bypass_slug'] ?? 'accesogymk');
+    update_option('gc_mobile_bypass_slug', $slug ?: 'accesogymk');
     echo '<div class="notice notice-success"><p>Ajustes guardados.</p></div>';
   }
 
-  $mobile_only = get_option('gc_mobile_only', '0');
-  $mobile_msg  = get_option('gc_mobile_only_message', '');
+  $mobile_only  = get_option('gc_mobile_only', '0');
+  $mobile_msg   = get_option('gc_mobile_only_message', '');
+  $bypass_slug  = get_option('gc_mobile_bypass_slug', 'accesogymk');
   ?>
   <div class="wrap">
     <h1>Ajustes de Gincana Core</h1>
@@ -95,6 +98,21 @@ function gincana_core_settings_cb(){
               <span>Mostrar aviso a usuarios de escritorio en el frontend</span>
             </label>
             <p class="description">Si se activa, los visitantes desde ordenador verán un mensaje indicando que la web es solo para móvil. El panel de administración (backend) no se ve afectado.</p>
+          </td>
+        </tr>
+        <tr>
+          <th><label for="gc_mobile_bypass_slug">URL de acceso escritorio</label></th>
+          <td>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <code style="font-size:13px;padding:6px 8px;background:#f1f5f9;border-radius:6px;"><?php echo esc_html(home_url('/')); ?></code>
+              <input type="text" name="gc_mobile_bypass_slug" id="gc_mobile_bypass_slug"
+                     value="<?php echo esc_attr($bypass_slug); ?>"
+                     placeholder="accesogymk" style="width:200px;" />
+            </div>
+            <p class="description">
+              URL secreta para acceder desde escritorio. Al visitarla se setea una cookie de 30 días y redirige al admin.<br>
+              <strong>Enlace actual:</strong> <a href="<?php echo esc_url(home_url('/' . $bypass_slug)); ?>" target="_blank"><?php echo esc_html(home_url('/' . $bypass_slug)); ?></a>
+            </p>
           </td>
         </tr>
         <tr>
