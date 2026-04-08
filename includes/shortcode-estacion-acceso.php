@@ -53,7 +53,7 @@ function gc_shortcode_estacion_acceso() {
     echo '<style>.entry-title, .page-title, .et_pb_post_title, .et_pb_title_container { display:none !important; }</style>';
     echo '<script>document.title = ' . json_encode(esc_html($title) . ' — ' . esc_html($esc_title)) . ';</script>';
 
-    echo '<div class="gc-station-access" style="width:100%;padding:16px 0;">';
+    echo '<div class="gc-station-access" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
 
     // Cabecera: escenario + nº estación + nombre
     echo '<h3 style="margin:0 0 6px;font-size:18px;font-weight:600;color:#2563eb;line-height:1.3;">' . esc_html($esc_title) . '</h3>';
@@ -605,6 +605,8 @@ add_shortcode('gincana_estacion_contenido', function($atts){
 
     $tipo_escenario = get_post_meta($escenario_id, 'gc_tipo_escenario', true) ?: 'adulto';
     $title       = get_the_title($station_id);
+    $esc_title   = get_the_title($escenario_id);
+    $orden       = (int) get_post_meta($station_id, 'gc_orden', true);
     $descripcion = get_post_meta($station_id, 'gc_descripcion', true);
     $audio       = get_post_meta($station_id, 'gc_audio', true);
     $maps_url    = get_post_meta($station_id, 'gc_maps_url', true);
@@ -614,9 +616,14 @@ add_shortcode('gincana_estacion_contenido', function($atts){
 
     $user_id     = get_current_user_id();
 
-    // Helper para renderizar contenido visual (titulo + iconos + descripcion + media)
-    $render_content = function() use ($title, $descripcion, $audio, $maps_url, $img1, $img2) {
-        echo '<h2 class="gc-station-title" style="margin:0 0 8px;font-size:22px;font-weight:700;line-height:1.3;">' . esc_html($title) . '</h2>';
+    // Helper para renderizar contenido visual (cabecera + iconos + descripcion + media)
+    $render_content = function() use ($title, $esc_title, $orden, $descripcion, $audio, $maps_url, $img1, $img2) {
+        echo '<style>.entry-title, .page-title, .et_pb_post_title, .et_pb_title_container { display:none !important; }</style>';
+        echo '<script>document.title = ' . json_encode(esc_html($title) . ' — ' . esc_html($esc_title)) . ';</script>';
+        echo '<h3 style="margin:0 0 6px;font-size:18px;font-weight:600;color:#2563eb;line-height:1.3;">' . esc_html($esc_title) . '</h3>';
+        echo '<h2 style="margin:0 0 8px;font-size:22px;font-weight:700;line-height:1.3;">';
+        if ($orden) echo '<span style="color:#64748b;">' . $orden . '.</span> ';
+        echo esc_html($title) . '</h2>';
         echo gc_render_action_icons($audio, $maps_url);
         if ($descripcion) {
             echo '<div class="gc-station-desc" style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;">';
@@ -635,7 +642,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     if ($is_logged && function_exists('gincana_user_passed') && gincana_user_passed($user_id, $station_id) ) {
         $escenario_url = get_permalink($escenario_id);
         ob_start();
-        echo '<div class="gc-station-content" style="width:100%;padding:16px 0;">';
+        echo '<div class="gc-station-content" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
         $render_content();
         echo '<div style="padding:20px;border:1px solid #e6f0e6;border-radius:14px;background:#f7fff7;text-align:center;">';
         $lbl = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
@@ -648,7 +655,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
 
     // Render completo
     ob_start();
-    echo '<div class="gc-station-content" style="width:100%;padding:16px 0;">';
+    echo '<div class="gc-station-content" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
 
     $render_content();
 
