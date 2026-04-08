@@ -53,7 +53,7 @@ function gc_shortcode_estacion_acceso() {
     echo '<style>.entry-title, .page-title, .et_pb_post_title, .et_pb_title_container { display:none !important; }</style>';
     echo '<script>document.title = ' . json_encode(esc_html($title) . ' — ' . esc_html($esc_title)) . ';</script>';
 
-    echo '<div class="gc-station-access" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">';
+    echo '<div class="gc-station-access" style="width:100%;padding:16px 0;">';
 
     // Cabecera: escenario + nº estación + nombre
     echo '<h3 style="margin:0 0 6px;font-size:18px;font-weight:600;color:#2563eb;line-height:1.3;">' . esc_html($esc_title) . '</h3>';
@@ -635,7 +635,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     if ($is_logged && function_exists('gincana_user_passed') && gincana_user_passed($user_id, $station_id) ) {
         $escenario_url = get_permalink($escenario_id);
         ob_start();
-        echo '<div class="gc-station-content" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">';
+        echo '<div class="gc-station-content" style="width:100%;padding:16px 0;">';
         $render_content();
         echo '<div style="padding:20px;border:1px solid #e6f0e6;border-radius:14px;background:#f7fff7;text-align:center;">';
         $lbl = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
@@ -648,7 +648,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
 
     // Render completo
     ob_start();
-    echo '<div class="gc-station-content" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">';
+    echo '<div class="gc-station-content" style="width:100%;padding:16px 0;">';
 
     $render_content();
 
@@ -700,5 +700,5 @@ function gc_station_wrap_message($message, $type = 'info') {
         $color = '#a8071a';
     }
 
-    return '<div style="max-width:760px;margin:24px auto;padding:16px 18px;border:1px solid ' . esc_attr($border) . ';background:' . esc_attr($bg) . ';color:' . esc_attr($color) . ';border-radius:12px;">' . esc_html($message) . '</div>';
+    return '<div style="width:100%;margin:24px 0;padding:16px 18px;border:1px solid ' . esc_attr($border) . ';background:' . esc_attr($bg) . ';color:' . esc_attr($color) . ';border-radius:12px;">' . esc_html($message) . '</div>';
 }
