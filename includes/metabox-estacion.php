@@ -177,4 +177,17 @@ add_action('save_post', function ($post_id) {
     }
 
     update_post_meta($post_id, 'gc_qr_url', gc_get_station_entry_url($post_id));
+
+    // Auto-actualizar slug cuando cambia el título
+    $post = get_post($post_id);
+    if ($post) {
+        $new_slug = sanitize_title($post->post_title);
+        if ($new_slug && $new_slug !== $post->post_name) {
+            remove_action('save_post', __FUNCTION__); // evitar loop
+            wp_update_post([
+                'ID'        => $post_id,
+                'post_name' => wp_unique_post_slug($new_slug, $post_id, $post->post_status, $post->post_type, $post->post_parent),
+            ]);
+        }
+    }
 });
