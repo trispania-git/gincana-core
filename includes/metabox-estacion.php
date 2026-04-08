@@ -155,20 +155,20 @@ function gc_render_estacion_metabox($post) {
 
 /**
  * Auto-actualizar slug al cambiar título de estación.
+ * Usa save_post con prioridad alta + update directo en DB para evitar loops.
  */
-add_filter('wp_insert_post_data', function ($data, $postarr) {
-    if (($data['post_type'] ?? '') !== 'estacion') return $data;
-    if (($data['post_status'] ?? '') === 'auto-draft') return $data;
+add_action('save_post_estacion', function ($post_id, $post) {
+    if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
+    if ($post->post_status === 'auto-draft') return;
 
-    $new_slug = sanitize_title($data['post_title']);
-    if ($new_slug) {
-        $post_id = $postarr['ID'] ?? 0;
-        $data['post_name'] = wp_unique_post_slug(
-            $new_slug, $post_id, $data['post_status'], 'estacion', $data['post_parent'] ?? 0
-        );
+    $new_slug = sanitize_title($post->post_title);
+    if ($new_slug && $new_slug !== $post->post_name) {
+        global $wpdb;
+        $unique_slug = wp_unique_post_slug($new_slug, $post_id, $post->post_status, $post->post_type, $post->post_parent);
+        $wpdb->update($wpdb->posts, ['post_name' => $unique_slug], ['ID' => $post_id]);
+        clean_post_cache($post_id);
     }
-    return $data;
-}, 10, 2);
+}, 99, 2);
 
 /**
  * Guardado de datos
