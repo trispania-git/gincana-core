@@ -94,8 +94,7 @@ function gc_shortcode_estacion_acceso() {
             echo gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id);
         } else {
             // QR = enlace: depende de si requiere prueba
-            $requiere_prueba = get_post_meta($escenario_id, 'gc_requiere_prueba', true);
-            if ($requiere_prueba === '1') {
+            if (gc_requiere_prueba($escenario_id)) {
                 echo gc_render_adulto_station($station_id, $title, $escenario_id);
             } else {
                 echo gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id);
@@ -268,8 +267,7 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
     }
 
     // ¿Requiere prueba este escenario?
-    $requiere_prueba = get_post_meta($escenario_id, 'gc_requiere_prueba', true);
-    $con_prueba = ($requiere_prueba === '1');
+    $con_prueba = gc_requiere_prueba($escenario_id);
 
     ob_start();
     ?>
@@ -673,14 +671,13 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     } else {
         // Logueado, acceso directo (sin QR)
         $tipo_qr = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';
-        $requiere_prueba = get_post_meta($escenario_id, 'gc_requiere_prueba', true);
 
         if ($tipo_qr === 'validacion_boton' || $tipo_qr === 'validacion_quiz' || $tipo_qr === 'validacion') {
             // QR obligatorio (botón o quiz): solo mostrar pista para buscar el QR
             echo gc_render_infantil_station_pista($station_id, $title, $escenario_id);
         } else {
             // QR como enlace: mostrar quiz/completar directamente
-            if ($requiere_prueba === '1') {
+            if (gc_requiere_prueba($escenario_id)) {
                 echo gc_render_adulto_station($station_id, $title, $escenario_id);
             } else {
                 echo gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id);

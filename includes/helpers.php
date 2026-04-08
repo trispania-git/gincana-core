@@ -234,6 +234,16 @@ if ( ! function_exists('gc_get_qr_url') ) {
 }
 
 /**
+ * ¿Requiere prueba este escenario? Default true para escenarios legacy sin valor guardado.
+ */
+if ( ! function_exists('gc_requiere_prueba') ) {
+  function gc_requiere_prueba($escenario_id) {
+    $val = get_post_meta((int)$escenario_id, 'gc_requiere_prueba', true);
+    return ($val === '' || $val === '1'); // vacío (legacy) o '1' = sí
+  }
+}
+
+/**
  * Devuelve el HTML de imagen de "estación encontrada" para un escenario.
  * Si el escenario tiene gc_img_encontrada, usa esa. Si no, un icono por defecto.
  */
