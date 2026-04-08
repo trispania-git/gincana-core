@@ -407,6 +407,15 @@ function gc_render_escenario_metabox($post) {
                 </div>
             </div>
         </div>
+
+        <!-- Botón resumen flotante -->
+        <div style="text-align:center;margin-top:16px;">
+            <button type="button" id="gc-wiz-resumen-btn"
+                    style="padding:10px 24px;border:2px solid #2563eb;border-radius:10px;background:#eff6ff;color:#2563eb;font-size:14px;font-weight:600;cursor:pointer;">
+                Resumen de configuracion
+            </button>
+        </div>
+        <div id="gc-wiz-resumen-panel" style="display:none;margin-top:16px;padding:20px;border-radius:12px;border:2px solid #2563eb;background:#f8fafc;"></div>
     </div>
 
     <script>
@@ -526,6 +535,103 @@ function gc_render_escenario_metabox($post) {
         // Mark done tabs for existing data
         var tipo = document.getElementById('gc_tipo_escenario').value;
         if (tipo) goToStep(1);
+
+        // === Resumen de configuración ===
+        var resumenBtn = document.getElementById('gc-wiz-resumen-btn');
+        var resumenPanel = document.getElementById('gc-wiz-resumen-panel');
+        if (resumenBtn && resumenPanel) {
+            resumenBtn.addEventListener('click', function() {
+                if (resumenPanel.style.display !== 'none') {
+                    resumenPanel.style.display = 'none';
+                    return;
+                }
+                var labels = {
+                    tipo_escenario: { adulto: 'Adulto', infantil: 'Infantil' },
+                    tipo_qr: { enlace: 'Enlace directo', validacion_boton: 'Validacion (boton)', validacion_quiz: 'Validacion (quiz)', validacion: 'Validacion (legacy)' },
+                    origen_preguntas: { por_estacion: 'Por estacion', pool: 'Pool aleatorio' },
+                    accion_final: { ninguna: 'Solo enhorabuena', subir_foto: 'Subir foto' }
+                };
+
+                var v = function(id) { var el = document.getElementById(id); return el ? el.value : ''; };
+                var ch = function(id) { var el = document.getElementById(id); return el ? el.checked : false; };
+                var lb = function(cat, val) { return (labels[cat] && labels[cat][val]) ? labels[cat][val] : (val || '—'); };
+                var esc = function(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
+
+                var tipoEsc = v('gc_tipo_escenario');
+                var tipoQr = v('gc_tipo_qr');
+                var prueba = ch('gc_requiere_prueba');
+                var puntos = ch('gc_mostrar_puntos');
+                var origen = v('gc_origen_preguntas');
+                var poolSel = document.getElementById('gc_pool_prueba_ref');
+                var poolText = poolSel && poolSel.selectedIndex > 0 ? poolSel.options[poolSel.selectedIndex].text : '—';
+                var accion = v('gc_accion_final');
+                var fotoTexto = v('gc_foto_texto');
+                var labelEst = v('gc_label_estacion') || 'estacion';
+                var labelPl = v('gc_label_estacion_plural') || 'las estaciones';
+                var cta = v('gc_cta_texto') || '(auto)';
+                var rankUrl = v('gc_ranking_url') || '(auto)';
+                var audio = v('gc_audio');
+                var img1 = v('gc_img_1');
+                var img2 = v('gc_img_2');
+                var imgEnc = v('gc_img_encontrada');
+
+                var section = function(title, rows) {
+                    var h = '<div style="margin-bottom:14px;"><div style="font-size:13px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;border-bottom:1px solid #bfdbfe;padding-bottom:4px;">' + title + '</div>';
+                    h += '<table style="width:100%;font-size:13px;border-collapse:collapse;">';
+                    for (var i = 0; i < rows.length; i++) {
+                        h += '<tr><td style="padding:3px 8px 3px 0;color:#64748b;white-space:nowrap;vertical-align:top;width:180px;">' + rows[i][0] + '</td>';
+                        h += '<td style="padding:3px 0;color:#0f172a;font-weight:500;">' + rows[i][1] + '</td></tr>';
+                    }
+                    h += '</table></div>';
+                    return h;
+                };
+
+                var dot = function(color) { return '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + color + ';margin-right:6px;"></span>'; };
+                var si = dot('#16a34a') + 'Si';
+                var no = dot('#dc2626') + 'No';
+
+                var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">'
+                    + '<h3 style="margin:0;font-size:16px;color:#1e293b;">Resumen de configuracion</h3>'
+                    + '<button type="button" onclick="this.closest(\'#gc-wiz-resumen-panel\').style.display=\'none\'" style="border:0;background:0;font-size:20px;color:#94a3b8;cursor:pointer;">&times;</button>'
+                    + '</div>';
+
+                html += section('1. Tipo de escenario', [
+                    ['Tipo', lb('tipo_escenario', tipoEsc)]
+                ]);
+
+                var mecRows = [
+                    ['Tipo de QR', lb('tipo_qr', tipoQr)],
+                    ['Prueba/quiz', prueba ? si : no],
+                    ['Gamificacion', puntos ? si : no]
+                ];
+                if (prueba) {
+                    mecRows.push(['Origen preguntas', lb('origen_preguntas', origen)]);
+                    if (origen === 'pool') mecRows.push(['Pool seleccionado', esc(poolText)]);
+                }
+                html += section('2. Mecanica', mecRows);
+
+                var accRows = [['Accion final', lb('accion_final', accion)]];
+                if (accion === 'subir_foto' && fotoTexto) accRows.push(['Texto foto', esc(fotoTexto)]);
+                html += section('3. Accion final', accRows);
+
+                html += section('4. Textos', [
+                    ['Nombre singular', esc(labelEst)],
+                    ['Nombre plural', esc(labelPl)],
+                    ['CTA', esc(cta)],
+                    ['Ranking URL', rankUrl === '(auto)' ? '<span style="color:#94a3b8;">(auto)</span>' : esc(rankUrl)]
+                ]);
+
+                var contRows = [];
+                contRows.push(['Audio', audio ? dot('#16a34a') + 'Si' : dot('#dc2626') + 'No']);
+                contRows.push(['Imagen 1', img1 ? dot('#16a34a') + 'Si' : dot('#dc2626') + 'No']);
+                contRows.push(['Imagen 2', img2 ? dot('#16a34a') + 'Si' : dot('#dc2626') + 'No']);
+                contRows.push(['Img encontrada', imgEnc ? dot('#16a34a') + 'Si' : dot('#dc2626') + 'No']);
+                html += section('5. Contenido', contRows);
+
+                resumenPanel.innerHTML = html;
+                resumenPanel.style.display = '';
+            });
+        }
     })();
     </script>
     <?php
