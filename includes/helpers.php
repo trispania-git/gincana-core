@@ -401,12 +401,12 @@ if ( ! function_exists('gc_user_has_final_photo') ) {
  * Devuelve HTML. Usa SVGs inline para evitar dependencias.
  */
 if ( ! function_exists('gc_render_action_icons') ) {
-  function gc_render_action_icons($audio_url = '', $maps_url = '') {
-    if (!$audio_url && !$maps_url) return '';
+  function gc_render_action_icons($audio_url = '', $maps_url = '', $direccion = '') {
+    if (!$audio_url && !$maps_url && !$direccion) return '';
 
     $uid = 'gc-icons-' . uniqid();
 
-    $html = '<div id="' . esc_attr($uid) . '" class="gc-action-icons" style="display:flex;align-items:center;gap:12px;margin:0 0 16px;">';
+    $html = '<div id="' . esc_attr($uid) . '" class="gc-action-icons" style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:0 0 16px;">';
 
     // Icono de audio
     if ($audio_url) {
@@ -417,12 +417,16 @@ if ( ! function_exists('gc_render_action_icons') ) {
       $html .= '<audio id="' . esc_attr($uid) . '-player" preload="none" style="display:none;"><source src="' . esc_url($audio_url) . '"></audio>';
     }
 
-    // Icono de ubicacion
-    if ($maps_url) {
-      $html .= '<a href="' . esc_url($maps_url) . '" target="_blank" rel="noopener" class="gc-icon-btn" title="Ver ubicacion en Google Maps" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;text-decoration:none;font-size:13px;color:#334155;transition:background 0.2s,border-color 0.2s;">';
+    // Ubicacion: direccion + enlace maps
+    if ($maps_url || $direccion) {
+      $location_tag = $maps_url ? 'a' : 'span';
+      $location_attrs = $maps_url
+        ? ' href="' . esc_url($maps_url) . '" target="_blank" rel="noopener" title="Ver en Google Maps"'
+        : '';
+      $html .= '<' . $location_tag . $location_attrs . ' class="gc-icon-btn" style="display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid #e2e8f0;border-radius:10px;background:#fff;text-decoration:none;font-size:13px;color:#334155;transition:background 0.2s,border-color 0.2s;">';
       $html .= '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
-      $html .= '<span>Ubicacion</span>';
-      $html .= '</a>';
+      $html .= '<span>' . esc_html($direccion ?: 'Ubicacion') . '</span>';
+      $html .= '</' . $location_tag . '>';
     }
 
     $html .= '</div>';

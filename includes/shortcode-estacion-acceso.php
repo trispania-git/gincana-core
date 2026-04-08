@@ -35,13 +35,14 @@ function gc_shortcode_estacion_acceso() {
         $tipo_escenario = 'adulto';
     }
 
-    $audio    = get_post_meta($station_id, 'gc_audio', true);
-    $maps_url = get_post_meta($station_id, 'gc_maps_url', true);
-    $img1     = get_post_meta($station_id, 'gc_img_1', true);
-    $img2     = get_post_meta($station_id, 'gc_img_2', true);
-    $title    = get_the_title($station_id);
-    $orden    = (int) get_post_meta($station_id, 'gc_orden', true);
-    $label    = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
+    $audio     = get_post_meta($station_id, 'gc_audio', true);
+    $maps_url  = get_post_meta($station_id, 'gc_maps_url', true);
+    $direccion = get_post_meta($station_id, 'gc_direccion', true);
+    $img1      = get_post_meta($station_id, 'gc_img_1', true);
+    $img2      = get_post_meta($station_id, 'gc_img_2', true);
+    $title     = get_the_title($station_id);
+    $orden     = (int) get_post_meta($station_id, 'gc_orden', true);
+    $label     = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
     $esc_title = get_the_title($escenario_id);
     $is_logged = is_user_logged_in();
 
@@ -61,7 +62,7 @@ function gc_shortcode_estacion_acceso() {
     if ($orden) echo '<span style="color:#64748b;">' . $orden . '.</span> ';
     echo esc_html($title) . '</h2>';
 
-    echo gc_render_action_icons($audio, $maps_url);
+    echo gc_render_action_icons($audio, $maps_url, $direccion);
 
     if ($descripcion) {
         echo '<div class="gc-station-desc" style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;">';
@@ -610,6 +611,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     $descripcion = get_post_meta($station_id, 'gc_descripcion', true);
     $audio       = get_post_meta($station_id, 'gc_audio', true);
     $maps_url    = get_post_meta($station_id, 'gc_maps_url', true);
+    $direccion   = get_post_meta($station_id, 'gc_direccion', true);
     $img1        = get_post_meta($station_id, 'gc_img_1', true);
     $img2        = get_post_meta($station_id, 'gc_img_2', true);
     $is_logged   = is_user_logged_in();
@@ -617,12 +619,12 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     $user_id     = get_current_user_id();
 
     // Helper para renderizar contenido visual (cabecera + iconos + descripcion + media)
-    $render_content = function() use ($title, $esc_title, $orden, $descripcion, $audio, $maps_url, $img1, $img2) {
+    $render_content = function() use ($title, $esc_title, $orden, $descripcion, $audio, $maps_url, $direccion, $img1, $img2) {
         echo '<h3 style="margin:0 0 6px;font-size:18px;font-weight:600;color:#2563eb;line-height:1.3;">' . esc_html($esc_title) . '</h3>';
         echo '<h2 style="margin:0 0 8px;font-size:22px;font-weight:700;line-height:1.3;">';
         if ($orden) echo '<span style="color:#64748b;">' . $orden . '.</span> ';
         echo esc_html($title) . '</h2>';
-        echo gc_render_action_icons($audio, $maps_url);
+        echo gc_render_action_icons($audio, $maps_url, $direccion);
         if ($descripcion) {
             echo '<div class="gc-station-desc" style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;">';
             echo wp_kses_post($descripcion);

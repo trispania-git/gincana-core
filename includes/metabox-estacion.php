@@ -49,6 +49,7 @@ function gc_render_estacion_metabox($post) {
     $pista_busqueda  = get_post_meta($post->ID, 'gc_pista_busqueda', true);
     $audio    = get_post_meta($post->ID, 'gc_audio', true);
     $maps_url = get_post_meta($post->ID, 'gc_maps_url', true);
+    $direccion = get_post_meta($post->ID, 'gc_direccion', true);
     $img1     = get_post_meta($post->ID, 'gc_img_1', true);
     $img2     = get_post_meta($post->ID, 'gc_img_2', true);
     $token    = get_post_meta($post->ID, 'gc_qr_token', true);
@@ -97,10 +98,17 @@ function gc_render_estacion_metabox($post) {
         </tr>
 
         <tr>
+            <th><label for="gc_direccion">Direccion</label></th>
+            <td>
+                <input type="text" name="gc_direccion" id="gc_direccion" value="<?php echo esc_attr($direccion); ?>" style="width:100%;" placeholder="Plaza Mayor, 1 - Colmenar de Oreja" />
+                <p class="description">Direccion o referencia del lugar. Se muestra junto al icono de ubicacion.</p>
+            </td>
+        </tr>
+        <tr>
             <th><label for="gc_maps_url">Ubicacion (Google Maps)</label></th>
             <td>
                 <input type="url" name="gc_maps_url" id="gc_maps_url" value="<?php echo esc_attr($maps_url); ?>" style="width:100%;" placeholder="https://maps.google.com/..." />
-                <p class="description">Enlace de Google Maps del lugar. Se mostrara como icono de ubicacion.</p>
+                <p class="description">Enlace de Google Maps del lugar.</p>
             </td>
         </tr>
 
@@ -184,6 +192,7 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
     update_post_meta($post_id, 'gc_pista_busqueda', sanitize_text_field($_POST['gc_pista_busqueda'] ?? ''));
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
+    update_post_meta($post_id, 'gc_direccion', sanitize_text_field($_POST['gc_direccion'] ?? ''));
     update_post_meta($post_id, 'gc_maps_url', esc_url_raw($_POST['gc_maps_url'] ?? ''));
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));
     update_post_meta($post_id, 'gc_img_2', esc_url_raw($_POST['gc_img_2'] ?? ''));

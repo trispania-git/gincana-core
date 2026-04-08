@@ -359,6 +359,10 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
       $desc = gincana_core_csv_cell($row, $idx['station_description']);
       if ($desc !== '') update_post_meta($station_id, 'gc_descripcion', wp_kses_post($desc));
     }
+    if ( isset($idx['station_direccion']) ) {
+      $dir = gincana_core_csv_cell($row, $idx['station_direccion']);
+      if ($dir !== '') update_post_meta($station_id, 'gc_direccion', sanitize_text_field($dir));
+    }
     if ( isset($idx['station_maps_url']) ) {
       $maps = gincana_core_csv_cell($row, $idx['station_maps_url']);
       if ($maps !== '') update_post_meta($station_id, 'gc_maps_url', esc_url_raw($maps));
