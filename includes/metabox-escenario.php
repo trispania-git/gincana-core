@@ -122,6 +122,14 @@ function gc_render_escenario_metabox($post) {
     }
     </style>
 
+    <div style="text-align:center;margin-bottom:12px;">
+        <button type="button" id="gc-wiz-resumen-btn"
+                style="padding:8px 20px;border:2px solid #2563eb;border-radius:10px;background:#eff6ff;color:#2563eb;font-size:13px;font-weight:600;cursor:pointer;">
+            Resumen de configuracion
+        </button>
+    </div>
+    <div id="gc-wiz-resumen-panel" style="display:none;margin-bottom:16px;padding:20px;border-radius:12px;border:2px solid #2563eb;background:#f8fafc;"></div>
+
     <div class="gc-wizard" id="gc-wizard">
 
         <!-- Progress tabs -->
@@ -408,14 +416,6 @@ function gc_render_escenario_metabox($post) {
             </div>
         </div>
 
-        <!-- Botón resumen flotante -->
-        <div style="text-align:center;margin-top:16px;">
-            <button type="button" id="gc-wiz-resumen-btn"
-                    style="padding:10px 24px;border:2px solid #2563eb;border-radius:10px;background:#eff6ff;color:#2563eb;font-size:14px;font-weight:600;cursor:pointer;">
-                Resumen de configuracion
-            </button>
-        </div>
-        <div id="gc-wiz-resumen-panel" style="display:none;margin-top:16px;padding:20px;border-radius:12px;border:2px solid #2563eb;background:#f8fafc;"></div>
     </div>
 
     <script>
