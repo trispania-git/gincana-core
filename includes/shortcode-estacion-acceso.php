@@ -618,8 +618,6 @@ add_shortcode('gincana_estacion_contenido', function($atts){
 
     // Helper para renderizar contenido visual (cabecera + iconos + descripcion + media)
     $render_content = function() use ($title, $esc_title, $orden, $descripcion, $audio, $maps_url, $img1, $img2) {
-        echo '<style>.gc-station-access .entry-title, .gc-station-content .entry-title { display:none !important; }</style>';
-        echo '<script>document.title = ' . json_encode(esc_html($title) . ' — ' . esc_html($esc_title)) . ';</script>';
         echo '<h3 style="margin:0 0 6px;font-size:18px;font-weight:600;color:#2563eb;line-height:1.3;">' . esc_html($esc_title) . '</h3>';
         echo '<h2 style="margin:0 0 8px;font-size:22px;font-weight:700;line-height:1.3;">';
         if ($orden) echo '<span style="color:#64748b;">' . $orden . '.</span> ';
