@@ -67,6 +67,8 @@ add_shortcode('gincana_header', function($atts){
         max-width: 760px;
         margin: 0 auto;
         padding: 10px 0;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 12px;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     #<?php echo $uid; ?> a {
