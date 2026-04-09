@@ -362,6 +362,128 @@ function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
         <p style="margin:0 0 12px;font-size:15px;color:#78350f;">
             Para validar esta <?php echo esc_html($label); ?>, necesitas encontrar y escanear el código QR en el lugar.
         </p>
+
+        <!-- Botón escanear QR con cámara -->
+        <div style="margin:16px 0;">
+          <button type="button" id="gc-qr-scan-btn-est" style="display:inline-flex;align-items:center;gap:10px;padding:14px 28px;border:0;border-radius:14px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(245,158,11,0.35);transition:transform 0.2s,box-shadow 0.2s;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            </svg>
+            Escanear QR
+          </button>
+        </div>
+
+        <!-- Modal escáner QR estación -->
+        <div id="gc-qr-modal-est" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;">
+          <div style="position:relative;width:100%;max-width:480px;padding:16px;">
+            <div style="text-align:center;margin-bottom:12px;">
+              <span style="color:#fff;font-size:18px;font-weight:700;">Escanea el codigo QR</span>
+            </div>
+            <div style="position:relative;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:1/1;">
+              <video id="gc-qr-video-est" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
+              <div style="position:absolute;inset:15%;border:3px solid rgba(255,255,255,0.7);border-radius:12px;pointer-events:none;"></div>
+            </div>
+            <canvas id="gc-qr-canvas-est" style="display:none;"></canvas>
+            <div id="gc-qr-status-est" style="text-align:center;margin-top:12px;color:#94a3b8;font-size:14px;">Apunta la camara al codigo QR...</div>
+            <button type="button" id="gc-qr-close-est" style="display:block;margin:16px auto 0;padding:12px 32px;border:2px solid rgba(255,255,255,0.4);border-radius:12px;background:transparent;color:#fff;font-size:16px;font-weight:600;cursor:pointer;">
+              Cerrar
+            </button>
+          </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+        <script>
+        (function(){
+          var btn   = document.getElementById('gc-qr-scan-btn-est');
+          var modal = document.getElementById('gc-qr-modal-est');
+          var video = document.getElementById('gc-qr-video-est');
+          var canvas = document.getElementById('gc-qr-canvas-est');
+          var status = document.getElementById('gc-qr-status-est');
+          var closeBtn = document.getElementById('gc-qr-close-est');
+          var ctx = canvas.getContext('2d', {willReadFrequently: true});
+          var stream = null;
+          var scanning = false;
+          var scanInterval = null;
+          var siteUrl = <?php echo wp_json_encode(home_url('/')); ?>;
+
+          function stopCamera() {
+            scanning = false;
+            if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+            if (stream) {
+              stream.getTracks().forEach(function(t){ t.stop(); });
+              stream = null;
+            }
+            video.srcObject = null;
+            modal.style.display = 'none';
+          }
+
+          function handleQR(url) {
+            if (url.indexOf(siteUrl) === 0 || url.indexOf(siteUrl.replace('https://','http://')) === 0) {
+              stopCamera();
+              status.style.color = '#4ade80';
+              status.textContent = '¡QR detectado! Redirigiendo...';
+              modal.style.display = 'flex';
+              setTimeout(function(){ window.location.href = url; }, 600);
+            }
+          }
+
+          function scanFrame() {
+            if (!scanning || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            if (window._gcUseBarcodeDetector && window._gcBarcodeDetector) {
+              window._gcBarcodeDetector.detect(canvas).then(function(barcodes){
+                if (barcodes.length > 0) handleQR(barcodes[0].rawValue);
+              }).catch(function(){});
+              return;
+            }
+            if (typeof jsQR === 'function') {
+              var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              var code = jsQR(imageData.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
+              if (code && code.data) handleQR(code.data);
+            }
+          }
+
+          if ('BarcodeDetector' in window) {
+            BarcodeDetector.getSupportedFormats().then(function(formats) {
+              if (formats.indexOf('qr_code') !== -1) {
+                window._gcUseBarcodeDetector = true;
+                window._gcBarcodeDetector = new BarcodeDetector({formats: ['qr_code']});
+              }
+            }).catch(function(){});
+          }
+
+          btn.addEventListener('click', function(){
+            modal.style.display = 'flex';
+            status.style.color = '#94a3b8';
+            status.textContent = 'Iniciando camara...';
+            navigator.mediaDevices.getUserMedia({
+              video: { facingMode: 'environment', width: { ideal: 720 }, height: { ideal: 720 } }
+            }).then(function(s){
+              stream = s;
+              video.srcObject = s;
+              video.play();
+              scanning = true;
+              status.textContent = 'Apunta la camara al codigo QR...';
+              scanInterval = setInterval(scanFrame, 250);
+            }).catch(function(err){
+              status.style.color = '#f87171';
+              if (err.name === 'NotAllowedError') {
+                status.textContent = 'Permiso de camara denegado. Activa el permiso e intentalo de nuevo.';
+              } else {
+                status.textContent = 'No se pudo acceder a la camara: ' + err.message;
+              }
+            });
+          });
+
+          closeBtn.addEventListener('click', stopCamera);
+          document.addEventListener('keydown', function(e){
+            if (e.key === 'Escape' && scanning) stopCamera();
+          });
+        })();
+        </script>
+
         <?php if ($pista): ?>
         <div style="margin:16px 0 0;padding:14px 16px;border-radius:10px;background:#fff;border:1px dashed #f59e0b;">
             <p style="margin:0;font-size:13px;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">💡 Pista</p>
