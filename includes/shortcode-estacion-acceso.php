@@ -8,6 +8,11 @@ if ( ! defined('ABSPATH') ) exit;
 add_shortcode('gincana_estacion_acceso', 'gc_shortcode_estacion_acceso');
 
 function gc_shortcode_estacion_acceso() {
+    // Evitar ejecución duplicada si Divi renderiza el shortcode más de una vez
+    static $already_rendered = false;
+    if ($already_rendered) return '';
+    $already_rendered = true;
+
     $station_id = isset($_GET['gc_station']) ? absint($_GET['gc_station']) : 0;
     $token      = isset($_GET['gc_token']) ? sanitize_text_field(wp_unslash($_GET['gc_token'])) : '';
 
@@ -51,8 +56,14 @@ function gc_shortcode_estacion_acceso() {
     $descripcion = get_post_meta($station_id, 'gc_descripcion', true);
 
     // Ocultar el título de la página WordPress ("acceso-estacion") y cambiar título del navegador
-    echo '<style>.gc-station-access .entry-title, .gc-station-content .entry-title { display:none !important; }</style>';
+    echo '<style>'
+        . '.entry-title, .et_pb_title_container h1, .page .entry-title, h1.entry-title { display:none !important; }'
+        . '.gc-station-access { margin-top: -10px; }'
+        . '</style>';
     echo '<script>document.title = ' . json_encode(esc_html($title) . ' — ' . esc_html($esc_title)) . ';</script>';
+
+    // Header de navegación (mismo que [gincana_header] pero con escenario correcto)
+    echo do_shortcode('[gincana_header escenario="' . (int) $escenario_id . '"]');
 
     echo '<div class="gc-station-access" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
 
