@@ -183,7 +183,6 @@ function gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id)
             ✓ Validar <?php echo esc_html($label); ?>
         </button>
         <div id="gc-adulto-msg" style="margin-top:16px;"></div>
-        <a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:14px;font-size:14px;color:#64748b;text-decoration:underline;">← Volver al escenario</a>
     </div>
 
     <script>
@@ -250,7 +249,6 @@ function gc_render_infantil_station_qr_no_login($station_id, $title, $escenario_
             <a href="<?php echo esc_url($login_url); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Iniciar sesión</a>
             <a href="<?php echo esc_url($register_url); ?>" style="display:inline-block;padding:12px 24px;border:2px solid #2563eb;border-radius:10px;background:#fff;color:#2563eb;text-decoration:none;font-weight:600;">Registrarse</a>
         </div>
-        <a href="<?php echo esc_url(get_permalink($escenario_id)); ?>" style="display:inline-block;margin-top:14px;font-size:14px;color:#64748b;text-decoration:underline;">← Volver al escenario</a>
     </div>
     <?php
     return ob_get_clean();
@@ -308,7 +306,6 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
                 </button>
 
                 <div id="gc-kids-msg" style="margin-top:16px;"></div>
-                <a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:14px;font-size:14px;color:#64748b;text-decoration:underline;">← Volver al escenario</a>
             </div>
         </div>
 
@@ -352,9 +349,6 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
         </script>
     <?php endif; ?>
 
-    <div style="text-align:center;margin-top:12px;">
-        <a href="<?php echo esc_url($escenario_url); ?>" style="font-size:14px;color:#64748b;text-decoration:underline;">← Volver al escenario</a>
-    </div>
     <?php
     return ob_get_clean();
 }
