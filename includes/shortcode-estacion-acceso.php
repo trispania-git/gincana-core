@@ -64,6 +64,7 @@ function gc_shortcode_estacion_acceso() {
 
     // Header de navegación (mismo que [gincana_header] pero con escenario correcto)
     echo do_shortcode('[gincana_header escenario="' . (int) $escenario_id . '"]');
+    echo '<hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 12px;">';
 
     echo '<div class="gc-station-access" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
 
