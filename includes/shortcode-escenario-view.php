@@ -602,14 +602,203 @@ add_shortcode('gincana_estaciones_lista', function($atts){
         <?php endif; ?>
       </div>
 
-      <?php elseif ($accion_final === 'ninguna' && $completed === $total && $total > 0): ?>
+      <?php elseif ($accion_final === 'ninguna' && $completed === $total && $total > 0):
+        $enhorabuena_msg = get_post_meta($escenario_id, 'gc_enhorabuena_msg', true);
+        $diploma_activo  = get_post_meta($escenario_id, 'gc_diploma_activo', true) === '1';
+        $diploma_msg     = get_post_meta($escenario_id, 'gc_diploma_msg', true);
+        $diploma_fondo   = get_post_meta($escenario_id, 'gc_diploma_fondo', true);
+        $current_user    = wp_get_current_user();
+        $user_display    = $current_user->display_name ?: $current_user->user_login;
+        $esc_title       = get_the_title($escenario_id);
+
+        // Calcular ranking del usuario
+        global $wpdb;
+        $pts_tbl = $wpdb->prefix . 'gincana_points_log';
+        $user_total_pts = (int) $wpdb->get_var($wpdb->prepare(
+          "SELECT COALESCE(SUM(points),0) FROM {$pts_tbl} WHERE user_id=%d AND escenario_id=%d",
+          $user_id, $escenario_id
+        ));
+        $ranking_pos = 1 + (int) $wpdb->get_var($wpdb->prepare(
+          "SELECT COUNT(*) FROM (SELECT user_id FROM {$pts_tbl} WHERE escenario_id=%d AND user_id != %d GROUP BY user_id HAVING SUM(points) > %d) AS better",
+          $escenario_id, $user_id, $user_total_pts
+        ));
+      ?>
         <!-- Completado sin acción final -->
         <div style="margin-top:8px;padding:20px;border:2px solid #16a34a;border-radius:var(--gc-radius);background:linear-gradient(135deg,#f0fdf4,#dcfce7);text-align:center;">
           <div style="font-size:40px;margin-bottom:8px;">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </div>
           <h3 style="margin:0 0 4px;font-size:20px;font-weight:700;color:#14532d;">¡Enhorabuena!</h3>
-          <p style="margin:0;font-size:15px;color:#166534;">Has completado todas <?php echo esc_html($label_estacion_plural); ?>.</p>
+          <p style="margin:0 0 8px;font-size:15px;color:#166534;">
+            <?php echo $enhorabuena_msg ? esc_html($enhorabuena_msg) : 'Has completado todas ' . esc_html($label_estacion_plural) . '.'; ?>
+          </p>
+
+          <?php if ($diploma_activo): ?>
+            <div style="margin-top:16px;">
+              <button type="button" id="gc-diploma-download-btn" style="display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border:0;border-radius:12px;background:#16a34a;color:#fff;font-size:16px;font-weight:700;cursor:pointer;transition:background 0.2s;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Descargar diploma
+              </button>
+            </div>
+            <canvas id="gc-diploma-canvas" style="display:none;" width="1200" height="800"></canvas>
+            <script>
+            (function(){
+              var btn = document.getElementById('gc-diploma-download-btn');
+              if (!btn) return;
+
+              var userName  = <?php echo wp_json_encode($user_display); ?>;
+              var escName   = <?php echo wp_json_encode($esc_title); ?>;
+              var ranking   = <?php echo (int) $ranking_pos; ?>;
+              var totalPts  = <?php echo (int) $user_total_pts; ?>;
+              var diplomaMsg = <?php echo wp_json_encode($diploma_msg ?: ''); ?>;
+              var fondoUrl  = <?php echo wp_json_encode($diploma_fondo ?: ''); ?>;
+              var fecha     = new Date().toLocaleDateString('es-ES', {day:'numeric',month:'long',year:'numeric'});
+
+              btn.addEventListener('click', function() {
+                btn.disabled = true;
+                btn.textContent = 'Generando...';
+
+                var canvas = document.getElementById('gc-diploma-canvas');
+                var ctx = canvas.getContext('2d');
+                var W = 1200, H = 800;
+                canvas.width = W;
+                canvas.height = H;
+
+                function drawDiploma() {
+                  // Fondo
+                  if (!fondoUrl) {
+                    // Fondo por defecto: degradado elegante
+                    var grad = ctx.createLinearGradient(0, 0, W, H);
+                    grad.addColorStop(0, '#f0fdf4');
+                    grad.addColorStop(0.5, '#dcfce7');
+                    grad.addColorStop(1, '#bbf7d0');
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, W, H);
+
+                    // Marco decorativo
+                    ctx.strokeStyle = '#16a34a';
+                    ctx.lineWidth = 6;
+                    ctx.strokeRect(30, 30, W - 60, H - 60);
+                    ctx.strokeStyle = '#86efac';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(42, 42, W - 84, H - 84);
+                  }
+
+                  // Icono trofeo
+                  ctx.fillStyle = '#f59e0b';
+                  ctx.font = '60px serif';
+                  ctx.textAlign = 'center';
+                  ctx.fillText('\uD83C\uDFC6', W/2, 120);
+
+                  // Titulo
+                  ctx.fillStyle = '#14532d';
+                  ctx.font = 'bold 48px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                  ctx.textAlign = 'center';
+                  ctx.fillText('\u00A1Enhorabuena!', W/2, 190);
+
+                  // Nombre del usuario
+                  ctx.fillStyle = '#166534';
+                  ctx.font = 'bold 38px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                  ctx.fillText(userName, W/2, 270);
+
+                  // Escenario
+                  ctx.fillStyle = '#334155';
+                  ctx.font = '26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                  ctx.fillText('Ha completado el escenario', W/2, 340);
+
+                  ctx.fillStyle = '#1e40af';
+                  ctx.font = 'bold 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                  ctx.fillText(escName, W/2, 390);
+
+                  // Ranking y puntos
+                  ctx.fillStyle = '#334155';
+                  ctx.font = '24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                  var statsText = 'Posicion: #' + ranking + '  \u00B7  ' + totalPts + ' puntos';
+                  ctx.fillText(statsText, W/2, 450);
+
+                  // Fecha
+                  ctx.fillStyle = '#64748b';
+                  ctx.font = '20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                  ctx.fillText(fecha, W/2, 500);
+
+                  // Mensaje diploma (premio / instrucciones)
+                  if (diplomaMsg) {
+                    ctx.fillStyle = '#991b1b';
+                    ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                    // Dividir en líneas si es muy largo
+                    var words = diplomaMsg.split(' ');
+                    var lines = [];
+                    var line = '';
+                    var maxW = W - 160;
+                    for (var i = 0; i < words.length; i++) {
+                      var test = line + (line ? ' ' : '') + words[i];
+                      if (ctx.measureText(test).width > maxW && line) {
+                        lines.push(line);
+                        line = words[i];
+                      } else {
+                        line = test;
+                      }
+                    }
+                    if (line) lines.push(line);
+
+                    var startY = 570;
+                    // Fondo para el mensaje
+                    var msgH = lines.length * 32 + 24;
+                    ctx.fillStyle = 'rgba(254,242,242,0.8)';
+                    ctx.beginPath();
+                    var rx = 80, ry = startY - 28, rw = W - 160, rh = msgH;
+                    ctx.moveTo(rx + 12, ry);
+                    ctx.arcTo(rx + rw, ry, rx + rw, ry + rh, 12);
+                    ctx.arcTo(rx + rw, ry + rh, rx, ry + rh, 12);
+                    ctx.arcTo(rx, ry + rh, rx, ry, 12);
+                    ctx.arcTo(rx, ry, rx + rw, ry, 12);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#991b1b';
+                    ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                    for (var j = 0; j < lines.length; j++) {
+                      ctx.fillText(lines[j], W/2, startY + j * 32);
+                    }
+                  }
+
+                  // Línea inferior
+                  ctx.fillStyle = '#94a3b8';
+                  ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+                  ctx.fillText('Generado por Gincana', W/2, H - 50);
+
+                  // Descargar
+                  var link = document.createElement('a');
+                  link.download = 'diploma-' + escName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() + '.png';
+                  link.href = canvas.toDataURL('image/png');
+                  link.click();
+
+                  btn.disabled = false;
+                  btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Descargar diploma';
+                }
+
+                if (fondoUrl) {
+                  var img = new Image();
+                  img.crossOrigin = 'anonymous';
+                  img.onload = function() {
+                    ctx.drawImage(img, 0, 0, W, H);
+                    // Marco sobre la imagen
+                    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                    ctx.lineWidth = 6;
+                    ctx.strokeRect(30, 30, W - 60, H - 60);
+                    drawDiploma();
+                  };
+                  img.onerror = function() {
+                    fondoUrl = '';
+                    drawDiploma();
+                  };
+                  img.src = fondoUrl;
+                } else {
+                  drawDiploma();
+                }
+              });
+            })();
+            </script>
+          <?php endif; ?>
         </div>
       <?php
         endif;
