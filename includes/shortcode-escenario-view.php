@@ -361,7 +361,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
 
     <?php
       $ranking_url = get_post_meta($escenario_id, 'gc_ranking_url', true);
-      if ($ranking_url):
+      if ($ranking_url && $show_points):
     ?>
     <div style="text-align:center;margin-bottom:16px;">
       <a href="<?php echo esc_url($ranking_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:2px solid #2563eb;border-radius:10px;color:#2563eb;text-decoration:none;font-weight:600;font-size:15px;transition:background 0.2s,color 0.2s;">
@@ -438,7 +438,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
 
       <?php
         $ranking_url_bottom = get_post_meta($escenario_id, 'gc_ranking_url', true);
-        if ($ranking_url_bottom):
+        if ($ranking_url_bottom && $show_points):
       ?>
       <a href="<?php echo esc_url($ranking_url_bottom); ?>" class="gc-ranking-card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border:2px solid #d97706;border-radius:var(--gc-radius);text-decoration:none;color:#78350f;transition:transform 0.2s,box-shadow 0.2s;">
         <div style="flex-shrink:0;width:44px;height:44px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.12);">
