@@ -45,6 +45,8 @@ function gc_get_station_entry_url($post_id) {
 function gc_render_estacion_metabox($post) {
     wp_nonce_field('gc_save_estacion_meta', 'gc_estacion_nonce');
 
+    $escenario_ref   = (int) get_post_meta($post->ID, 'gc_escenario_ref', true);
+    $orden           = get_post_meta($post->ID, 'gc_orden', true);
     $descripcion     = get_post_meta($post->ID, 'gc_descripcion', true);
     $pista_busqueda  = get_post_meta($post->ID, 'gc_pista_busqueda', true);
     $audio    = get_post_meta($post->ID, 'gc_audio', true);
@@ -64,6 +66,37 @@ function gc_render_estacion_metabox($post) {
     $qr_url = gc_get_station_entry_url($post->ID);
     ?>
     <table class="form-table">
+
+        <tr>
+            <th><label for="gc_escenario_ref">Escenario</label></th>
+            <td>
+                <?php
+                $escenarios = get_posts([
+                    'post_type'      => 'escenario',
+                    'post_status'    => 'publish',
+                    'posts_per_page' => -1,
+                    'orderby'        => 'title',
+                    'order'          => 'ASC',
+                ]);
+                ?>
+                <select name="gc_escenario_ref" id="gc_escenario_ref" style="width:100%;max-width:400px;">
+                    <option value="">— Seleccionar escenario —</option>
+                    <?php foreach ($escenarios as $esc): ?>
+                        <option value="<?php echo (int) $esc->ID; ?>" <?php selected($escenario_ref, $esc->ID); ?>>
+                            <?php echo esc_html($esc->post_title); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="description">Escenario al que pertenece esta estacion. Obligatorio.</p>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="gc_orden">Orden</label></th>
+            <td>
+                <input type="number" name="gc_orden" id="gc_orden" value="<?php echo esc_attr($orden); ?>" min="1" step="1" style="width:80px;" />
+                <p class="description">Posicion de esta estacion dentro del escenario (1, 2, 3...).</p>
+            </td>
+        </tr>
 
         <tr>
             <th><label for="gc_descripcion">Descripcion cultural</label></th>
@@ -230,6 +263,8 @@ add_action('save_post', function ($post_id) {
     if ( get_post_type($post_id) !== 'estacion' ) return;
     if ( ! current_user_can('edit_post', $post_id) ) return;
 
+    update_post_meta($post_id, 'gc_escenario_ref', (int) ($_POST['gc_escenario_ref'] ?? 0));
+    update_post_meta($post_id, 'gc_orden', (int) ($_POST['gc_orden'] ?? 0));
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
     update_post_meta($post_id, 'gc_pista_busqueda', sanitize_text_field($_POST['gc_pista_busqueda'] ?? ''));
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
