@@ -545,12 +545,15 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
 
     // Si ya la ha completado
     if (function_exists('gincana_user_passed') && gincana_user_passed($user_id, $station_id)) {
+        $has_quiz = gc_requiere_prueba($escenario_id);
         ob_start();
         ?>
         <div style="padding:24px 20px;border-radius:14px;background:#f7fff7;border:2px solid #16a34a;text-align:center;">
-            <div style="font-size:48px;margin-bottom:8px;">✅</div>
-            <h2 style="margin:0 0 8px;color:#146c2e;">¡Ya completaste esta <?php echo esc_html($label); ?>!</h2>
-            <a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:12px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>
+            <p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Ubicación verificada</p>
+            <?php if ($has_quiz): ?>
+            <p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Desafío completado</p>
+            <?php endif; ?>
+            <a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:16px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>
         </div>
         <?php
         return ob_get_clean();
@@ -913,13 +916,21 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     // Si ya la ha superado (solo si esta logueado)
     if ($is_logged && function_exists('gincana_user_passed') && gincana_user_passed($user_id, $station_id) ) {
         $escenario_url = get_permalink($escenario_id);
+        $tipo_qr_check = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';
         ob_start();
         echo '<div class="gc-station-content" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
         $render_content();
         echo '<div style="padding:20px;border:1px solid #e6f0e6;border-radius:14px;background:#f7fff7;text-align:center;">';
-        $lbl = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
-        echo '<p style="margin:0 0 12px;font-size:16px;">&#10003; Ya has completado este ' . esc_html($lbl) . '.</p>';
-        echo '<a href="' . esc_url($escenario_url) . '" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
+        if ($tipo_qr_check === 'validacion_gps') {
+            echo '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Ubicación verificada</p>';
+            if (gc_requiere_prueba($escenario_id)) {
+                echo '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Desafío completado</p>';
+            }
+        } else {
+            $lbl = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
+            echo '<p style="margin:0 0 12px;font-size:16px;">&#10003; Ya has completado este ' . esc_html($lbl) . '.</p>';
+        }
+        echo '<a href="' . esc_url($escenario_url) . '" style="display:inline-block;margin-top:8px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
         echo '</div>';
         echo '</div>';
         return ob_get_clean();
