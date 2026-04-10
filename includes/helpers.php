@@ -210,7 +210,7 @@ if ( ! function_exists('gc_get_tipo_qr') ) {
   function gc_get_tipo_qr($escenario_id) {
     $val = get_post_meta((int)$escenario_id, 'gc_tipo_qr', true);
     if ($val === 'validacion') $val = 'validacion_boton'; // migración automática
-    return in_array($val, ['enlace', 'validacion_boton', 'validacion_quiz'], true) ? $val : 'enlace';
+    return in_array($val, ['enlace', 'validacion_boton', 'validacion_quiz', 'validacion_gps'], true) ? $val : 'enlace';
   }
 }
 
@@ -228,7 +228,7 @@ if ( ! function_exists('gc_get_qr_url') ) {
     if ($tipo_qr === 'enlace') {
       return get_permalink((int)$station_id);
     }
-    // validacion_boton o validacion_quiz: URL con token
+    // validacion_boton, validacion_quiz o validacion_gps: URL con token
     return function_exists('gc_get_station_entry_url') ? gc_get_station_entry_url((int)$station_id) : get_permalink((int)$station_id);
   }
 }

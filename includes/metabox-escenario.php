@@ -213,6 +213,13 @@ function gc_render_escenario_metabox($post) {
                     <div class="gc-wiz-card-title">QR = Validacion (quiz)</div>
                     <div class="gc-wiz-card-desc">El QR lleva a una pregunta que valida la estacion</div>
                 </div>
+                <div class="gc-wiz-card <?php echo $tipo_qr === 'validacion_gps' ? 'selected' : ''; ?>" data-value="validacion_gps" data-field="gc_tipo_qr">
+                    <div class="gc-wiz-card-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    </div>
+                    <div class="gc-wiz-card-title">Validacion por GPS</div>
+                    <div class="gc-wiz-card-desc">Verifica que el jugador esta fisicamente en el lugar</div>
+                </div>
             </div>
             <input type="hidden" name="gc_tipo_qr" id="gc_tipo_qr" value="<?php echo esc_attr($tipo_qr); ?>" />
 
@@ -235,16 +242,16 @@ function gc_render_escenario_metabox($post) {
                 </div>
             </label>
 
-            <!-- Verificación por GPS -->
-            <div id="gc-geo-section" style="margin-top:16px;padding:14px 16px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;<?php echo !in_array($tipo_qr, ['validacion_boton', 'validacion_quiz', 'validacion'], true) ? 'display:none;' : ''; ?>">
+            <!-- Radio GPS (visible para validacion_gps) -->
+            <div id="gc-geo-section" style="margin-top:16px;padding:14px 16px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;<?php echo $tipo_qr !== 'validacion_gps' ? 'display:none;' : ''; ?>">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    <span style="font-size:13px;font-weight:600;color:#334155;">Verificacion por GPS</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span style="font-size:13px;font-weight:600;color:#334155;">Radio de verificacion GPS</span>
                 </div>
                 <div class="gc-wiz-field" style="margin:0;">
                     <label for="gc_geo_radio">Radio maximo (metros)</label>
-                    <input type="number" name="gc_geo_radio" id="gc_geo_radio" value="<?php echo esc_attr($geo_radio); ?>" min="0" step="10" style="width:120px;" placeholder="0" />
-                    <div class="gc-hint">Si es mayor que 0 y la estacion tiene coordenadas GPS, el jugador podra verificar su ubicacion como alternativa al QR. Valor recomendado: 50-150 metros. Dejalo en 0 o vacio para desactivar.</div>
+                    <input type="number" name="gc_geo_radio" id="gc_geo_radio" value="<?php echo esc_attr($geo_radio ?: 100); ?>" min="10" step="10" style="width:120px;" />
+                    <div class="gc-hint">Distancia maxima permitida entre el jugador y la estacion. Recomendado: 50-150 metros. Cada estacion necesita tener coordenadas GPS configuradas.</div>
                 </div>
             </div>
 
@@ -549,8 +556,7 @@ function gc_render_escenario_metabox($post) {
                 var val = this.dataset.value;
                 document.getElementById('gc_tipo_qr').value = val;
                 // validacion_quiz requiere prueba obligatoriamente
-                var isValidacion = (val === 'validacion_quiz' || val === 'validacion_boton');
-                document.getElementById('gc-geo-section').style.display = isValidacion ? '' : 'none';
+                document.getElementById('gc-geo-section').style.display = val === 'validacion_gps' ? '' : 'none';
                 if (val === 'validacion_quiz') {
                     document.getElementById('gc_requiere_prueba').checked = true;
                     document.getElementById('gc-origen-preguntas-section').style.display = '';
@@ -612,7 +618,7 @@ function gc_render_escenario_metabox($post) {
                 }
                 var labels = {
                     tipo_escenario: { adulto: 'Adulto', infantil: 'Infantil' },
-                    tipo_qr: { enlace: 'Enlace directo', validacion_boton: 'Validacion (boton)', validacion_quiz: 'Validacion (quiz)', validacion: 'Validacion (legacy)' },
+                    tipo_qr: { enlace: 'Enlace directo', validacion_boton: 'Validacion (boton)', validacion_quiz: 'Validacion (quiz)', validacion_gps: 'Validacion GPS', validacion: 'Validacion (legacy)' },
                     origen_preguntas: { por_estacion: 'Por estacion', pool: 'Pool aleatorio' },
                     accion_final: { ninguna: 'Solo enhorabuena', subir_foto: 'Subir foto' }
                 };
@@ -727,7 +733,7 @@ add_action('save_post', function ($post_id) {
 
     update_post_meta($post_id, 'gc_tipo_escenario', $tipo);
     $tipo_qr = sanitize_text_field($_POST['gc_tipo_qr'] ?? 'enlace');
-    if ( ! in_array($tipo_qr, ['enlace', 'validacion_boton', 'validacion_quiz'], true) ) $tipo_qr = 'enlace';
+    if ( ! in_array($tipo_qr, ['enlace', 'validacion_boton', 'validacion_quiz', 'validacion_gps'], true) ) $tipo_qr = 'enlace';
     update_post_meta($post_id, 'gc_tipo_qr', $tipo_qr);
     update_post_meta($post_id, 'gc_mostrar_puntos', isset($_POST['gc_mostrar_puntos']) ? '1' : '0');
     update_post_meta($post_id, 'gc_requiere_prueba', isset($_POST['gc_requiere_prueba']) ? '1' : '0');

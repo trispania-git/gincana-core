@@ -102,6 +102,9 @@ function gc_shortcode_estacion_acceso() {
         if ($tipo_qr === 'validacion_quiz') {
             // QR valida mediante quiz
             echo gc_render_adulto_station($station_id, $title, $escenario_id);
+        } elseif ($tipo_qr === 'validacion_gps') {
+            // GPS verificado (token URL = ya pasó la verificación): completar con botón
+            echo gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id);
         } elseif ($tipo_qr === 'validacion_boton' || $tipo_qr === 'validacion') {
             // QR valida con botón (presencia)
             echo gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id);
@@ -359,10 +362,6 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
 function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
     $label = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
     $pista = get_post_meta($station_id, 'gc_pista_busqueda', true);
-    $geo_radio = (int) get_post_meta($escenario_id, 'gc_geo_radio', true);
-    $st_lat    = get_post_meta($station_id, 'gc_latitud', true);
-    $st_lng    = get_post_meta($station_id, 'gc_longitud', true);
-    $geo_enabled = ($geo_radio > 0 && $st_lat && $st_lng);
 
     ob_start();
     ?>
@@ -494,75 +493,6 @@ function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
         })();
         </script>
 
-        <?php if ($geo_enabled): ?>
-        <!-- Botón verificar ubicación GPS -->
-        <div style="margin:12px 0 0;">
-          <button type="button" id="gc-geo-verify-btn" style="display:inline-flex;align-items:center;gap:10px;padding:12px 24px;border:2px solid #2563eb;border-radius:14px;background:#fff;color:#2563eb;font-size:15px;font-weight:700;cursor:pointer;transition:background 0.2s;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            Verificar ubicacion
-          </button>
-          <div id="gc-geo-msg" style="margin-top:10px;font-size:14px;"></div>
-        </div>
-        <script>
-        (function(){
-          var btn = document.getElementById('gc-geo-verify-btn');
-          var msg = document.getElementById('gc-geo-msg');
-          var stLat = <?php echo (float) $st_lat; ?>;
-          var stLng = <?php echo (float) $st_lng; ?>;
-          var maxDist = <?php echo (int) $geo_radio; ?>;
-          var qrUrl = <?php echo wp_json_encode(gc_get_station_entry_url($station_id)); ?>;
-
-          function haversine(lat1, lon1, lat2, lon2) {
-            var R = 6371000;
-            var dLat = (lat2 - lat1) * Math.PI / 180;
-            var dLon = (lon2 - lon1) * Math.PI / 180;
-            var a = Math.sin(dLat/2) * Math.sin(dLat/2)
-                  + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
-                  * Math.sin(dLon/2) * Math.sin(dLon/2);
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          }
-
-          btn.addEventListener('click', function(){
-            btn.disabled = true;
-            msg.style.color = '#64748b';
-            msg.textContent = 'Obteniendo ubicacion...';
-
-            if (!navigator.geolocation) {
-              msg.style.color = '#dc2626';
-              msg.textContent = 'Tu navegador no soporta geolocalizacion.';
-              btn.disabled = false;
-              return;
-            }
-
-            navigator.geolocation.getCurrentPosition(function(pos) {
-              var dist = haversine(pos.coords.latitude, pos.coords.longitude, stLat, stLng);
-              var distRound = Math.round(dist);
-
-              if (dist <= maxDist) {
-                msg.style.color = '#16a34a';
-                msg.innerHTML = '<strong>✅ ¡Ubicacion verificada!</strong> Estas a ' + distRound + 'm. Redirigiendo...';
-                setTimeout(function(){ window.location.href = qrUrl; }, 1000);
-              } else {
-                msg.style.color = '#dc2626';
-                msg.innerHTML = '❌ Estas a <strong>' + distRound + 'm</strong>. Necesitas estar a menos de ' + maxDist + 'm.';
-                btn.disabled = false;
-              }
-            }, function(err) {
-              msg.style.color = '#dc2626';
-              if (err.code === 1) {
-                msg.textContent = 'Permiso de ubicacion denegado. Activalo en los ajustes del navegador.';
-              } else if (err.code === 2) {
-                msg.textContent = 'No se pudo determinar tu ubicacion. Intentalo al aire libre.';
-              } else {
-                msg.textContent = 'Error al obtener ubicacion. Intentalo de nuevo.';
-              }
-              btn.disabled = false;
-            }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-          });
-        })();
-        </script>
-        <?php endif; ?>
-
         <?php if ($pista): ?>
         <div style="margin:16px 0 0;padding:14px 16px;border-radius:10px;background:#fff;border:1px dashed #f59e0b;">
             <p style="margin:0;font-size:13px;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">💡 Pista</p>
@@ -570,6 +500,162 @@ function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
         </div>
         <?php endif; ?>
     </div>
+    <?php
+    return ob_get_clean();
+}
+
+/**
+ * Render GPS: verificación por geolocalización.
+ * Se muestra en acceso directo (sin QR) cuando tipo_qr = validacion_gps.
+ */
+function gc_render_station_gps($station_id, $title, $escenario_id) {
+    $label = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
+    $label_uc = mb_strtoupper(mb_substr($label, 0, 1)) . mb_substr($label, 1);
+    $geo_radio = (int) get_post_meta($escenario_id, 'gc_geo_radio', true);
+    $st_lat    = get_post_meta($station_id, 'gc_latitud', true);
+    $st_lng    = get_post_meta($station_id, 'gc_longitud', true);
+    $escenario_url = get_permalink($escenario_id) ?: home_url('/');
+    $nonce = wp_create_nonce('wp_rest');
+    $user_id = get_current_user_id();
+
+    // Si no está logueado
+    if (!$user_id) {
+        $current_url = (is_ssl() ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+        $login_url = wp_login_url($current_url);
+        $register_url = wp_registration_url();
+        ob_start();
+        ?>
+        <div style="padding:24px 20px;border-radius:14px;background:#eff6ff;border:2px solid #2563eb;text-align:center;">
+            <div style="font-size:48px;margin-bottom:8px;">📍</div>
+            <h2 style="margin:0 0 8px;color:#1e40af;">¡Verifica tu ubicacion!</h2>
+            <p style="margin:0 0 16px;font-size:15px;color:#334155;">
+                Inicia sesion para verificar que estas en <strong><?php echo esc_html($title); ?></strong>.
+            </p>
+            <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                <a href="<?php echo esc_url($login_url); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Iniciar sesion</a>
+                <a href="<?php echo esc_url($register_url); ?>" style="display:inline-block;padding:12px 24px;border:2px solid #2563eb;border-radius:10px;background:#fff;color:#2563eb;text-decoration:none;font-weight:600;">Registrarse</a>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    // Si ya la ha completado
+    if (function_exists('gincana_user_passed') && gincana_user_passed($user_id, $station_id)) {
+        ob_start();
+        ?>
+        <div style="padding:24px 20px;border-radius:14px;background:#f7fff7;border:2px solid #16a34a;text-align:center;">
+            <div style="font-size:48px;margin-bottom:8px;">✅</div>
+            <h2 style="margin:0 0 8px;color:#146c2e;">¡Ya completaste esta <?php echo esc_html($label); ?>!</h2>
+            <a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:12px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    // Sin coordenadas configuradas
+    if (!$st_lat || !$st_lng || $geo_radio <= 0) {
+        ob_start();
+        ?>
+        <div style="padding:20px;border-radius:14px;background:#fef2f2;border:1px solid #fecaca;text-align:center;">
+            <p style="margin:0;color:#991b1b;">Esta <?php echo esc_html($label); ?> no tiene coordenadas GPS configuradas.</p>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
+    // Verificación GPS
+    ob_start();
+    ?>
+    <div style="padding:24px 20px;border-radius:14px;background:#fef2f2;border:2px solid #dc2626;text-align:center;">
+        <div style="font-size:48px;margin-bottom:8px;">📍</div>
+        <h3 style="margin:0 0 8px;color:#991b1b;">Verifica tu ubicacion</h3>
+        <p style="margin:0 0 16px;font-size:15px;color:#7f1d1d;">
+            Comprueba que estas cerca de <strong><?php echo esc_html($title); ?></strong> para validar esta <?php echo esc_html($label); ?>.
+        </p>
+        <button type="button" id="gc-geo-verify-btn" style="display:inline-flex;align-items:center;gap:10px;padding:14px 28px;border:0;border-radius:14px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(220,38,38,0.35);transition:transform 0.2s;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Verificar ubicacion
+        </button>
+        <div id="gc-geo-msg" style="margin-top:14px;font-size:15px;"></div>
+    </div>
+    <script>
+    (function(){
+      var btn = document.getElementById('gc-geo-verify-btn');
+      var msg = document.getElementById('gc-geo-msg');
+      var stLat = <?php echo (float) $st_lat; ?>;
+      var stLng = <?php echo (float) $st_lng; ?>;
+      var maxDist = <?php echo (int) $geo_radio; ?>;
+      var stationId = <?php echo (int) $station_id; ?>;
+      var nonce = '<?php echo esc_js($nonce); ?>';
+
+      function haversine(lat1, lon1, lat2, lon2) {
+        var R = 6371000;
+        var dLat = (lat2 - lat1) * Math.PI / 180;
+        var dLon = (lon2 - lon1) * Math.PI / 180;
+        var a = Math.sin(dLat/2) * Math.sin(dLat/2)
+              + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+              * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
+      btn.addEventListener('click', function(){
+        btn.disabled = true;
+        msg.style.color = '#64748b';
+        msg.textContent = 'Obteniendo ubicacion...';
+
+        if (!navigator.geolocation) {
+          msg.style.color = '#dc2626';
+          msg.textContent = 'Tu navegador no soporta geolocalizacion.';
+          btn.disabled = false;
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(function(pos) {
+          var dist = haversine(pos.coords.latitude, pos.coords.longitude, stLat, stLng);
+          var distRound = Math.round(dist);
+
+          if (dist <= maxDist) {
+            msg.style.color = '#16a34a';
+            msg.innerHTML = '<strong>✅ ¡Ubicacion verificada!</strong> Estas a ' + distRound + 'm. Validando...';
+            // Completar la estación directamente via API
+            fetch('/wp-json/gincana/v1/progress/skip', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+              credentials: 'same-origin',
+              body: JSON.stringify({ estacion_id: stationId, time_ms: 0 })
+            }).then(function(r){ return r.json(); }).then(function(data){
+              if (data && data.ok) {
+                msg.innerHTML = '<div style="padding:16px;border-radius:12px;background:#dcfce7;border:1px solid #16a34a;color:#146c2e;font-size:16px;font-weight:600;">✅ ¡<?php echo esc_html($label_uc); ?> validada!</div>'
+                  + '<a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:14px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
+                btn.style.display = 'none';
+              } else {
+                msg.innerHTML = '<div style="color:#dc2626;">No se pudo validar. Intentalo de nuevo.</div>';
+                btn.disabled = false;
+              }
+            }).catch(function(err){
+              msg.innerHTML = '<div style="color:#dc2626;">Error: ' + err.message + '</div>';
+              btn.disabled = false;
+            });
+          } else {
+            msg.style.color = '#dc2626';
+            msg.innerHTML = '❌ Estas a <strong>' + distRound + 'm</strong>. Necesitas estar a menos de ' + maxDist + 'm.';
+            btn.disabled = false;
+          }
+        }, function(err) {
+          msg.style.color = '#dc2626';
+          if (err.code === 1) {
+            msg.textContent = 'Permiso de ubicacion denegado. Activalo en los ajustes del navegador.';
+          } else if (err.code === 2) {
+            msg.textContent = 'No se pudo determinar tu ubicacion. Intentalo al aire libre.';
+          } else {
+            msg.textContent = 'Error al obtener ubicacion. Intentalo de nuevo.';
+          }
+          btn.disabled = false;
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+      });
+    })();
+    </script>
     <?php
     return ob_get_clean();
 }
@@ -880,7 +966,10 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         // Logueado, acceso directo (sin QR)
         $tipo_qr = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';
 
-        if ($tipo_qr === 'validacion_boton' || $tipo_qr === 'validacion_quiz' || $tipo_qr === 'validacion') {
+        if ($tipo_qr === 'validacion_gps') {
+            // GPS: mostrar verificación por geolocalización
+            echo gc_render_station_gps($station_id, $title, $escenario_id);
+        } elseif ($tipo_qr === 'validacion_boton' || $tipo_qr === 'validacion_quiz' || $tipo_qr === 'validacion') {
             // QR obligatorio (botón o quiz): solo mostrar pista para buscar el QR
             echo gc_render_infantil_station_pista($station_id, $title, $escenario_id);
         } else {
