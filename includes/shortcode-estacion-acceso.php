@@ -103,8 +103,12 @@ function gc_shortcode_estacion_acceso() {
             // QR valida mediante quiz
             echo gc_render_adulto_station($station_id, $title, $escenario_id);
         } elseif ($tipo_qr === 'validacion_gps') {
-            // GPS verificado (token URL = ya pasó la verificación): completar con botón
-            echo gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id);
+            // GPS verificado (token URL = ya pasó la verificación): quiz si hay prueba, si no botón
+            if (gc_requiere_prueba($escenario_id)) {
+                echo gc_render_adulto_station($station_id, $title, $escenario_id);
+            } else {
+                echo gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id);
+            }
         } elseif ($tipo_qr === 'validacion_boton' || $tipo_qr === 'validacion') {
             // QR valida con botón (presencia)
             echo gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id);
@@ -515,7 +519,6 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
     $st_lat    = get_post_meta($station_id, 'gc_latitud', true);
     $st_lng    = get_post_meta($station_id, 'gc_longitud', true);
     $escenario_url = get_permalink($escenario_id) ?: home_url('/');
-    $nonce = wp_create_nonce('wp_rest');
     $user_id = get_current_user_id();
 
     // Si no está logueado
@@ -586,8 +589,7 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
       var stLat = <?php echo (float) $st_lat; ?>;
       var stLng = <?php echo (float) $st_lng; ?>;
       var maxDist = <?php echo (int) $geo_radio; ?>;
-      var stationId = <?php echo (int) $station_id; ?>;
-      var nonce = '<?php echo esc_js($nonce); ?>';
+      var tokenUrl = <?php echo wp_json_encode(gc_get_station_entry_url($station_id)); ?>;
 
       function haversine(lat1, lon1, lat2, lon2) {
         var R = 6371000;
@@ -617,26 +619,9 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
 
           if (dist <= maxDist) {
             msg.style.color = '#16a34a';
-            msg.innerHTML = '<strong>✅ ¡Ubicacion verificada!</strong> Estas a ' + distRound + 'm. Validando...';
-            // Completar la estación directamente via API
-            fetch('/wp-json/gincana/v1/progress/skip', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
-              credentials: 'same-origin',
-              body: JSON.stringify({ estacion_id: stationId, time_ms: 0 })
-            }).then(function(r){ return r.json(); }).then(function(data){
-              if (data && data.ok) {
-                msg.innerHTML = '<div style="padding:16px;border-radius:12px;background:#dcfce7;border:1px solid #16a34a;color:#146c2e;font-size:16px;font-weight:600;">✅ ¡<?php echo esc_html($label_uc); ?> validada!</div>'
-                  + '<a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:14px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
-                btn.style.display = 'none';
-              } else {
-                msg.innerHTML = '<div style="color:#dc2626;">No se pudo validar. Intentalo de nuevo.</div>';
-                btn.disabled = false;
-              }
-            }).catch(function(err){
-              msg.innerHTML = '<div style="color:#dc2626;">Error: ' + err.message + '</div>';
-              btn.disabled = false;
-            });
+            msg.innerHTML = '<strong>✅ ¡Ubicacion verificada!</strong> Estas a ' + distRound + 'm. Continuando...';
+            // Redirigir a la URL con token: allí se mostrará quiz o validación directa
+            setTimeout(function(){ window.location.href = tokenUrl; }, 800);
           } else {
             msg.style.color = '#dc2626';
             msg.innerHTML = '❌ Estas a <strong>' + distRound + 'm</strong>. Necesitas estar a menos de ' + maxDist + 'm.';
