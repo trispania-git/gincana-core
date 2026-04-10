@@ -367,6 +367,14 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
       $maps = gincana_core_csv_cell($row, $idx['station_maps_url']);
       if ($maps !== '') update_post_meta($station_id, 'gc_maps_url', esc_url_raw($maps));
     }
+    if ( isset($idx['station_latitud']) ) {
+      $lat = preg_replace('/[^0-9.\-]/', '', gincana_core_csv_cell($row, $idx['station_latitud']));
+      if ($lat !== '') update_post_meta($station_id, 'gc_latitud', $lat);
+    }
+    if ( isset($idx['station_longitud']) ) {
+      $lng = preg_replace('/[^0-9.\-]/', '', gincana_core_csv_cell($row, $idx['station_longitud']));
+      if ($lng !== '') update_post_meta($station_id, 'gc_longitud', $lng);
+    }
     if ( isset($idx['station_audio']) ) {
       $audio = gincana_core_csv_cell($row, $idx['station_audio']);
       if ($audio !== '') update_post_meta($station_id, 'gc_audio', esc_url_raw($audio));

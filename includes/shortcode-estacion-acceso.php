@@ -359,6 +359,10 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
 function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
     $label = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
     $pista = get_post_meta($station_id, 'gc_pista_busqueda', true);
+    $geo_radio = (int) get_post_meta($escenario_id, 'gc_geo_radio', true);
+    $st_lat    = get_post_meta($station_id, 'gc_latitud', true);
+    $st_lng    = get_post_meta($station_id, 'gc_longitud', true);
+    $geo_enabled = ($geo_radio > 0 && $st_lat && $st_lng);
 
     ob_start();
     ?>
@@ -489,6 +493,75 @@ function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
           });
         })();
         </script>
+
+        <?php if ($geo_enabled): ?>
+        <!-- Botón verificar ubicación GPS -->
+        <div style="margin:12px 0 0;">
+          <button type="button" id="gc-geo-verify-btn" style="display:inline-flex;align-items:center;gap:10px;padding:12px 24px;border:2px solid #2563eb;border-radius:14px;background:#fff;color:#2563eb;font-size:15px;font-weight:700;cursor:pointer;transition:background 0.2s;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Verificar ubicacion
+          </button>
+          <div id="gc-geo-msg" style="margin-top:10px;font-size:14px;"></div>
+        </div>
+        <script>
+        (function(){
+          var btn = document.getElementById('gc-geo-verify-btn');
+          var msg = document.getElementById('gc-geo-msg');
+          var stLat = <?php echo (float) $st_lat; ?>;
+          var stLng = <?php echo (float) $st_lng; ?>;
+          var maxDist = <?php echo (int) $geo_radio; ?>;
+          var qrUrl = <?php echo wp_json_encode(gc_get_station_entry_url($station_id)); ?>;
+
+          function haversine(lat1, lon1, lat2, lon2) {
+            var R = 6371000;
+            var dLat = (lat2 - lat1) * Math.PI / 180;
+            var dLon = (lon2 - lon1) * Math.PI / 180;
+            var a = Math.sin(dLat/2) * Math.sin(dLat/2)
+                  + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+                  * Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          }
+
+          btn.addEventListener('click', function(){
+            btn.disabled = true;
+            msg.style.color = '#64748b';
+            msg.textContent = 'Obteniendo ubicacion...';
+
+            if (!navigator.geolocation) {
+              msg.style.color = '#dc2626';
+              msg.textContent = 'Tu navegador no soporta geolocalizacion.';
+              btn.disabled = false;
+              return;
+            }
+
+            navigator.geolocation.getCurrentPosition(function(pos) {
+              var dist = haversine(pos.coords.latitude, pos.coords.longitude, stLat, stLng);
+              var distRound = Math.round(dist);
+
+              if (dist <= maxDist) {
+                msg.style.color = '#16a34a';
+                msg.innerHTML = '<strong>✅ ¡Ubicacion verificada!</strong> Estas a ' + distRound + 'm. Redirigiendo...';
+                setTimeout(function(){ window.location.href = qrUrl; }, 1000);
+              } else {
+                msg.style.color = '#dc2626';
+                msg.innerHTML = '❌ Estas a <strong>' + distRound + 'm</strong>. Necesitas estar a menos de ' + maxDist + 'm.';
+                btn.disabled = false;
+              }
+            }, function(err) {
+              msg.style.color = '#dc2626';
+              if (err.code === 1) {
+                msg.textContent = 'Permiso de ubicacion denegado. Activalo en los ajustes del navegador.';
+              } else if (err.code === 2) {
+                msg.textContent = 'No se pudo determinar tu ubicacion. Intentalo al aire libre.';
+              } else {
+                msg.textContent = 'Error al obtener ubicacion. Intentalo de nuevo.';
+              }
+              btn.disabled = false;
+            }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+          });
+        })();
+        </script>
+        <?php endif; ?>
 
         <?php if ($pista): ?>
         <div style="margin:16px 0 0;padding:14px 16px;border-radius:10px;background:#fff;border:1px dashed #f59e0b;">

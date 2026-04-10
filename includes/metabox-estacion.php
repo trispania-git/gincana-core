@@ -48,8 +48,10 @@ function gc_render_estacion_metabox($post) {
     $descripcion     = get_post_meta($post->ID, 'gc_descripcion', true);
     $pista_busqueda  = get_post_meta($post->ID, 'gc_pista_busqueda', true);
     $audio    = get_post_meta($post->ID, 'gc_audio', true);
-    $maps_url = get_post_meta($post->ID, 'gc_maps_url', true);
+    $maps_url  = get_post_meta($post->ID, 'gc_maps_url', true);
     $direccion = get_post_meta($post->ID, 'gc_direccion', true);
+    $latitud   = get_post_meta($post->ID, 'gc_latitud', true);
+    $longitud  = get_post_meta($post->ID, 'gc_longitud', true);
     $img1     = get_post_meta($post->ID, 'gc_img_1', true);
     $img2     = get_post_meta($post->ID, 'gc_img_2', true);
     $token    = get_post_meta($post->ID, 'gc_qr_token', true);
@@ -109,6 +111,45 @@ function gc_render_estacion_metabox($post) {
             <td>
                 <input type="url" name="gc_maps_url" id="gc_maps_url" value="<?php echo esc_attr($maps_url); ?>" style="width:100%;" placeholder="https://maps.google.com/..." />
                 <p class="description">Enlace de Google Maps del lugar.</p>
+            </td>
+        </tr>
+        <tr>
+            <th><label>Coordenadas GPS</label></th>
+            <td>
+                <div style="display:flex;gap:12px;align-items:center;">
+                    <div style="flex:1;">
+                        <label for="gc_latitud" style="font-size:12px;color:#666;">Latitud</label>
+                        <input type="text" name="gc_latitud" id="gc_latitud" value="<?php echo esc_attr($latitud); ?>" style="width:100%;" placeholder="40.123456" />
+                    </div>
+                    <div style="flex:1;">
+                        <label for="gc_longitud" style="font-size:12px;color:#666;">Longitud</label>
+                        <input type="text" name="gc_longitud" id="gc_longitud" value="<?php echo esc_attr($longitud); ?>" style="width:100%;" placeholder="-3.456789" />
+                    </div>
+                    <button type="button" id="gc-extract-coords" class="button" style="margin-top:16px;" title="Extraer de la URL de Google Maps">📍 Extraer</button>
+                </div>
+                <p class="description">Para verificacion por GPS. Pulsa "Extraer" para obtenerlas de la URL de Maps, o introducelas manualmente.</p>
+                <script>
+                document.getElementById('gc-extract-coords').addEventListener('click', function(){
+                    var url = document.getElementById('gc_maps_url').value;
+                    if (!url) { alert('Introduce primero una URL de Google Maps.'); return; }
+                    // Intentar extraer coordenadas de varios formatos de URL
+                    var patterns = [
+                        /@(-?\d+\.\d+),(-?\d+\.\d+)/,           // @lat,lng
+                        /[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/,       // ?q=lat,lng
+                        /place\/[^/]*\/(-?\d+\.\d+),(-?\d+\.\d+)/, // place/.../lat,lng
+                        /ll=(-?\d+\.\d+),(-?\d+\.\d+)/,           // ll=lat,lng
+                    ];
+                    for (var i = 0; i < patterns.length; i++) {
+                        var m = url.match(patterns[i]);
+                        if (m) {
+                            document.getElementById('gc_latitud').value = m[1];
+                            document.getElementById('gc_longitud').value = m[2];
+                            return;
+                        }
+                    }
+                    alert('No se pudieron extraer las coordenadas de esta URL.\nIntroduce latitud y longitud manualmente.');
+                });
+                </script>
             </td>
         </tr>
 
@@ -194,6 +235,11 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
     update_post_meta($post_id, 'gc_direccion', sanitize_text_field($_POST['gc_direccion'] ?? ''));
     update_post_meta($post_id, 'gc_maps_url', esc_url_raw($_POST['gc_maps_url'] ?? ''));
+    // Coordenadas GPS: sanitizar como float
+    $lat = isset($_POST['gc_latitud']) ? preg_replace('/[^0-9.\-]/', '', $_POST['gc_latitud']) : '';
+    $lng = isset($_POST['gc_longitud']) ? preg_replace('/[^0-9.\-]/', '', $_POST['gc_longitud']) : '';
+    update_post_meta($post_id, 'gc_latitud', $lat);
+    update_post_meta($post_id, 'gc_longitud', $lng);
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));
     update_post_meta($post_id, 'gc_img_2', esc_url_raw($_POST['gc_img_2'] ?? ''));
 
