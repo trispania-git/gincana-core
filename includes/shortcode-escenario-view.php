@@ -690,77 +690,77 @@ add_shortcode('gincana_estaciones_lista', function($atts){
                   }
 
                   // Marco decorativo
-                  ctx.strokeStyle = fondoUrl ? 'rgba(255,255,255,0.5)' : '#16a34a';
+                  ctx.strokeStyle = '#16a34a';
                   ctx.lineWidth = 6;
                   ctx.strokeRect(24, 24, W - 48, H - 48);
-                  ctx.strokeStyle = fondoUrl ? 'rgba(255,255,255,0.3)' : '#86efac';
+                  ctx.strokeStyle = '#86efac';
                   ctx.lineWidth = 2;
                   ctx.strokeRect(36, 36, W - 72, H - 72);
 
                   ctx.textAlign = 'center';
 
                   // Trofeo
-                  ctx.font = '80px serif';
-                  ctx.fillText('\uD83C\uDFC6', W/2, 140);
+                  ctx.font = '100px serif';
+                  ctx.fillText('\uD83C\uDFC6', W/2, 160);
 
                   // Titulo
-                  ctx.fillStyle = fondoUrl ? '#ffffff' : '#14532d';
-                  ctx.font = font('bold', 56);
-                  ctx.fillText('\u00A1Enhorabuena!', W/2, 240);
+                  ctx.fillStyle = '#14532d';
+                  ctx.font = font('bold', 66);
+                  ctx.fillText('\u00A1Enhorabuena!', W/2, 270);
 
                   // Separador
-                  ctx.strokeStyle = fondoUrl ? 'rgba(255,255,255,0.5)' : '#86efac';
+                  ctx.strokeStyle = '#86efac';
                   ctx.lineWidth = 2;
-                  ctx.beginPath(); ctx.moveTo(W/2 - 120, 270); ctx.lineTo(W/2 + 120, 270); ctx.stroke();
+                  ctx.beginPath(); ctx.moveTo(W/2 - 140, 300); ctx.lineTo(W/2 + 140, 300); ctx.stroke();
 
                   // Nombre del usuario
-                  ctx.fillStyle = fondoUrl ? '#ffffff' : '#166534';
-                  ctx.font = font('bold', 48);
+                  ctx.fillStyle = '#166534';
+                  ctx.font = font('bold', 56);
                   var nameLines = wrapText(ctx, userName, W - 120);
-                  var nameY = 340;
+                  var nameY = 390;
                   for (var n = 0; n < nameLines.length; n++) {
-                    ctx.fillText(nameLines[n], W/2, nameY + n * 58);
+                    ctx.fillText(nameLines[n], W/2, nameY + n * 66);
                   }
-                  var afterName = nameY + nameLines.length * 58 + 20;
+                  var afterName = nameY + nameLines.length * 66 + 24;
 
                   // "Ha completado el escenario"
-                  ctx.fillStyle = fondoUrl ? 'rgba(255,255,255,0.85)' : '#334155';
-                  ctx.font = font('normal', 32);
+                  ctx.fillStyle = '#334155';
+                  ctx.font = font('normal', 38);
                   ctx.fillText('Ha completado el escenario', W/2, afterName);
 
                   // Nombre escenario
-                  ctx.fillStyle = fondoUrl ? '#ffffff' : '#1e40af';
-                  ctx.font = font('bold', 42);
+                  ctx.fillStyle = '#1e40af';
+                  ctx.font = font('bold', 50);
                   var escLines = wrapText(ctx, escName, W - 120);
-                  var escY = afterName + 60;
+                  var escY = afterName + 70;
                   for (var e = 0; e < escLines.length; e++) {
-                    ctx.fillText(escLines[e], W/2, escY + e * 52);
+                    ctx.fillText(escLines[e], W/2, escY + e * 60);
                   }
-                  var afterEsc = escY + escLines.length * 52 + 30;
+                  var afterEsc = escY + escLines.length * 60 + 40;
 
                   // Ranking y puntos
                   if (totalPts > 0) {
-                    ctx.fillStyle = fondoUrl ? 'rgba(255,255,255,0.85)' : '#334155';
-                    ctx.font = font('bold', 30);
+                    ctx.fillStyle = '#334155';
+                    ctx.font = font('bold', 36);
                     ctx.fillText('Posicion #' + ranking + '  \u00B7  ' + totalPts + ' puntos', W/2, afterEsc);
-                    afterEsc += 50;
+                    afterEsc += 60;
                   }
 
                   // Fecha
-                  ctx.fillStyle = fondoUrl ? 'rgba(255,255,255,0.7)' : '#64748b';
-                  ctx.font = font('normal', 26);
+                  ctx.fillStyle = '#64748b';
+                  ctx.font = font('normal', 30);
                   ctx.fillText(fecha, W/2, afterEsc);
-                  afterEsc += 60;
+                  afterEsc += 70;
 
                   // Mensaje diploma (premio / instrucciones)
                   if (diplomaMsg) {
-                    ctx.font = font('bold', 28);
+                    ctx.font = font('bold', 34);
                     var msgLines = wrapText(ctx, diplomaMsg, W - 120);
-                    var msgH = msgLines.length * 40 + 32;
+                    var msgH = msgLines.length * 46 + 36;
                     var msgY = afterEsc;
 
                     // Fondo del mensaje
-                    ctx.fillStyle = fondoUrl ? 'rgba(0,0,0,0.35)' : 'rgba(254,242,242,0.85)';
+                    ctx.fillStyle = 'rgba(254,242,242,0.85)';
                     var rx = 60, ry = msgY - 30, rw = W - 120, rh = msgH;
                     ctx.beginPath();
                     ctx.moveTo(rx + 14, ry);
@@ -770,16 +770,16 @@ add_shortcode('gincana_estaciones_lista', function($atts){
                     ctx.arcTo(rx, ry, rx + rw, ry, 14);
                     ctx.fill();
 
-                    ctx.fillStyle = fondoUrl ? '#ffffff' : '#991b1b';
-                    ctx.font = font('bold', 28);
+                    ctx.fillStyle = '#991b1b';
+                    ctx.font = font('bold', 34);
                     for (var j = 0; j < msgLines.length; j++) {
-                      ctx.fillText(msgLines[j], W/2, msgY + j * 40);
+                      ctx.fillText(msgLines[j], W/2, msgY + j * 46);
                     }
                   }
 
                   // Pie
-                  ctx.fillStyle = fondoUrl ? 'rgba(255,255,255,0.5)' : '#94a3b8';
-                  ctx.font = font('normal', 18);
+                  ctx.fillStyle = '#94a3b8';
+                  ctx.font = font('normal', 22);
                   ctx.fillText('Generado por Gincana', W/2, H - 45);
 
                   // Descargar
@@ -800,8 +800,8 @@ add_shortcode('gincana_estaciones_lista', function($atts){
                     var scale = Math.max(W / img.width, H / img.height);
                     var sw = img.width * scale, sh = img.height * scale;
                     ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
-                    // Overlay semitransparente para aclarar y que el texto sea legible
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                    // Overlay blanco semitransparente para aclarar el fondo
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
                     ctx.fillRect(0, 0, W, H);
                     drawDiploma();
                   };
