@@ -341,10 +341,14 @@ if ( ! function_exists('gc_get_pool_question') ) {
       }
     }
 
-    if (empty($available)) return null; // Pool agotado
+    if (empty($available)) {
+      // Pool agotado: reciclar (permitir repetidas)
+      $available = array_keys($preguntas);
+    }
 
-    // Elegir al azar
-    $rand_idx = $available[array_rand($available)];
+    // Elegir al azar con shuffle para mejor distribución
+    shuffle($available);
+    $rand_idx = $available[0];
 
     // Guardar asignación
     $assigned[$station_key] = $rand_idx;

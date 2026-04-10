@@ -825,11 +825,26 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
 
                 if (data2 && data2.ok) {
                     const pts = data2.points_awarded || 0;
+                    <?php
+                    $tipo_qr_redirect = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';
+                    $escenario_url_js = get_permalink($escenario_id) ?: home_url('/');
+                    ?>
+                    <?php if ($tipo_qr_redirect === 'validacion_gps'): ?>
+                    // GPS: mostrar resumen en la misma página
+                    var wrap = document.querySelector('.gc-adult-station');
+                    if (wrap) {
+                        wrap.innerHTML = '<div style="padding:24px 20px;border-radius:14px;background:#f7fff7;border:2px solid #16a34a;text-align:center;">'
+                            + '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Ubicación verificada</p>'
+                            + '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Desafío completado — ' + pts + ' puntos</p>'
+                            + '<a href="<?php echo esc_url($escenario_url_js); ?>" style="display:inline-block;margin-top:16px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>'
+                            + '</div>';
+                    }
+                    <?php else: ?>
                     msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;">✅ Respuesta correcta. Has conseguido <strong>' + pts + ' puntos</strong>.</div>';
-
                     setTimeout(function(){
-                        window.location.href = <?php echo json_encode( get_permalink($escenario_id) ?: home_url('/') ); ?>;
+                        window.location.href = <?php echo json_encode($escenario_url_js); ?>;
                     }, 1800);
+                    <?php endif; ?>
                 } else {
                     msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">La respuesta era correcta, pero no se pudo registrar el progreso.</div>';
                 }

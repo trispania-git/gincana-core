@@ -34,14 +34,24 @@ function gincana_core_users_cb(){
       $deleted_prog = (int) $wpdb->query($wpdb->prepare(
         "DELETE FROM $tbl_prog WHERE user_id=%d AND escenario_id=%d", $reset_user, $reset_esc
       ));
+      // Limpiar asignaciones de pool de preguntas
+      delete_user_meta($reset_user, 'gc_pool_assigned_' . $reset_esc);
     } elseif ($action === 'reset_user_all' && $reset_user) {
       // Vaciar TODOS los datos de un usuario
       $deleted_pts  = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_points WHERE user_id=%d", $reset_user));
       $deleted_prog = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_prog WHERE user_id=%d", $reset_user));
+      // Limpiar TODAS las asignaciones de pool de este usuario
+      $wpdb->query($wpdb->prepare(
+        "DELETE FROM $wpdb->usermeta WHERE user_id=%d AND meta_key LIKE 'gc_pool_assigned_%%'", $reset_user
+      ));
     } elseif ($action === 'reset_escenario' && $reset_esc) {
       // Vaciar TODOS los datos de un escenario (todos los usuarios)
       $deleted_pts  = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_points WHERE escenario_id=%d", $reset_esc));
       $deleted_prog = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_prog WHERE escenario_id=%d", $reset_esc));
+      // Limpiar asignaciones de pool de todos los usuarios para este escenario
+      $wpdb->query($wpdb->prepare(
+        "DELETE FROM $wpdb->usermeta WHERE meta_key = %s", 'gc_pool_assigned_' . $reset_esc
+      ));
     } elseif ($action === 'clean_station_content' && $reset_esc) {
       // Limpiar contenido falso/placeholder de estaciones de un escenario
       $stations = get_posts([
