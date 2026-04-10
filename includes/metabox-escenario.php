@@ -344,7 +344,7 @@ function gc_render_escenario_metabox($post) {
                     <div class="gc-wiz-field" style="margin:0;">
                         <label>Imagen de fondo del diploma</label>
                         <?php gc_render_media_field('gc_diploma_fondo', $diploma_fondo, 'image', 'Seleccionar fondo'); ?>
-                        <div class="gc-hint">Opcional. Si no se sube, se usa un fondo por defecto con degradado.</div>
+                        <div class="gc-hint">Opcional (800&times;1200px recomendado, vertical). La imagen se oscurece automaticamente para que el texto sea legible. Si no se sube, se usa un degradado por defecto.</div>
                     </div>
                 </div>
             </div>

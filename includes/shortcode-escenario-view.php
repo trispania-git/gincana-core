@@ -640,7 +640,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
                 Descargar diploma
               </button>
             </div>
-            <canvas id="gc-diploma-canvas" style="display:none;" width="1200" height="800"></canvas>
+            <canvas id="gc-diploma-canvas" style="display:none;"></canvas>
             <script>
             (function(){
               var btn = document.getElementById('gc-diploma-download-btn');
@@ -653,6 +653,20 @@ add_shortcode('gincana_estaciones_lista', function($atts){
               var diplomaMsg = <?php echo wp_json_encode($diploma_msg ?: ''); ?>;
               var fondoUrl  = <?php echo wp_json_encode($diploma_fondo ?: ''); ?>;
               var fecha     = new Date().toLocaleDateString('es-ES', {day:'numeric',month:'long',year:'numeric'});
+              var font = function(w, s) { return w + ' ' + s + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'; };
+
+              // Dividir texto en líneas que quepan en maxW
+              function wrapText(ctx, text, maxW) {
+                var words = text.split(' '), lines = [], line = '';
+                for (var i = 0; i < words.length; i++) {
+                  var test = line + (line ? ' ' : '') + words[i];
+                  if (ctx.measureText(test).width > maxW && line) {
+                    lines.push(line); line = words[i];
+                  } else { line = test; }
+                }
+                if (line) lines.push(line);
+                return lines;
+              }
 
               btn.addEventListener('click', function() {
                 btn.disabled = true;
@@ -660,111 +674,113 @@ add_shortcode('gincana_estaciones_lista', function($atts){
 
                 var canvas = document.getElementById('gc-diploma-canvas');
                 var ctx = canvas.getContext('2d');
-                var W = 1200, H = 800;
+                var W = 800, H = 1200;
                 canvas.width = W;
                 canvas.height = H;
 
                 function drawDiploma() {
-                  // Fondo
+                  // Fondo por defecto (si no hay imagen o antes de dibujar encima)
                   if (!fondoUrl) {
-                    // Fondo por defecto: degradado elegante
                     var grad = ctx.createLinearGradient(0, 0, W, H);
                     grad.addColorStop(0, '#f0fdf4');
                     grad.addColorStop(0.5, '#dcfce7');
                     grad.addColorStop(1, '#bbf7d0');
                     ctx.fillStyle = grad;
                     ctx.fillRect(0, 0, W, H);
-
-                    // Marco decorativo
-                    ctx.strokeStyle = '#16a34a';
-                    ctx.lineWidth = 6;
-                    ctx.strokeRect(30, 30, W - 60, H - 60);
-                    ctx.strokeStyle = '#86efac';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(42, 42, W - 84, H - 84);
                   }
 
-                  // Icono trofeo
-                  ctx.fillStyle = '#f59e0b';
-                  ctx.font = '60px serif';
+                  // Marco decorativo
+                  ctx.strokeStyle = fondoUrl ? 'rgba(255,255,255,0.5)' : '#16a34a';
+                  ctx.lineWidth = 6;
+                  ctx.strokeRect(24, 24, W - 48, H - 48);
+                  ctx.strokeStyle = fondoUrl ? 'rgba(255,255,255,0.3)' : '#86efac';
+                  ctx.lineWidth = 2;
+                  ctx.strokeRect(36, 36, W - 72, H - 72);
+
                   ctx.textAlign = 'center';
-                  ctx.fillText('\uD83C\uDFC6', W/2, 120);
+
+                  // Trofeo
+                  ctx.font = '80px serif';
+                  ctx.fillText('\uD83C\uDFC6', W/2, 140);
 
                   // Titulo
-                  ctx.fillStyle = '#14532d';
-                  ctx.font = 'bold 48px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                  ctx.textAlign = 'center';
-                  ctx.fillText('\u00A1Enhorabuena!', W/2, 190);
+                  ctx.fillStyle = fondoUrl ? '#ffffff' : '#14532d';
+                  ctx.font = font('bold', 56);
+                  ctx.fillText('\u00A1Enhorabuena!', W/2, 240);
+
+                  // Separador
+                  ctx.strokeStyle = fondoUrl ? 'rgba(255,255,255,0.5)' : '#86efac';
+                  ctx.lineWidth = 2;
+                  ctx.beginPath(); ctx.moveTo(W/2 - 120, 270); ctx.lineTo(W/2 + 120, 270); ctx.stroke();
 
                   // Nombre del usuario
-                  ctx.fillStyle = '#166534';
-                  ctx.font = 'bold 38px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                  ctx.fillText(userName, W/2, 270);
+                  ctx.fillStyle = fondoUrl ? '#ffffff' : '#166534';
+                  ctx.font = font('bold', 48);
+                  var nameLines = wrapText(ctx, userName, W - 120);
+                  var nameY = 340;
+                  for (var n = 0; n < nameLines.length; n++) {
+                    ctx.fillText(nameLines[n], W/2, nameY + n * 58);
+                  }
+                  var afterName = nameY + nameLines.length * 58 + 20;
 
-                  // Escenario
-                  ctx.fillStyle = '#334155';
-                  ctx.font = '26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                  ctx.fillText('Ha completado el escenario', W/2, 340);
+                  // "Ha completado el escenario"
+                  ctx.fillStyle = fondoUrl ? 'rgba(255,255,255,0.85)' : '#334155';
+                  ctx.font = font('normal', 32);
+                  ctx.fillText('Ha completado el escenario', W/2, afterName);
 
-                  ctx.fillStyle = '#1e40af';
-                  ctx.font = 'bold 34px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                  ctx.fillText(escName, W/2, 390);
+                  // Nombre escenario
+                  ctx.fillStyle = fondoUrl ? '#ffffff' : '#1e40af';
+                  ctx.font = font('bold', 42);
+                  var escLines = wrapText(ctx, escName, W - 120);
+                  var escY = afterName + 60;
+                  for (var e = 0; e < escLines.length; e++) {
+                    ctx.fillText(escLines[e], W/2, escY + e * 52);
+                  }
+                  var afterEsc = escY + escLines.length * 52 + 30;
 
                   // Ranking y puntos
-                  ctx.fillStyle = '#334155';
-                  ctx.font = '24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                  var statsText = 'Posicion: #' + ranking + '  \u00B7  ' + totalPts + ' puntos';
-                  ctx.fillText(statsText, W/2, 450);
+                  if (totalPts > 0) {
+                    ctx.fillStyle = fondoUrl ? 'rgba(255,255,255,0.85)' : '#334155';
+                    ctx.font = font('bold', 30);
+                    ctx.fillText('Posicion #' + ranking + '  \u00B7  ' + totalPts + ' puntos', W/2, afterEsc);
+                    afterEsc += 50;
+                  }
 
                   // Fecha
-                  ctx.fillStyle = '#64748b';
-                  ctx.font = '20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                  ctx.fillText(fecha, W/2, 500);
+                  ctx.fillStyle = fondoUrl ? 'rgba(255,255,255,0.7)' : '#64748b';
+                  ctx.font = font('normal', 26);
+                  ctx.fillText(fecha, W/2, afterEsc);
+                  afterEsc += 60;
 
                   // Mensaje diploma (premio / instrucciones)
                   if (diplomaMsg) {
-                    ctx.fillStyle = '#991b1b';
-                    ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                    // Dividir en líneas si es muy largo
-                    var words = diplomaMsg.split(' ');
-                    var lines = [];
-                    var line = '';
-                    var maxW = W - 160;
-                    for (var i = 0; i < words.length; i++) {
-                      var test = line + (line ? ' ' : '') + words[i];
-                      if (ctx.measureText(test).width > maxW && line) {
-                        lines.push(line);
-                        line = words[i];
-                      } else {
-                        line = test;
-                      }
-                    }
-                    if (line) lines.push(line);
+                    ctx.font = font('bold', 28);
+                    var msgLines = wrapText(ctx, diplomaMsg, W - 120);
+                    var msgH = msgLines.length * 40 + 32;
+                    var msgY = afterEsc;
 
-                    var startY = 570;
-                    // Fondo para el mensaje
-                    var msgH = lines.length * 32 + 24;
-                    ctx.fillStyle = 'rgba(254,242,242,0.8)';
+                    // Fondo del mensaje
+                    ctx.fillStyle = fondoUrl ? 'rgba(0,0,0,0.35)' : 'rgba(254,242,242,0.85)';
+                    var rx = 60, ry = msgY - 30, rw = W - 120, rh = msgH;
                     ctx.beginPath();
-                    var rx = 80, ry = startY - 28, rw = W - 160, rh = msgH;
-                    ctx.moveTo(rx + 12, ry);
-                    ctx.arcTo(rx + rw, ry, rx + rw, ry + rh, 12);
-                    ctx.arcTo(rx + rw, ry + rh, rx, ry + rh, 12);
-                    ctx.arcTo(rx, ry + rh, rx, ry, 12);
-                    ctx.arcTo(rx, ry, rx + rw, ry, 12);
+                    ctx.moveTo(rx + 14, ry);
+                    ctx.arcTo(rx + rw, ry, rx + rw, ry + rh, 14);
+                    ctx.arcTo(rx + rw, ry + rh, rx, ry + rh, 14);
+                    ctx.arcTo(rx, ry + rh, rx, ry, 14);
+                    ctx.arcTo(rx, ry, rx + rw, ry, 14);
                     ctx.fill();
 
-                    ctx.fillStyle = '#991b1b';
-                    ctx.font = 'bold 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                    for (var j = 0; j < lines.length; j++) {
-                      ctx.fillText(lines[j], W/2, startY + j * 32);
+                    ctx.fillStyle = fondoUrl ? '#ffffff' : '#991b1b';
+                    ctx.font = font('bold', 28);
+                    for (var j = 0; j < msgLines.length; j++) {
+                      ctx.fillText(msgLines[j], W/2, msgY + j * 40);
                     }
                   }
 
-                  // Línea inferior
-                  ctx.fillStyle = '#94a3b8';
-                  ctx.font = '16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-                  ctx.fillText('Generado por Gincana', W/2, H - 50);
+                  // Pie
+                  ctx.fillStyle = fondoUrl ? 'rgba(255,255,255,0.5)' : '#94a3b8';
+                  ctx.font = font('normal', 18);
+                  ctx.fillText('Generado por Gincana', W/2, H - 45);
 
                   // Descargar
                   var link = document.createElement('a');
@@ -780,11 +796,13 @@ add_shortcode('gincana_estaciones_lista', function($atts){
                   var img = new Image();
                   img.crossOrigin = 'anonymous';
                   img.onload = function() {
-                    ctx.drawImage(img, 0, 0, W, H);
-                    // Marco sobre la imagen
-                    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-                    ctx.lineWidth = 6;
-                    ctx.strokeRect(30, 30, W - 60, H - 60);
+                    // Dibujar imagen de fondo cubriendo todo el canvas
+                    var scale = Math.max(W / img.width, H / img.height);
+                    var sw = img.width * scale, sh = img.height * scale;
+                    ctx.drawImage(img, (W - sw) / 2, (H - sh) / 2, sw, sh);
+                    // Overlay semitransparente para aclarar y que el texto sea legible
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                    ctx.fillRect(0, 0, W, H);
                     drawDiploma();
                   };
                   img.onerror = function() {
