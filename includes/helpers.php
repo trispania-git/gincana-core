@@ -405,33 +405,16 @@ if ( ! function_exists('gc_user_has_final_photo') ) {
  * Devuelve el CSS + clase para un fondo con la imagen destacada del escenario muy clarita.
  * Usa un pseudo-elemento ::before con opacity baja para no molestar la lectura.
  */
-if ( ! function_exists('gc_bg_featured_style') ) {
-  function gc_bg_featured_style($escenario_id) {
-    $esc_id = (int) $escenario_id;
-    // Campo dedicado de portada
-    $thumb_url = get_post_meta($esc_id, 'gc_portada', true);
+if ( ! function_exists('gc_bg_featured_inline') ) {
+  /**
+   * Devuelve el fragmento CSS inline para usar en un atributo style="".
+   * Ejemplo: style="padding:16px;<?php echo gc_bg_featured_inline($id); ?>"
+   */
+  function gc_bg_featured_inline($escenario_id) {
+    $thumb_url = get_post_meta((int)$escenario_id, 'gc_portada', true);
     if (!$thumb_url) return '';
-
-    $uid = 'gc-bg-' . uniqid();
     $url_esc = esc_url($thumb_url);
-    // Fondo directo con gradient blanco encima para simular opacidad muy baja
-    return '<style>
-      .' . $uid . ' {
-        background: linear-gradient(rgba(255,255,255,0.92), rgba(255,255,255,0.92)), url(' . $url_esc . ') center/cover no-repeat !important;
-      }
-    </style><!--gc-bg-class:' . $uid . '-->';
-  }
-}
-
-/**
- * Extrae la clase del fondo del string devuelto por gc_bg_featured_style().
- */
-if ( ! function_exists('gc_bg_featured_class') ) {
-  function gc_bg_featured_class($style_html) {
-    if (preg_match('/gc-bg-class:([a-z0-9-]+)/', $style_html, $m)) {
-      return $m[1];
-    }
-    return '';
+    return 'background: linear-gradient(rgba(255,255,255,0.92),rgba(255,255,255,0.92)), url(' . $url_esc . ') center/cover no-repeat;';
   }
 }
 
