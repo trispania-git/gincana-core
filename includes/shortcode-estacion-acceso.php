@@ -124,8 +124,12 @@ function gc_shortcode_estacion_acceso() {
 
     echo '</div>';
 
-    // Itinerario de estaciones (círculos) al pie
+    // Itinerario de estaciones (círculos) fijo al pie
+    echo '<div style="position:fixed;bottom:0;left:0;right:0;z-index:999;background:#fff;border-top:1px solid #e2e8f0;padding:6px 8px;box-shadow:0 -2px 8px rgba(0,0,0,0.08);">';
     echo do_shortcode('[gincana_itinerario escenario="' . (int) $escenario_id . '" estacion="' . (int) $station_id . '"]');
+    echo '</div>';
+    // Espaciador para que el contenido no quede tapado por el footer fijo
+    echo '<div style="height:56px;"></div>';
 
     return ob_get_clean();
 }
