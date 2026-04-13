@@ -40,6 +40,7 @@ function gc_render_escenario_metabox($post) {
     $label_plural    = get_post_meta($post->ID, 'gc_label_estacion_plural', true);
     $cta_texto       = get_post_meta($post->ID, 'gc_cta_texto', true);
     $ranking_url     = get_post_meta($post->ID, 'gc_ranking_url', true);
+    $portada         = get_post_meta($post->ID, 'gc_portada', true);
     $descripcion     = get_post_meta($post->ID, 'gc_descripcion', true);
     $audio           = get_post_meta($post->ID, 'gc_audio', true);
     $img1            = get_post_meta($post->ID, 'gc_img_1', true);
@@ -434,6 +435,12 @@ function gc_render_escenario_metabox($post) {
             <p class="gc-wiz-subtitle">Descripcion, audio e imagenes que vera el jugador en la pagina principal.</p>
 
             <div class="gc-wiz-field">
+                <label>Imagen de portada</label>
+                <p class="description" style="margin:0 0 6px;font-size:12px;color:#64748b;">Se usa como fondo sutil en las paginas del escenario y sus estaciones.</p>
+                <?php gc_render_media_field('gc_portada', $portada, 'image', 'Seleccionar portada'); ?>
+            </div>
+
+            <div class="gc-wiz-field">
                 <label>Descripcion introductoria</label>
                 <?php
                 wp_editor($descripcion, 'gc_esc_descripcion', [
@@ -765,6 +772,7 @@ add_action('save_post', function ($post_id) {
         update_post_meta($post_id, 'gc_ranking_url', $ranking_url_manual);
     }
 
+    update_post_meta($post_id, 'gc_portada', esc_url_raw($_POST['gc_portada'] ?? ''));
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));

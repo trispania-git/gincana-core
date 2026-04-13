@@ -408,13 +408,8 @@ if ( ! function_exists('gc_user_has_final_photo') ) {
 if ( ! function_exists('gc_bg_featured_style') ) {
   function gc_bg_featured_style($escenario_id) {
     $esc_id = (int) $escenario_id;
-    // Buscar imagen en orden de prioridad
-    $thumb_url = get_the_post_thumbnail_url($esc_id, 'large');         // Featured image
-    if (!$thumb_url) $thumb_url = get_post_meta($esc_id, 'gc_img_1', true);
-    if (!$thumb_url) $thumb_url = get_post_meta($esc_id, 'gc_img_2', true);
-    if (!$thumb_url) $thumb_url = get_post_meta($esc_id, 'gc_diploma_fondo', true);
-    // DEBUG temporal — quitar después
-    if (!$thumb_url) return '<!-- gc_bg: sin imagen en escenario #' . $esc_id . ' -->';
+    // Campo dedicado de portada
+    $thumb_url = get_post_meta($esc_id, 'gc_portada', true);
     if (!$thumb_url) return '';
 
     $uid = 'gc-bg-' . uniqid();
