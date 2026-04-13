@@ -668,13 +668,24 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
             $q_index  = $pool_data['index'];
         }
     } else {
-        // Por estación (comportamiento original)
+        // Por estación: elegir pregunta aleatoria de la prueba vinculada
         $test_id = (int) get_post_meta($station_id, 'gc_prueba_ref', true);
         if ($test_id > 0) {
             $preguntas = get_post_meta($test_id, 'gc_preguntas', true);
-            if (is_array($preguntas) && !empty($preguntas[0]) && is_array($preguntas[0])) {
-                $pregunta = $preguntas[0];
-                $q_index  = 0;
+            if (is_array($preguntas) && !empty($preguntas)) {
+                // Filtrar solo preguntas válidas (con enunciado)
+                $valid = [];
+                foreach ($preguntas as $i => $p) {
+                    if (is_array($p) && !empty($p['enunciado'])) {
+                        $valid[$i] = $p;
+                    }
+                }
+                if (!empty($valid)) {
+                    $keys = array_keys($valid);
+                    shuffle($keys);
+                    $q_index  = $keys[0];
+                    $pregunta = $valid[$q_index];
+                }
             }
         }
     }
