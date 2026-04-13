@@ -407,7 +407,17 @@ if ( ! function_exists('gc_user_has_final_photo') ) {
  */
 if ( ! function_exists('gc_bg_featured_style') ) {
   function gc_bg_featured_style($escenario_id) {
-    $thumb_url = get_the_post_thumbnail_url((int)$escenario_id, 'large');
+    $esc_id = (int) $escenario_id;
+    // 1) Imagen destacada de WordPress
+    $thumb_url = get_the_post_thumbnail_url($esc_id, 'large');
+    // 2) Fallback: gc_img_1 del escenario
+    if (!$thumb_url) {
+      $thumb_url = get_post_meta($esc_id, 'gc_img_1', true);
+    }
+    // 3) Fallback: gc_img_2 del escenario
+    if (!$thumb_url) {
+      $thumb_url = get_post_meta($esc_id, 'gc_img_2', true);
+    }
     if (!$thumb_url) return '';
 
     $uid = 'gc-bg-' . uniqid();
