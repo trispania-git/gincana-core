@@ -16,12 +16,23 @@ function gc_auth_styles() {
     $printed = true;
 
     return '<style>
+    /* Ocultar título de la página WP */
+    .page .entry-title,
+    .et_pb_title_container h1,
+    h1.entry-title { display: none !important; }
+
     .gc-auth {
         width: 95%;
         max-width: 440px;
         margin: 0 auto;
         padding: 24px 0;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .gc-auth form {
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 24px 20px;
+        background: #fff;
     }
     .gc-auth-title {
         font-size: 24px;
@@ -207,14 +218,14 @@ add_shortcode('gincana_login', function($atts){
     echo gc_auth_styles();
     ?>
     <div class="gc-auth">
-        <h2 class="gc-auth-title">Iniciar sesion</h2>
-        <p class="gc-auth-subtitle">Accede para participar en la gimkana</p>
-
-        <?php if ($error): ?>
-            <div class="gc-auth-msg error"><?php echo esc_html($error); ?></div>
-        <?php endif; ?>
-
         <form method="post" autocomplete="on">
+            <h2 class="gc-auth-title">Iniciar sesión</h2>
+            <p class="gc-auth-subtitle">Accede para participar en la gimkana</p>
+
+            <?php if ($error): ?>
+                <div class="gc-auth-msg error"><?php echo esc_html($error); ?></div>
+            <?php endif; ?>
+
             <?php wp_nonce_field('gc_login_action', 'gc_login_nonce'); ?>
             <input type="hidden" name="redirect_to" value="<?php echo esc_attr($redirect); ?>">
 
@@ -342,14 +353,14 @@ add_shortcode('gincana_registro', function($atts){
     echo gc_auth_styles();
     ?>
     <div class="gc-auth">
-        <h2 class="gc-auth-title">Crear cuenta</h2>
-        <p class="gc-auth-subtitle">Registrate para participar en la gimkana</p>
-
-        <?php if ($error): ?>
-            <div class="gc-auth-msg error"><?php echo esc_html($error); ?></div>
-        <?php endif; ?>
-
         <form method="post" autocomplete="on">
+            <h2 class="gc-auth-title">Crear cuenta</h2>
+            <p class="gc-auth-subtitle">Regístrate para participar en la gimkana</p>
+
+            <?php if ($error): ?>
+                <div class="gc-auth-msg error"><?php echo esc_html($error); ?></div>
+            <?php endif; ?>
+
             <?php wp_nonce_field('gc_registro_action', 'gc_reg_nonce'); ?>
             <input type="hidden" name="redirect_to" value="<?php echo esc_attr($redirect); ?>">
 
