@@ -421,19 +421,12 @@ if ( ! function_exists('gc_bg_featured_style') ) {
     if (!$thumb_url) return '';
 
     $uid = 'gc-bg-' . uniqid();
+    $url_esc = esc_url($thumb_url);
+    // Fondo directo con gradient blanco encima para simular opacidad muy baja
     return '<style>
-      .' . $uid . ' { position: relative; }
-      .' . $uid . '::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: url(' . esc_url($thumb_url) . ') center/cover no-repeat;
-        opacity: 0.06;
-        pointer-events: none;
-        z-index: 0;
-        border-radius: inherit;
+      .' . $uid . ' {
+        background: linear-gradient(rgba(255,255,255,0.92), rgba(255,255,255,0.92)), url(' . $url_esc . ') center/cover no-repeat !important;
       }
-      .' . $uid . ' > * { position: relative; z-index: 1; }
     </style><!--gc-bg-class:' . $uid . '-->';
   }
 }
