@@ -608,6 +608,7 @@ add_action('init', function(){
 
     $a = shortcode_atts([
       'escenario'      => '',
+      'estacion'       => '',
       'size'           => '28',
       'current_scale'  => '1.35',
       'link_completed' => '1',
@@ -648,9 +649,15 @@ add_action('init', function(){
     $est_ids = array_map('intval', $q->posts);
     wp_reset_postdata();
 
-    // Estación actual
+    // Estación actual: parámetro explícito > GET gc_station > contexto CPT
     $current_est_id = 0;
-    if ($ctx_id && get_post_type($ctx_id) === 'estacion') $current_est_id = (int)$ctx_id;
+    if (!empty($a['estacion'])) {
+      $current_est_id = (int) $a['estacion'];
+    } elseif (isset($_GET['gc_station'])) {
+      $current_est_id = (int) $_GET['gc_station'];
+    } elseif ($ctx_id && get_post_type($ctx_id) === 'estacion') {
+      $current_est_id = (int) $ctx_id;
+    }
 
     // Progreso del usuario
     global $wpdb;

@@ -124,6 +124,9 @@ function gc_shortcode_estacion_acceso() {
 
     echo '</div>';
 
+    // Itinerario de estaciones (círculos) al pie
+    echo do_shortcode('[gincana_itinerario escenario="' . (int) $escenario_id . '" estacion="' . (int) $station_id . '"]');
+
     return ob_get_clean();
 }
 
