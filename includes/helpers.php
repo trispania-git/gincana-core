@@ -402,6 +402,45 @@ if ( ! function_exists('gc_user_has_final_photo') ) {
 
 /**
  * Renderiza la barra de iconos de una estacion (audio + ubicacion).
+ * Devuelve el CSS + clase para un fondo con la imagen destacada del escenario muy clarita.
+ * Usa un pseudo-elemento ::before con opacity baja para no molestar la lectura.
+ */
+if ( ! function_exists('gc_bg_featured_style') ) {
+  function gc_bg_featured_style($escenario_id) {
+    $thumb_url = get_the_post_thumbnail_url((int)$escenario_id, 'large');
+    if (!$thumb_url) return '';
+
+    $uid = 'gc-bg-' . uniqid();
+    return '<style>
+      .' . $uid . ' { position: relative; }
+      .' . $uid . '::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: url(' . esc_url($thumb_url) . ') center/cover no-repeat;
+        opacity: 0.06;
+        pointer-events: none;
+        z-index: 0;
+        border-radius: inherit;
+      }
+      .' . $uid . ' > * { position: relative; z-index: 1; }
+    </style><!--gc-bg-class:' . $uid . '-->';
+  }
+}
+
+/**
+ * Extrae la clase del fondo del string devuelto por gc_bg_featured_style().
+ */
+if ( ! function_exists('gc_bg_featured_class') ) {
+  function gc_bg_featured_class($style_html) {
+    if (preg_match('/gc-bg-class:([a-z0-9-]+)/', $style_html, $m)) {
+      return $m[1];
+    }
+    return '';
+  }
+}
+
+/**
  * Devuelve HTML. Usa SVGs inline para evitar dependencias.
  */
 if ( ! function_exists('gc_render_action_icons') ) {

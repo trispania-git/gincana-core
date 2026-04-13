@@ -54,19 +54,22 @@ function gc_shortcode_estacion_acceso() {
     ob_start();
 
     $descripcion = get_post_meta($station_id, 'gc_descripcion', true);
+    $bg_style = function_exists('gc_bg_featured_style') ? gc_bg_featured_style($escenario_id) : '';
+    $bg_class = function_exists('gc_bg_featured_class') ? gc_bg_featured_class($bg_style) : '';
 
     // Ocultar el título de la página WordPress ("acceso-estacion") y cambiar título del navegador
     echo '<style>'
         . '.entry-title, .et_pb_title_container h1, .page .entry-title, h1.entry-title { display:none !important; }'
         . '.gc-station-access { margin-top: -10px; }'
         . '</style>';
+    echo $bg_style;
     echo '<script>document.title = ' . json_encode(esc_html($title) . ' — ' . esc_html($esc_title)) . ';</script>';
 
     // Header de navegación (mismo que [gincana_header] pero con escenario correcto)
     echo do_shortcode('[gincana_header escenario="' . (int) $escenario_id . '"]');
     echo '<hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 12px;">';
 
-    echo '<div class="gc-station-access" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
+    echo '<div class="gc-station-access ' . esc_attr($bg_class) . '" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
 
     // Cabecera: escenario + nº estación + nombre
     echo '<h3 style="margin:0 0 6px;font-size:18px;font-weight:600;color:#2563eb;line-height:1.3;">' . esc_html($esc_title) . '</h3>';
@@ -917,6 +920,8 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     $esc_title   = get_the_title($escenario_id);
     $orden       = (int) get_post_meta($station_id, 'gc_orden', true);
     $descripcion = get_post_meta($station_id, 'gc_descripcion', true);
+    $bg_style    = function_exists('gc_bg_featured_style') ? gc_bg_featured_style($escenario_id) : '';
+    $bg_class    = function_exists('gc_bg_featured_class') ? gc_bg_featured_class($bg_style) : '';
     $audio       = get_post_meta($station_id, 'gc_audio', true);
     $maps_url    = get_post_meta($station_id, 'gc_maps_url', true);
     $direccion   = get_post_meta($station_id, 'gc_direccion', true);
@@ -951,7 +956,8 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         $escenario_url = get_permalink($escenario_id);
         $tipo_qr_check = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';
         ob_start();
-        echo '<div class="gc-station-content" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
+        echo $bg_style;
+        echo '<div class="gc-station-content ' . esc_attr($bg_class) . '" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
         $render_content();
         echo '<div style="padding:20px;border:1px solid #e6f0e6;border-radius:14px;background:#f7fff7;text-align:center;">';
         if ($tipo_qr_check === 'validacion_gps') {
@@ -971,7 +977,8 @@ add_shortcode('gincana_estacion_contenido', function($atts){
 
     // Render completo
     ob_start();
-    echo '<div class="gc-station-content" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
+    echo $bg_style;
+    echo '<div class="gc-station-content ' . esc_attr($bg_class) . '" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
 
     $render_content();
 

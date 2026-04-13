@@ -36,9 +36,13 @@ add_shortcode('gincana_escenario_contenido', function($atts){
   $img1        = get_post_meta($escenario_id, 'gc_img_1', true);
   $img2        = get_post_meta($escenario_id, 'gc_img_2', true);
 
+  $bg_style = function_exists('gc_bg_featured_style') ? gc_bg_featured_style($escenario_id) : '';
+  $bg_class = function_exists('gc_bg_featured_class') ? gc_bg_featured_class($bg_style) : '';
+
   ob_start();
+  echo $bg_style;
   ?>
-  <div class="gc-escenario-content" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">
+  <div class="gc-escenario-content <?php echo esc_attr($bg_class); ?>" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">
 
     <h2 style="margin:0 0 12px;font-size:22px;font-weight:700;line-height:1.3;"><?php echo esc_html($title); ?></h2>
 
