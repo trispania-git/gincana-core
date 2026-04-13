@@ -411,7 +411,7 @@ if ( ! function_exists('gc_bg_featured_inline') ) {
    * Ejemplo: style="padding:16px;<?php echo gc_bg_featured_inline($id); ?>"
    */
   function gc_bg_featured_inline($escenario_id) {
-    $thumb_url = get_post_meta((int)$escenario_id, 'gc_portada', true);
+    $thumb_url = get_post_meta((int)$escenario_id, 'gc_fondo_textos', true);
     if (!$thumb_url) return '';
     $url_esc = esc_url($thumb_url);
     return 'background: linear-gradient(rgba(255,255,255,0.92),rgba(255,255,255,0.92)), url(' . $url_esc . ') center/cover no-repeat;';
