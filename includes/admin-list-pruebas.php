@@ -159,6 +159,7 @@ add_filter('manage_edit-prueba_columns', function($cols){
   foreach ($cols as $key => $label) {
     $new[$key] = $label;
     if ($key === 'title') {
+      $new['gc_num_preguntas'] = 'Preguntas';
       $new['gc_estacion_ref_by'] = 'Estación';
       $new['gc_escenario_ref_by'] = 'Escenario';
     }
@@ -167,6 +168,13 @@ add_filter('manage_edit-prueba_columns', function($cols){
 });
 
 add_action('manage_prueba_posts_custom_column', function($col, $post_id){
+  if ($col === 'gc_num_preguntas') {
+    $preguntas = get_post_meta($post_id, 'gc_preguntas', true);
+    $count = is_array($preguntas) ? count($preguntas) : 0;
+    echo '<strong>' . (int) $count . '</strong>';
+    return;
+  }
+
   if ($col === 'gc_estacion_ref_by' || $col === 'gc_escenario_ref_by') {
 
     // Buscar la Estación que referencia esta Prueba vía gc_prueba_ref
