@@ -66,9 +66,10 @@ add_shortcode('gincana_header', function($atts){
         display: flex;
         align-items: center;
         justify-content: space-between;
-        width: 100%;
-        max-width: none;
-        margin: 0;
+        width: 100vw;
+        position: relative;
+        left: 50%;
+        margin-left: -50vw;
         padding: 10px 16px;
         background: #f1f5f9;
         border-bottom: 1px solid #e2e8f0;
