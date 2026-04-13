@@ -50,9 +50,12 @@ add_shortcode('gincana_header', function($atts){
     $is_logged = is_user_logged_in();
     $user = $is_logged ? wp_get_current_user() : null;
     $display_name = $user ? ($user->display_name ?: $user->user_login) : '';
-    $current_url = get_permalink();
-    $logout_url = add_query_arg('redirect_to', urlencode($current_url), wp_logout_url());
-    $login_url_with_redirect = add_query_arg('redirect_to', urlencode($current_url), $login_url);
+    // URL actual completa (con query params, para que funcione en acceso-estacion)
+    $current_url = (is_ssl() ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+    // Para logout/login redirect, usar la URL del escenario (más limpio que volver al QR)
+    $redirect_url = $escenario_url ?: $current_url;
+    $logout_url = add_query_arg('redirect_to', urlencode($redirect_url), wp_logout_url());
+    $login_url_with_redirect = add_query_arg('redirect_to', urlencode($redirect_url), $login_url);
 
     $uid = 'gc-hdr-' . uniqid();
 
