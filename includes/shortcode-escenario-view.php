@@ -40,12 +40,12 @@ add_shortcode('gincana_escenario_contenido', function($atts){
 
   ob_start();
   ?>
-  <div class="gc-escenario-content" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;<?php echo $bg_inline; ?>">
+  <div class="gc-escenario-content" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">
 
     <h2 style="margin:0 0 12px;font-size:22px;font-weight:700;line-height:1.3;"><?php echo esc_html($title); ?></h2>
 
     <?php if ($descripcion): ?>
-      <div style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;">
+      <div style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;padding:16px;border-radius:12px;<?php echo $bg_inline; ?>">
         <?php echo wp_kses_post($descripcion); ?>
       </div>
     <?php endif; ?>
