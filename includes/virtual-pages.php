@@ -21,6 +21,12 @@ add_action('init', function () {
         'index.php?post_type=escenario&name=$matches[1]&gc_subpage=$matches[2]',
         'top'
     );
+
+    // Flush una sola vez para que WP registre la regla
+    if ( ! get_option('gc_virtual_pages_flushed') ) {
+        flush_rewrite_rules();
+        update_option('gc_virtual_pages_flushed', '1');
+    }
 }, 100); // después de CPT y permalinks
 
 add_filter('query_vars', function ($vars) {
