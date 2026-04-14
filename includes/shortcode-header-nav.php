@@ -62,6 +62,12 @@ add_shortcode('gincana_header', function($atts){
     ob_start();
     ?>
     <style>
+    /* Ocultar header nativo de Divi y reducir padding de secciones */
+    #main-header, #top-header, .et-fixed-header { display: none !important; }
+    .et_pb_section:first-of-type { padding-top: 0 !important; }
+    .et_pb_section .et_pb_row { padding-top: 0 !important; }
+    #page-container { padding-top: 0 !important; margin-top: 0 !important; }
+
     #<?php echo $uid; ?> {
         display: flex;
         align-items: center;
