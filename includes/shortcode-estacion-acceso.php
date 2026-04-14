@@ -374,11 +374,18 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
 function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
     $label = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
     $pista = get_post_meta($station_id, 'gc_pista_busqueda', true);
+    $img_busca_qr = get_post_meta($escenario_id, 'gc_img_busca_qr', true);
 
     ob_start();
     ?>
     <div style="padding:24px 20px;border-radius:14px;background:#fffbeb;border:2px solid #f59e0b;text-align:center;">
+        <?php if ($img_busca_qr): ?>
+        <div style="margin-bottom:12px;">
+            <img src="<?php echo esc_url($img_busca_qr); ?>" alt="Busca el código QR" style="max-width:100%;height:auto;border-radius:12px;" />
+        </div>
+        <?php else: ?>
         <div style="font-size:48px;margin-bottom:8px;">🔍</div>
+        <?php endif; ?>
         <h3 style="margin:0 0 8px;color:#92400e;">¡Busca el código QR!</h3>
         <p style="margin:0 0 12px;font-size:15px;color:#78350f;">
             Para validar esta <?php echo esc_html($label); ?>, necesitas encontrar y escanear el código QR en el lugar.
