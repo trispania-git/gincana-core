@@ -8,10 +8,18 @@ if ( ! defined('ABSPATH') ) exit;
 
 // Encolar scripts de la media library en nuestros CPTs
 add_action('admin_enqueue_scripts', function($hook){
-  if ( ! in_array($hook, ['post.php', 'post-new.php']) ) return;
+  // CPTs: estacion, escenario, prueba
+  $is_cpt = false;
+  if (in_array($hook, ['post.php', 'post-new.php'])) {
+    $screen = get_current_screen();
+    if ($screen && in_array($screen->post_type, ['estacion', 'escenario', 'prueba'])) {
+      $is_cpt = true;
+    }
+  }
+  // Página de ajustes del plugin
+  $is_settings = (isset($_GET['page']) && $_GET['page'] === 'gincana-settings');
 
-  $screen = get_current_screen();
-  if ( ! $screen || ! in_array($screen->post_type, ['estacion', 'escenario']) ) return;
+  if (!$is_cpt && !$is_settings) return;
 
   wp_enqueue_media();
 

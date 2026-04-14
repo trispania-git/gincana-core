@@ -127,7 +127,9 @@ function gincana_core_settings_cb(){
         <tr>
           <th><label>Imagen del aviso</label></th>
           <td>
-            <?php if (function_exists('gc_render_media_field')) gc_render_media_field('gc_mobile_only_image', $mobile_img, 'image', 'Seleccionar imagen'); ?>
+            <div style="max-width:400px;">
+              <?php if (function_exists('gc_render_media_field')) gc_render_media_field('gc_mobile_only_image', $mobile_img, 'image', 'Seleccionar imagen'); ?>
+            </div>
             <p class="description">Tamaño recomendado: <strong>600 × 400 px</strong>. Se muestra encima del mensaje.</p>
           </td>
         </tr>
