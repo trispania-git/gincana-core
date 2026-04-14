@@ -169,3 +169,35 @@ function gc_escenario_subpage_url($escenario_id, $subpage) {
     $esc_permalink = get_permalink($escenario_id);
     return trailingslashit($esc_permalink) . $subpage . '/';
 }
+
+// === 3. Limpieza: eliminar páginas WP de ranking antiguas (una sola vez) ===
+add_action('admin_init', function () {
+    if (get_option('gc_legacy_ranking_pages_cleaned')) return;
+
+    $legacy_pages = get_posts([
+        'post_type'      => 'page',
+        'post_status'    => 'any',
+        'posts_per_page' => -1,
+        'meta_key'       => '_gc_ranking_escenario_id',
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+    ]);
+
+    foreach ($legacy_pages as $page_id) {
+        wp_trash_post($page_id);
+    }
+
+    // Limpiar meta gc_ranking_url de todos los escenarios
+    $escenarios = get_posts([
+        'post_type'      => 'escenario',
+        'post_status'    => 'any',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+    ]);
+    foreach ($escenarios as $esc_id) {
+        delete_post_meta($esc_id, 'gc_ranking_url');
+    }
+
+    update_option('gc_legacy_ranking_pages_cleaned', '1');
+});
