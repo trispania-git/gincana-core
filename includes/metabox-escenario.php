@@ -498,12 +498,9 @@ function gc_render_escenario_metabox($post) {
             <div class="gc-wiz-field">
                 <label>Instrucciones del escenario</label>
                 <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Explica el recorrido, las reglas y como participar. Se accede desde <code>/escenario/{slug}/instrucciones/</code>.</p>
-                <div style="margin-bottom:8px;display:flex;gap:8px;">
+                <div style="margin-bottom:8px;">
                     <button type="button" class="button" id="gc-gen-instrucciones" style="font-size:12px;">
                         Generar texto por defecto
-                    </button>
-                    <button type="button" class="button" id="gc-reset-instrucciones" style="font-size:12px;color:#dc2626;">
-                        Restablecer
                     </button>
                 </div>
                 <?php
@@ -520,12 +517,9 @@ function gc_render_escenario_metabox($post) {
             <div class="gc-wiz-field" style="margin-top:20px;">
                 <label>Sistema de puntuaciones</label>
                 <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Explica como se puntua en este escenario. Se accede desde <code>/escenario/{slug}/puntuaciones/</code>.</p>
-                <div style="margin-bottom:8px;display:flex;gap:8px;">
+                <div style="margin-bottom:8px;">
                     <button type="button" class="button" id="gc-gen-puntuaciones" style="font-size:12px;">
                         Generar texto por defecto
-                    </button>
-                    <button type="button" class="button" id="gc-reset-puntuaciones" style="font-size:12px;color:#dc2626;">
-                        Restablecer
                     </button>
                 </div>
                 <?php
@@ -563,18 +557,8 @@ function gc_render_escenario_metabox($post) {
                 document.getElementById('gc-gen-instrucciones').addEventListener('click', function(){
                     setEditorContent('gc_esc_instrucciones', defInstr);
                 });
-                document.getElementById('gc-reset-instrucciones').addEventListener('click', function(){
-                    if (confirm('¿Restablecer instrucciones al texto por defecto?')) {
-                        setEditorContent('gc_esc_instrucciones', defInstr);
-                    }
-                });
                 document.getElementById('gc-gen-puntuaciones').addEventListener('click', function(){
                     setEditorContent('gc_esc_puntuaciones', defPunt);
-                });
-                document.getElementById('gc-reset-puntuaciones').addEventListener('click', function(){
-                    if (confirm('¿Restablecer puntuaciones al texto por defecto?')) {
-                        setEditorContent('gc_esc_puntuaciones', defPunt);
-                    }
                 });
             })();
             </script>
