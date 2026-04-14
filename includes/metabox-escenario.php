@@ -868,14 +868,18 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
     update_post_meta($post_id, 'gc_label_estacion_plural', sanitize_text_field($_POST['gc_label_estacion_plural'] ?? ''));
     update_post_meta($post_id, 'gc_cta_texto', sanitize_text_field($_POST['gc_cta_texto'] ?? ''));
-    // Instrucciones y puntuaciones: si vacío, auto-rellenar con defaults
+    // Instrucciones y puntuaciones: auto-rellenar SOLO en la primera publicación
     $instr_val = wp_kses_post($_POST['gc_instrucciones'] ?? '');
     $punt_val  = wp_kses_post($_POST['gc_puntuaciones'] ?? '');
-    if ( ! trim(strip_tags($instr_val)) && function_exists('gc_default_instrucciones') ) {
-        $instr_val = gc_default_instrucciones($post_id);
-    }
-    if ( ! trim(strip_tags($punt_val)) && function_exists('gc_default_puntuaciones') ) {
-        $punt_val = gc_default_puntuaciones($post_id);
+    $is_first_save = ! get_post_meta($post_id, '_gc_info_generated', true);
+    if ( $is_first_save && function_exists('gc_default_instrucciones') ) {
+        if ( ! trim(strip_tags($instr_val)) ) {
+            $instr_val = gc_default_instrucciones($post_id);
+        }
+        if ( ! trim(strip_tags($punt_val)) ) {
+            $punt_val = gc_default_puntuaciones($post_id);
+        }
+        update_post_meta($post_id, '_gc_info_generated', '1');
     }
     update_post_meta($post_id, 'gc_instrucciones', $instr_val);
     update_post_meta($post_id, 'gc_puntuaciones', $punt_val);
