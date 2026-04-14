@@ -362,7 +362,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     <?php endif; ?>
 
     <?php
-      $ranking_url = get_post_meta($escenario_id, 'gc_ranking_url', true);
+      $ranking_url = function_exists('gc_escenario_subpage_url') ? gc_escenario_subpage_url($escenario_id, 'ranking') : '';
       if ($ranking_url && $show_points):
     ?>
     <div style="text-align:center;margin-bottom:16px;">
@@ -439,7 +439,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       <?php endforeach; ?>
 
       <?php
-        $ranking_url_bottom = get_post_meta($escenario_id, 'gc_ranking_url', true);
+        $ranking_url_bottom = function_exists('gc_escenario_subpage_url') ? gc_escenario_subpage_url($escenario_id, 'ranking') : '';
         if ($ranking_url_bottom && $show_points):
       ?>
       <a href="<?php echo esc_url($ranking_url_bottom); ?>" class="gc-ranking-card" style="display:flex;align-items:center;gap:14px;padding:16px 18px;background:linear-gradient(135deg,#fbbf24,#f59e0b);border:2px solid #d97706;border-radius:var(--gc-radius);text-decoration:none;color:#78350f;transition:transform 0.2s,box-shadow 0.2s;">

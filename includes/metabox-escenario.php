@@ -39,7 +39,6 @@ function gc_render_escenario_metabox($post) {
     $label_estacion  = get_post_meta($post->ID, 'gc_label_estacion', true);
     $label_plural    = get_post_meta($post->ID, 'gc_label_estacion_plural', true);
     $cta_texto       = get_post_meta($post->ID, 'gc_cta_texto', true);
-    $ranking_url     = get_post_meta($post->ID, 'gc_ranking_url', true);
     $portada         = get_post_meta($post->ID, 'gc_portada', true);
     $fondo_textos    = get_post_meta($post->ID, 'gc_fondo_textos', true);
     $descripcion     = get_post_meta($post->ID, 'gc_descripcion', true);
@@ -420,14 +419,6 @@ function gc_render_escenario_metabox($post) {
                 <div class="gc-hint">Aparece antes de la lista de estaciones. Si se deja vacio se genera automaticamente.</div>
             </div>
 
-            <div class="gc-wiz-field">
-                <label for="gc_ranking_url">Pagina de ranking (URL)</label>
-                <input type="url" name="gc_ranking_url" id="gc_ranking_url"
-                       value="<?php echo esc_attr($ranking_url); ?>"
-                       placeholder="Se crea automaticamente al publicar" />
-                <div class="gc-hint">Se autocrea al publicar el escenario. Solo rellenar para override manual.</div>
-            </div>
-
             <div class="gc-wiz-nav">
                 <button type="button" class="gc-wiz-btn gc-wiz-btn-prev" data-prev="3">&larr; Anterior</button>
                 <button type="button" class="gc-wiz-btn gc-wiz-btn-next" data-next="5">Siguiente &rarr;</button>
@@ -506,7 +497,7 @@ function gc_render_escenario_metabox($post) {
 
             <div class="gc-wiz-field">
                 <label>Instrucciones del escenario</label>
-                <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Explica el recorrido, las reglas y como participar. Se muestra con <code>[gincana_instrucciones]</code>.</p>
+                <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Explica el recorrido, las reglas y como participar. Se accede desde <code>/escenario/{slug}/instrucciones/</code>.</p>
                 <?php
                 wp_editor(get_post_meta($post->ID, 'gc_instrucciones', true) ?: '', 'gc_esc_instrucciones', [
                     'textarea_name' => 'gc_instrucciones',
@@ -520,7 +511,7 @@ function gc_render_escenario_metabox($post) {
 
             <div class="gc-wiz-field" style="margin-top:20px;">
                 <label>Sistema de puntuaciones</label>
-                <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Explica como se puntua en este escenario. Se muestra con <code>[gincana_puntuaciones]</code>.</p>
+                <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Explica como se puntua en este escenario. Se accede desde <code>/escenario/{slug}/puntuaciones/</code>.</p>
                 <?php
                 wp_editor(get_post_meta($post->ID, 'gc_puntuaciones', true) ?: '', 'gc_esc_puntuaciones', [
                     'textarea_name' => 'gc_puntuaciones',
@@ -704,7 +695,6 @@ function gc_render_escenario_metabox($post) {
                 var labelEst = v('gc_label_estacion') || 'estacion';
                 var labelPl = v('gc_label_estacion_plural') || 'las estaciones';
                 var cta = v('gc_cta_texto') || '(auto)';
-                var rankUrl = v('gc_ranking_url') || '(auto)';
                 var audio = v('gc_audio');
                 var img1 = v('gc_img_1');
                 var img2 = v('gc_img_2');
@@ -763,8 +753,7 @@ function gc_render_escenario_metabox($post) {
                 html += section('4. Textos', [
                     ['Nombre singular', esc(labelEst)],
                     ['Nombre plural', esc(labelPl)],
-                    ['CTA', esc(cta)],
-                    ['Ranking URL', rankUrl === '(auto)' ? '<span style="color:#94a3b8;">(auto)</span>' : esc(rankUrl)]
+                    ['CTA', esc(cta)]
                 ]);
 
                 var contRows = [];
@@ -823,12 +812,6 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
     update_post_meta($post_id, 'gc_label_estacion_plural', sanitize_text_field($_POST['gc_label_estacion_plural'] ?? ''));
     update_post_meta($post_id, 'gc_cta_texto', sanitize_text_field($_POST['gc_cta_texto'] ?? ''));
-    // Ranking URL: si viene del formulario, guardarla. Si no, auto-crear página.
-    $ranking_url_manual = esc_url_raw($_POST['gc_ranking_url'] ?? '');
-    if ($ranking_url_manual) {
-        update_post_meta($post_id, 'gc_ranking_url', $ranking_url_manual);
-    }
-
     update_post_meta($post_id, 'gc_instrucciones', wp_kses_post($_POST['gc_instrucciones'] ?? ''));
     update_post_meta($post_id, 'gc_puntuaciones', wp_kses_post($_POST['gc_puntuaciones'] ?? ''));
     update_post_meta($post_id, 'gc_portada', esc_url_raw($_POST['gc_portada'] ?? ''));
@@ -840,75 +823,7 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_img_encontrada', esc_url_raw($_POST['gc_img_encontrada'] ?? ''));
     update_post_meta($post_id, 'gc_ranking_imagen', esc_url_raw($_POST['gc_ranking_imagen'] ?? ''));
 
-    // Auto-crear página de ranking si no existe
-    gc_maybe_create_ranking_page($post_id);
 });
 
-/**
- * Migración: crear páginas de ranking para escenarios existentes (una sola vez).
- */
-add_action('admin_init', function () {
-    if (get_option('gc_ranking_pages_migrated')) return;
-
-    $escenarios = get_posts([
-        'post_type'      => 'escenario',
-        'post_status'    => 'publish',
-        'posts_per_page' => -1,
-        'fields'         => 'ids',
-        'no_found_rows'  => true,
-    ]);
-
-    foreach ($escenarios as $esc_id) {
-        gc_maybe_create_ranking_page((int) $esc_id);
-    }
-
-    update_option('gc_ranking_pages_migrated', '1');
-});
-
-/**
- * Crea automáticamente una página de ranking para un escenario.
- * Solo si el escenario está publicado y no tiene ya una página de ranking.
- */
-function gc_maybe_create_ranking_page($escenario_id) {
-    // Solo para escenarios publicados
-    if (get_post_status($escenario_id) !== 'publish') return;
-
-    // Si ya tiene URL de ranking, no crear
-    $existing_url = get_post_meta($escenario_id, 'gc_ranking_url', true);
-    if (!empty($existing_url)) return;
-
-    // Verificar que no exista ya una página con el meta enlazado
-    $existing_page = get_posts([
-        'post_type'      => 'page',
-        'post_status'    => 'any',
-        'posts_per_page' => 1,
-        'meta_query'     => [['key' => '_gc_ranking_escenario_id', 'value' => (int)$escenario_id, 'compare' => '=']],
-        'fields'         => 'ids',
-        'no_found_rows'  => true,
-    ]);
-
-    if (!empty($existing_page)) {
-        // Ya existe pero no estaba enlazada, re-enlazar
-        update_post_meta($escenario_id, 'gc_ranking_url', get_permalink($existing_page[0]));
-        return;
-    }
-
-    $esc_title = get_the_title($escenario_id);
-    $page_title = 'Ranking — ' . $esc_title;
-    $page_slug  = 'ranking-' . sanitize_title($esc_title);
-
-    $page_id = wp_insert_post([
-        'post_type'    => 'page',
-        'post_status'  => 'publish',
-        'post_title'   => $page_title,
-        'post_name'    => $page_slug,
-        'post_content' => '[gincana_ranking escenario="' . (int)$escenario_id . '"]',
-    ], true);
-
-    if (!is_wp_error($page_id) && $page_id) {
-        // Marcar la página como ranking de este escenario
-        update_post_meta($page_id, '_gc_ranking_escenario_id', (int)$escenario_id);
-        // Guardar la URL en el escenario
-        update_post_meta($escenario_id, 'gc_ranking_url', get_permalink($page_id));
-    }
-}
+// Nota: las páginas de ranking, instrucciones y puntuaciones se generan
+// como rutas virtuales en virtual-pages.php — no se crean páginas WP.

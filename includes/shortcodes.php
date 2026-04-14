@@ -596,8 +596,7 @@ add_action('init', function(){
         // Botón puntuaciones (solo si hay contenido configurado)
         $tiene_puntuaciones = get_post_meta($escenario_id, 'gc_puntuaciones', true);
         if ($tiene_puntuaciones):
-          $puntuaciones_page = get_page_by_path('puntuaciones');
-          $punt_url = $puntuaciones_page ? add_query_arg('escenario', $escenario_id, get_permalink($puntuaciones_page)) : '#';
+          $punt_url = function_exists('gc_escenario_subpage_url') ? gc_escenario_subpage_url($escenario_id, 'puntuaciones') : '#';
         ?>
         <a href="<?php echo esc_url($punt_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid #e2e8f0;border-radius:10px;color:#64748b;text-decoration:none;font-weight:600;font-size:14px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>

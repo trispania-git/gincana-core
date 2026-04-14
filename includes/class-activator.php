@@ -62,9 +62,13 @@ class Gincana_Core_Activator {
     dbDelta($sql3);
 
     update_option('gincana_db_version','1.0.0');
+
+    // Flush rewrite rules para registrar las rutas virtuales
+    flush_rewrite_rules();
   }
 
   public static function deactivate() {
     // No borramos tablas al desactivar. Para borrar, usa uninstall.php
+    flush_rewrite_rules();
   }
 }

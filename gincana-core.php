@@ -39,6 +39,7 @@ require_once GINCANA_CORE_PATH . 'includes/admin-import-csv.php';
 require_once GINCANA_CORE_PATH . 'includes/admin-qr-codes.php';
 require_once GINCANA_CORE_PATH . 'includes/admin-data-loader.php';
 require_once GINCANA_CORE_PATH . 'includes/mobile-gate.php';
+require_once GINCANA_CORE_PATH . 'includes/virtual-pages.php';
 
 // Hooks de activación/desactivación
 register_activation_hook(__FILE__, ['Gincana_Core_Activator','activate']);
