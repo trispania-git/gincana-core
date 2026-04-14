@@ -16,14 +16,15 @@ add_action('admin_enqueue_scripts', function($hook){
       $is_cpt = true;
     }
   }
-  // Página de ajustes del plugin
-  $is_settings = (isset($_GET['page']) && $_GET['page'] === 'gincana-settings');
+  // Página de ajustes del plugin (el hook contiene el slug del submenú)
+  $is_settings = (strpos($hook, 'gincana-settings') !== false);
 
   if (!$is_cpt && !$is_settings) return;
 
   wp_enqueue_media();
+  wp_enqueue_script('jquery');
 
-  wp_add_inline_script('media-upload', '
+  wp_add_inline_script('jquery', '
     jQuery(document).on("click", ".gc-media-select", function(e){
       e.preventDefault();
       var btn = jQuery(this);
