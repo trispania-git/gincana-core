@@ -91,6 +91,7 @@ function gc_is_mobile_ua($ua) {
 function gc_render_mobile_only_page() {
     $custom_msg = get_option('gc_mobile_only_message', '');
     $message = $custom_msg ?: 'Esta experiencia ha sido diseñada para disfrutarse desde tu teléfono móvil. Escanea el código QR o abre esta web desde tu smartphone para participar.';
+    $custom_img = get_option('gc_mobile_only_image', '');
     $site_name = get_bloginfo('name');
     $site_url = home_url('/');
 
@@ -134,10 +135,14 @@ function gc_render_mobile_only_page() {
 <body>
     <div class="gc-mobile-gate">
         <div class="gc-icon">
-            <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
-                <line x1="12" y1="18" x2="12.01" y2="18"/>
-            </svg>
+            <?php if ($custom_img): ?>
+                <img src="<?php echo esc_url($custom_img); ?>" alt="" style="max-width:100%;height:auto;border-radius:12px;">
+            <?php else: ?>
+                <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                    <line x1="12" y1="18" x2="12.01" y2="18"/>
+                </svg>
+            <?php endif; ?>
         </div>
         <div class="gc-subtitle"><?php echo esc_html($site_name); ?></div>
         <h1>Experiencia solo para móvil</h1>

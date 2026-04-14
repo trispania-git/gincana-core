@@ -74,6 +74,7 @@ function gincana_core_settings_cb(){
   if (isset($_POST['gc_settings_nonce']) && wp_verify_nonce($_POST['gc_settings_nonce'], 'gc_save_settings')) {
     update_option('gc_mobile_only', isset($_POST['gc_mobile_only']) ? '1' : '0');
     update_option('gc_mobile_only_message', wp_kses_post($_POST['gc_mobile_only_message'] ?? ''));
+    update_option('gc_mobile_only_image', esc_url_raw($_POST['gc_mobile_only_image'] ?? ''));
     $slug = sanitize_title($_POST['gc_mobile_bypass_slug'] ?? 'accesogymk');
     update_option('gc_mobile_bypass_slug', $slug ?: 'accesogymk');
     echo '<div class="notice notice-success"><p>Ajustes guardados.</p></div>';
@@ -81,6 +82,7 @@ function gincana_core_settings_cb(){
 
   $mobile_only  = get_option('gc_mobile_only', '0');
   $mobile_msg   = get_option('gc_mobile_only_message', '');
+  $mobile_img   = get_option('gc_mobile_only_image', '');
   $bypass_slug  = get_option('gc_mobile_bypass_slug', 'accesogymk');
   ?>
   <div class="wrap">
@@ -120,6 +122,13 @@ function gincana_core_settings_cb(){
           <td>
             <textarea name="gc_mobile_only_message" id="gc_mobile_only_message" rows="4" style="width:100%;max-width:600px;"><?php echo esc_textarea($mobile_msg); ?></textarea>
             <p class="description">Mensaje que verán los usuarios de escritorio. Si se deja vacío se usa el texto por defecto.</p>
+          </td>
+        </tr>
+        <tr>
+          <th><label>Imagen del aviso</label></th>
+          <td>
+            <?php if (function_exists('gc_render_media_field')) gc_render_media_field('gc_mobile_only_image', $mobile_img, 'image', 'Seleccionar imagen'); ?>
+            <p class="description">Tamaño recomendado: <strong>600 × 400 px</strong>. Se muestra encima del mensaje.</p>
           </td>
         </tr>
       </table>
