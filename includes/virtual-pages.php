@@ -9,64 +9,72 @@ if ( ! defined('ABSPATH') ) exit;
  *   /escenario/{slug}/instrucciones/
  *   /escenario/{slug}/puntuaciones/
  *
- * No requieren crear páginas WP: se renderizan en template_redirect.
+ * No requieren crear páginas WP: se renderizan interceptando parse_request.
+ * Esto evita conflictos con la rewrite rule de estaciones que usa el
+ * mismo patrón /escenario/{esc}/{est}/.
  */
 
-// === 1. Registrar query var y rewrite rules ===
-add_action('init', function () {
-    if ( ! post_type_exists('escenario') ) return;
+// === 1. Interceptar en parse_request (antes de que WP haga la query) ===
+add_action('parse_request', function ($wp) {
+    $path = trim($wp->request, '/');
 
-    add_rewrite_rule(
-        '^escenario/([^/]+)/(ranking|instrucciones|puntuaciones)/?$',
-        'index.php?post_type=escenario&name=$matches[1]&gc_subpage=$matches[2]',
-        'top'
-    );
-
-    // Flush una sola vez para que WP registre la regla
-    if ( ! get_option('gc_virtual_pages_flushed') ) {
-        flush_rewrite_rules();
-        update_option('gc_virtual_pages_flushed', '1');
+    // Comprobar patrón: escenario/{slug}/(ranking|instrucciones|puntuaciones)
+    if ( ! preg_match('#^escenario/([^/]+)/(ranking|instrucciones|puntuaciones)$#', $path, $m) ) {
+        return;
     }
-}, 100); // después de CPT y permalinks
 
+    $esc_slug = $m[1];
+    $subpage  = $m[2];
+
+    // Buscar el escenario por slug
+    $escenario = get_page_by_path($esc_slug, OBJECT, 'escenario');
+    if ( ! $escenario || $escenario->post_status !== 'publish' ) {
+        return; // dejar que WP devuelva 404 normal
+    }
+
+    // Guardar en query_vars para que template_redirect lo recoja
+    $wp->query_vars = [
+        'post_type'  => 'escenario',
+        'name'       => $esc_slug,
+        'gc_subpage' => $subpage,
+    ];
+});
+
+// Registrar query var
 add_filter('query_vars', function ($vars) {
     $vars[] = 'gc_subpage';
     return $vars;
 });
 
-// === 2. Interceptar y renderizar ===
+// === 2. Renderizar en template_redirect ===
 add_action('template_redirect', function () {
     $subpage = get_query_var('gc_subpage');
     if ( ! $subpage ) return;
     if ( ! in_array($subpage, ['ranking', 'instrucciones', 'puntuaciones'], true) ) return;
 
-    // Necesitamos el escenario
-    global $post;
-    if ( ! $post || $post->post_type !== 'escenario' ) {
+    // Obtener el escenario de la query
+    global $wp_query;
+    $escenario = $wp_query->get_queried_object();
+
+    // Fallback: buscar por slug si el queried object no es escenario
+    if ( ! $escenario || $escenario->post_type !== 'escenario' ) {
+        $esc_name = get_query_var('name');
+        if ($esc_name) {
+            $escenario = get_page_by_path($esc_name, OBJECT, 'escenario');
+        }
+    }
+
+    if ( ! $escenario ) {
         status_header(404);
         return;
     }
 
-    $escenario_id = $post->ID;
-
-    // Renderizar página virtual con el theme activo
-    switch ($subpage) {
-        case 'ranking':
-            gc_render_virtual_page($escenario_id, 'ranking');
-            break;
-        case 'instrucciones':
-            gc_render_virtual_page($escenario_id, 'instrucciones');
-            break;
-        case 'puntuaciones':
-            gc_render_virtual_page($escenario_id, 'puntuaciones');
-            break;
-    }
+    gc_render_virtual_page($escenario->ID, $subpage);
     exit;
 });
 
 /**
  * Renderiza una "página virtual" usando el theme activo (header + footer de WP/Divi).
- *
  * Suplanta $post con una página falsa para que Divi use su layout base.
  */
 function gc_render_virtual_page($escenario_id, $type) {
