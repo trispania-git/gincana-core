@@ -62,10 +62,10 @@ add_shortcode('gincana_header', function($atts){
     ob_start();
     ?>
     <style>
-    /* Ocultar header nativo de Divi y reducir padding de secciones */
+    /* Ocultar header nativo de Divi y reducir padding superior */
     #main-header, #top-header, .et-fixed-header { display: none !important; }
-    .et_pb_section { padding-top: 0 !important; padding-bottom: 0 !important; }
-    .et_pb_section .et_pb_row { padding-top: 0 !important; padding-bottom: 0 !important; width: 95% !important; max-width: 95% !important; }
+    .et_pb_section { padding-top: 0 !important; }
+    .et_pb_section .et_pb_row { padding-top: 0 !important; width: 95% !important; max-width: 95% !important; }
     .et_pb_section .et_pb_row .et_pb_column { padding: 0 !important; }
     #page-container { padding-top: 0 !important; margin-top: 0 !important; }
 
