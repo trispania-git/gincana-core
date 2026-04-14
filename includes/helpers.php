@@ -290,6 +290,126 @@ if ( ! function_exists('gc_get_cta_texto') ) {
 }
 
 /**
+ * Genera el texto por defecto de INSTRUCCIONES basado en la configuración del escenario.
+ */
+if ( ! function_exists('gc_default_instrucciones') ) {
+  function gc_default_instrucciones($escenario_id) {
+    $id   = (int) $escenario_id;
+    $tipo = get_post_meta($id, 'gc_tipo_escenario', true) ?: 'adulto';
+    $qr   = get_post_meta($id, 'gc_tipo_qr', true) ?: 'enlace';
+    $prueba = get_post_meta($id, 'gc_requiere_prueba', true);
+    $puntos = get_post_meta($id, 'gc_mostrar_puntos', true);
+    $accion = get_post_meta($id, 'gc_accion_final', true) ?: 'ninguna';
+    $diploma = get_post_meta($id, 'gc_diploma_activo', true);
+    $label  = gc_get_label_estacion($id);
+    $plural = gc_get_label_estacion_plural($id);
+
+    // Contar estaciones
+    $num_est = (int) (new WP_Query([
+      'post_type' => 'estacion', 'post_status' => 'publish',
+      'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true,
+      'meta_query' => [['key' => 'gc_escenario_ref', 'value' => $id]],
+    ]))->found_posts;
+
+    $title = get_the_title($id);
+
+    $html  = "<h3>¿Como funciona?</h3>\n";
+    $html .= "<p>Bienvenido a <strong>{$title}</strong>. ";
+    $html .= "El recorrido consta de <strong>{$num_est} {$label}s</strong> que deberas completar en orden.</p>\n";
+
+    $html .= "<ol>\n";
+
+    // Paso 1: como acceder
+    $html .= "<li><strong>Accede a cada {$label}</strong> — ";
+    switch ($qr) {
+      case 'enlace':
+        $html .= "Escanea el codigo QR que encontraras en cada punto del recorrido.</li>\n";
+        break;
+      case 'validacion_boton':
+        $html .= "Escanea el codigo QR y confirma tu llegada pulsando el boton de validacion.</li>\n";
+        break;
+      case 'validacion_quiz':
+        $html .= "Escanea el codigo QR y responde correctamente a la pregunta para validar la {$label}.</li>\n";
+        break;
+      case 'validacion_gps':
+        $html .= "Acercate al punto indicado; tu ubicacion GPS se verificara automaticamente.</li>\n";
+        break;
+    }
+
+    // Paso 2: prueba/quiz
+    if ($prueba) {
+      $html .= "<li><strong>Responde al desafio</strong> — En cada {$label} tendras que resolver una pregunta o prueba.</li>\n";
+    }
+
+    // Paso 3: puntos
+    if ($puntos) {
+      $html .= "<li><strong>Consigue puntos</strong> — Cuanto mas rapido respondas, mas puntos obtendras. Acertar a la primera tambien suma puntos extra.</li>\n";
+    }
+
+    // Paso 4: accion final
+    if ($accion === 'subir_foto') {
+      $html .= "<li><strong>Sube tu foto</strong> — Al completar todas {$plural}, podras subir una foto como recuerdo de tu aventura.</li>\n";
+    }
+
+    // Paso 5: diploma
+    if ($diploma) {
+      $html .= "<li><strong>Descarga tu diploma</strong> — Al finalizar recibiras un diploma personalizado que podras descargar.</li>\n";
+    }
+
+    $html .= "</ol>\n";
+    $html .= "<p><strong>¡Buena suerte y disfruta del recorrido!</strong></p>";
+
+    return $html;
+  }
+}
+
+/**
+ * Genera el texto por defecto de PUNTUACIONES basado en la configuración del escenario.
+ */
+if ( ! function_exists('gc_default_puntuaciones') ) {
+  function gc_default_puntuaciones($escenario_id) {
+    $id     = (int) $escenario_id;
+    $puntos = get_post_meta($id, 'gc_mostrar_puntos', true);
+    $label  = gc_get_label_estacion($id);
+
+    if ( ! $puntos ) {
+      return '<p>Este escenario no tiene sistema de puntuaciones activado.</p>';
+    }
+
+    $html  = "<h3>Sistema de puntuaciones</h3>\n";
+    $html .= "<p>En cada {$label} puedes obtener hasta <strong>100 puntos</strong>. La puntuacion depende de dos factores:</p>\n";
+
+    $html .= "<h4>Puntos por velocidad</h4>\n";
+    $html .= "<table style=\"width:100%;border-collapse:collapse;margin-bottom:16px;\">\n";
+    $html .= "<thead><tr><th style=\"text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;\">Tiempo de respuesta</th>";
+    $html .= "<th style=\"text-align:right;padding:8px;border-bottom:2px solid #e2e8f0;\">Puntos</th></tr></thead>\n<tbody>\n";
+
+    $rules = [
+      ['Menos de 5 segundos', 90],
+      ['5 — 10 segundos', 75],
+      ['10 — 15 segundos', 60],
+      ['15 — 20 segundos', 45],
+      ['20 — 25 segundos', 30],
+      ['25 — 30 segundos', 15],
+      ['Mas de 30 segundos', 0],
+    ];
+    foreach ($rules as $r) {
+      $html .= "<tr><td style=\"padding:6px 8px;border-bottom:1px solid #f1f5f9;\">{$r[0]}</td>";
+      $html .= "<td style=\"text-align:right;padding:6px 8px;border-bottom:1px solid #f1f5f9;font-weight:600;\">{$r[1]}</td></tr>\n";
+    }
+    $html .= "</tbody></table>\n";
+
+    $html .= "<h4>Bonus por primer intento</h4>\n";
+    $html .= "<p>Si aciertas la pregunta <strong>a la primera</strong>, obtienes <strong>+10 puntos</strong> adicionales.</p>\n";
+
+    $html .= "<h4>Puntuacion maxima</h4>\n";
+    $html .= "<p>La puntuacion maxima por {$label} es <strong>100 puntos</strong> (90 por velocidad + 10 por primer intento).</p>";
+
+    return $html;
+  }
+}
+
+/**
  * Devuelve el origen de las preguntas: 'por_estacion' o 'pool'.
  */
 if ( ! function_exists('gc_get_origen_preguntas') ) {

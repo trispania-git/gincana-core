@@ -498,6 +498,14 @@ function gc_render_escenario_metabox($post) {
             <div class="gc-wiz-field">
                 <label>Instrucciones del escenario</label>
                 <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Explica el recorrido, las reglas y como participar. Se accede desde <code>/escenario/{slug}/instrucciones/</code>.</p>
+                <div style="margin-bottom:8px;display:flex;gap:8px;">
+                    <button type="button" class="button" id="gc-gen-instrucciones" style="font-size:12px;">
+                        Generar texto por defecto
+                    </button>
+                    <button type="button" class="button" id="gc-reset-instrucciones" style="font-size:12px;color:#dc2626;">
+                        Restablecer
+                    </button>
+                </div>
                 <?php
                 wp_editor(get_post_meta($post->ID, 'gc_instrucciones', true) ?: '', 'gc_esc_instrucciones', [
                     'textarea_name' => 'gc_instrucciones',
@@ -512,6 +520,14 @@ function gc_render_escenario_metabox($post) {
             <div class="gc-wiz-field" style="margin-top:20px;">
                 <label>Sistema de puntuaciones</label>
                 <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Explica como se puntua en este escenario. Se accede desde <code>/escenario/{slug}/puntuaciones/</code>.</p>
+                <div style="margin-bottom:8px;display:flex;gap:8px;">
+                    <button type="button" class="button" id="gc-gen-puntuaciones" style="font-size:12px;">
+                        Generar texto por defecto
+                    </button>
+                    <button type="button" class="button" id="gc-reset-puntuaciones" style="font-size:12px;color:#dc2626;">
+                        Restablecer
+                    </button>
+                </div>
                 <?php
                 wp_editor(get_post_meta($post->ID, 'gc_puntuaciones', true) ?: '', 'gc_esc_puntuaciones', [
                     'textarea_name' => 'gc_puntuaciones',
@@ -522,6 +538,46 @@ function gc_render_escenario_metabox($post) {
                 ]);
                 ?>
             </div>
+
+            <?php
+            // Pre-generar textos por defecto para JS (sin AJAX, directo)
+            $def_instr = function_exists('gc_default_instrucciones') ? gc_default_instrucciones($post->ID) : '';
+            $def_punt  = function_exists('gc_default_puntuaciones') ? gc_default_puntuaciones($post->ID) : '';
+            ?>
+            <script>
+            (function(){
+                var defInstr = <?php echo wp_json_encode($def_instr); ?>;
+                var defPunt  = <?php echo wp_json_encode($def_punt); ?>;
+
+                function setEditorContent(editorId, html) {
+                    // TinyMCE visual mode
+                    if (typeof tinyMCE !== 'undefined') {
+                        var ed = tinyMCE.get(editorId);
+                        if (ed) { ed.setContent(html); ed.fire('change'); return; }
+                    }
+                    // Fallback: textarea (text mode)
+                    var ta = document.getElementById(editorId);
+                    if (ta) ta.value = html;
+                }
+
+                document.getElementById('gc-gen-instrucciones').addEventListener('click', function(){
+                    setEditorContent('gc_esc_instrucciones', defInstr);
+                });
+                document.getElementById('gc-reset-instrucciones').addEventListener('click', function(){
+                    if (confirm('¿Restablecer instrucciones al texto por defecto?')) {
+                        setEditorContent('gc_esc_instrucciones', defInstr);
+                    }
+                });
+                document.getElementById('gc-gen-puntuaciones').addEventListener('click', function(){
+                    setEditorContent('gc_esc_puntuaciones', defPunt);
+                });
+                document.getElementById('gc-reset-puntuaciones').addEventListener('click', function(){
+                    if (confirm('¿Restablecer puntuaciones al texto por defecto?')) {
+                        setEditorContent('gc_esc_puntuaciones', defPunt);
+                    }
+                });
+            })();
+            </script>
 
             <div class="gc-wiz-nav">
                 <button type="button" class="gc-wiz-btn gc-wiz-btn-prev" data-prev="5">&larr; Anterior</button>
@@ -812,8 +868,17 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
     update_post_meta($post_id, 'gc_label_estacion_plural', sanitize_text_field($_POST['gc_label_estacion_plural'] ?? ''));
     update_post_meta($post_id, 'gc_cta_texto', sanitize_text_field($_POST['gc_cta_texto'] ?? ''));
-    update_post_meta($post_id, 'gc_instrucciones', wp_kses_post($_POST['gc_instrucciones'] ?? ''));
-    update_post_meta($post_id, 'gc_puntuaciones', wp_kses_post($_POST['gc_puntuaciones'] ?? ''));
+    // Instrucciones y puntuaciones: si vacío, auto-rellenar con defaults
+    $instr_val = wp_kses_post($_POST['gc_instrucciones'] ?? '');
+    $punt_val  = wp_kses_post($_POST['gc_puntuaciones'] ?? '');
+    if ( ! trim(strip_tags($instr_val)) && function_exists('gc_default_instrucciones') ) {
+        $instr_val = gc_default_instrucciones($post_id);
+    }
+    if ( ! trim(strip_tags($punt_val)) && function_exists('gc_default_puntuaciones') ) {
+        $punt_val = gc_default_puntuaciones($post_id);
+    }
+    update_post_meta($post_id, 'gc_instrucciones', $instr_val);
+    update_post_meta($post_id, 'gc_puntuaciones', $punt_val);
     update_post_meta($post_id, 'gc_portada', esc_url_raw($_POST['gc_portada'] ?? ''));
     update_post_meta($post_id, 'gc_fondo_textos', esc_url_raw($_POST['gc_fondo_textos'] ?? ''));
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
