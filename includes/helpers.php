@@ -304,60 +304,74 @@ if ( ! function_exists('gc_default_instrucciones') ) {
     $label  = gc_get_label_estacion($id);
     $plural = gc_get_label_estacion_plural($id);
 
-    // Contar estaciones
-    $num_est = (int) (new WP_Query([
-      'post_type' => 'estacion', 'post_status' => 'publish',
-      'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true,
-      'meta_query' => [['key' => 'gc_escenario_ref', 'value' => $id]],
-    ]))->found_posts;
+    // Contar estaciones (sin no_found_rows para que cuente bien)
+    $q = new WP_Query([
+      'post_type'      => 'estacion',
+      'post_status'    => 'publish',
+      'posts_per_page' => -1,
+      'fields'         => 'ids',
+      'meta_query'     => [['key' => 'gc_escenario_ref', 'value' => $id]],
+    ]);
+    $num_est = (int) $q->post_count;
+    wp_reset_postdata();
 
-    $title = get_the_title($id);
+    $title   = get_the_title($id);
+    $portada = get_post_meta($id, 'gc_portada', true);
 
-    $html  = "<h3>¿Como funciona?</h3>\n";
+    $sp = 'style="margin-bottom:12px;"'; // spacing para los <li>
+
+    $html  = "<h3>¿Cómo funciona?</h3>\n";
     $html .= "<p>Bienvenido a <strong>{$title}</strong>. ";
-    $html .= "El recorrido consta de <strong>{$num_est} {$label}s</strong> que deberas completar en orden.</p>\n";
+    $html .= "El recorrido consta de <strong>{$num_est} " . rtrim($plural, 's') . "</strong> que deberás completar en orden.</p>\n";
 
     $html .= "<ol>\n";
 
     // Paso 1: como acceder
-    $html .= "<li><strong>Accede a cada {$label}</strong> — ";
+    $html .= "<li {$sp}><strong>Accede a cada {$label}</strong> — ";
     switch ($qr) {
       case 'enlace':
-        $html .= "Escanea el codigo QR que encontraras en cada punto del recorrido.</li>\n";
+        $html .= "Escanea el código QR que encontrarás en cada punto del recorrido.</li>\n";
         break;
       case 'validacion_boton':
-        $html .= "Escanea el codigo QR y confirma tu llegada pulsando el boton de validacion.</li>\n";
+        $html .= "Escanea el código QR y confirma tu llegada pulsando el botón de validación.</li>\n";
         break;
       case 'validacion_quiz':
-        $html .= "Escanea el codigo QR y responde correctamente a la pregunta para validar la {$label}.</li>\n";
+        $html .= "Escanea el código QR y responde correctamente a la pregunta para validar el {$label}.</li>\n";
         break;
       case 'validacion_gps':
-        $html .= "Acercate al punto indicado; tu ubicacion GPS se verificara automaticamente.</li>\n";
+        $html .= "Acércate al punto indicado; tu ubicación GPS se verificará automáticamente.</li>\n";
         break;
     }
 
     // Paso 2: prueba/quiz
     if ($prueba) {
-      $html .= "<li><strong>Responde al desafio</strong> — En cada {$label} tendras que resolver una pregunta o prueba.</li>\n";
+      $html .= "<li {$sp}><strong>Responde al desafío</strong> — En cada {$label} tendrás que resolver una pregunta o prueba.</li>\n";
     }
 
     // Paso 3: puntos
     if ($puntos) {
-      $html .= "<li><strong>Consigue puntos</strong> — Cuanto mas rapido respondas, mas puntos obtendras. Acertar a la primera tambien suma puntos extra.</li>\n";
+      $html .= "<li {$sp}><strong>Consigue puntos</strong> — Cuanto más rápido respondas, más puntos obtendrás. Acertar a la primera también suma puntos extra.</li>\n";
     }
 
     // Paso 4: accion final
     if ($accion === 'subir_foto') {
-      $html .= "<li><strong>Sube tu foto</strong> — Al completar todas {$plural}, podras subir una foto como recuerdo de tu aventura.</li>\n";
+      $html .= "<li {$sp}><strong>Sube tu foto</strong> — Al completar {$plural}, podrás subir una foto como recuerdo de tu aventura.</li>\n";
     }
 
     // Paso 5: diploma
     if ($diploma) {
-      $html .= "<li><strong>Descarga tu diploma</strong> — Al finalizar recibiras un diploma personalizado que podras descargar.</li>\n";
+      $html .= "<li {$sp}><strong>Descarga tu diploma</strong> — Al finalizar recibirás un diploma personalizado que podrás descargar.</li>\n";
     }
 
     $html .= "</ol>\n";
-    $html .= "<p><strong>¡Buena suerte y disfruta del recorrido!</strong></p>";
+    $html .= "<p><strong>¡Buena suerte y disfruta del recorrido!</strong></p>\n";
+
+    // Portada del escenario al final
+    if ($portada) {
+      $html .= "<div style=\"text-align:center;margin-top:24px;\">";
+      $html .= "<img src=\"" . esc_url($portada) . "\" alt=\"" . esc_attr($title) . "\" style=\"max-width:100%;height:auto;border-radius:12px;\" />";
+      $html .= "</div>\n";
+    }
 
     return $html;
   }
