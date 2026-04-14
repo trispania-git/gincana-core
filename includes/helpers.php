@@ -322,57 +322,56 @@ if ( ! function_exists('gc_default_instrucciones') ) {
     $punt_url = function_exists('gc_escenario_subpage_url') ? gc_escenario_subpage_url($id, 'puntuaciones') : '';
 
     $blue = '#2563eb';
-    $sp = 'style="margin-bottom:14px;"'; // spacing para los <li>
-    $sub = 'style="color:' . $blue . ';"'; // subtítulos en azul
 
     $html  = "<h3>¿Cómo funciona?</h3>\n";
-    $html .= "<p>Bienvenido a <strong>{$title}</strong>. ";
+    $html .= "<p style=\"margin-bottom:16px;\">Bienvenido a <strong>{$title}</strong>. ";
     $html .= "El recorrido consta de <strong>{$num_est} {$label}s</strong> que deberás completar en orden.</p>\n";
 
-    $html .= "<ol>\n";
-
     // Paso 1: como acceder
-    $html .= "<li {$sp}><strong {$sub}>Accede a cada {$label}</strong> — ";
+    $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Accede a cada {$label}</h4>\n";
     switch ($qr) {
       case 'enlace':
-        $html .= "Escanea el código QR que encontrarás en cada punto del recorrido.</li>\n";
+        $html .= "<p style=\"margin-bottom:20px;\">Escanea el código QR que encontrarás en cada punto del recorrido.</p>\n";
         break;
       case 'validacion_boton':
-        $html .= "Escanea el código QR y confirma tu llegada pulsando el botón de validación.</li>\n";
+        $html .= "<p style=\"margin-bottom:20px;\">Escanea el código QR y confirma tu llegada pulsando el botón de validación.</p>\n";
         break;
       case 'validacion_quiz':
-        $html .= "Escanea el código QR y responde correctamente a la pregunta para validar el {$label}.</li>\n";
+        $html .= "<p style=\"margin-bottom:20px;\">Escanea el código QR y responde correctamente a la pregunta para validar el {$label}.</p>\n";
         break;
       case 'validacion_gps':
-        $html .= "Acércate al punto indicado; tu ubicación GPS se verificará automáticamente.</li>\n";
+        $html .= "<p style=\"margin-bottom:20px;\">Acércate al punto indicado; tu ubicación GPS se verificará automáticamente.</p>\n";
         break;
     }
 
     // Paso 2: prueba/quiz
     if ($prueba) {
-      $html .= "<li {$sp}><strong {$sub}>Responde al desafío</strong> — En cada {$label} tendrás que resolver una pregunta o prueba.</li>\n";
+      $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Responde al desafío</h4>\n";
+      $html .= "<p style=\"margin-bottom:20px;\">En cada {$label} tendrás que resolver una pregunta o prueba.</p>\n";
     }
 
     // Paso 3: puntos
     if ($puntos) {
-      $html .= "<li {$sp}><strong {$sub}>Consigue puntos</strong> — Cuanto más rápido respondas, más puntos obtendrás. Acertar a la primera también suma puntos extra.";
+      $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Consigue puntos</h4>\n";
+      $html .= "<p style=\"margin-bottom:20px;\">Cuanto más rápido respondas, más puntos obtendrás. Acertar a la primera también suma puntos extra.";
       if ($punt_url) {
         $html .= " <a href=\"{$punt_url}\" style=\"color:{$blue};font-weight:600;\">Ver sistema de puntuaciones</a>.";
       }
-      $html .= "</li>\n";
+      $html .= "</p>\n";
     }
 
     // Paso 4: accion final
     if ($accion === 'subir_foto') {
-      $html .= "<li {$sp}><strong {$sub}>Sube tu foto</strong> — Al completar {$plural}, podrás subir una foto como recuerdo de tu aventura.</li>\n";
+      $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Sube tu foto</h4>\n";
+      $html .= "<p style=\"margin-bottom:20px;\">Al completar {$plural}, podrás subir una foto como recuerdo de tu aventura.</p>\n";
     }
 
     // Paso 5: diploma
     if ($diploma) {
-      $html .= "<li {$sp}><strong {$sub}>Descarga tu diploma</strong> — Al finalizar recibirás un diploma personalizado que podrás descargar.</li>\n";
+      $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Descarga tu diploma</h4>\n";
+      $html .= "<p style=\"margin-bottom:20px;\">Al finalizar recibirás un diploma personalizado que podrás descargar.</p>\n";
     }
 
-    $html .= "</ol>\n";
     $html .= "<p><strong>¡Buena suerte y disfruta del recorrido!</strong></p>\n";
 
     // Portada del escenario al final
