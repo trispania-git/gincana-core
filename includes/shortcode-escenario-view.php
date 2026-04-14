@@ -314,6 +314,19 @@ add_shortcode('gincana_estaciones_lista', function($atts){
 
   <div id="<?php echo esc_attr($uid); ?>" style="width:95%;max-width:760px;margin:0 auto;">
 
+    <?php
+      $instr_url   = function_exists('gc_escenario_subpage_url') ? gc_escenario_subpage_url($escenario_id, 'instrucciones') : '';
+      $tiene_instr = get_post_meta($escenario_id, 'gc_instrucciones', true);
+      if ($instr_url && $tiene_instr):
+    ?>
+    <div style="text-align:center;margin-bottom:16px;">
+      <a href="<?php echo esc_url($instr_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:2px solid #e2e8f0;border-radius:10px;color:#64748b;text-decoration:none;font-weight:600;font-size:15px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Instrucciones
+      </a>
+    </div>
+    <?php endif; ?>
+
     <!-- CTA motivacional -->
     <div style="text-align:center;padding:16px 12px 20px;border:2px solid #2563eb;border-radius:14px;margin-bottom:20px;">
       <p style="margin:0;font-size:17px;font-weight:600;line-height:1.5;color:#1e293b;">
@@ -363,13 +376,21 @@ add_shortcode('gincana_estaciones_lista', function($atts){
 
     <?php
       $ranking_url = function_exists('gc_escenario_subpage_url') ? gc_escenario_subpage_url($escenario_id, 'ranking') : '';
+      $punt_url    = function_exists('gc_escenario_subpage_url') ? gc_escenario_subpage_url($escenario_id, 'puntuaciones') : '';
+      $tiene_punt  = get_post_meta($escenario_id, 'gc_puntuaciones', true);
       if ($ranking_url && $show_points):
     ?>
-    <div style="text-align:center;margin-bottom:16px;">
-      <a href="<?php echo esc_url($ranking_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:2px solid #2563eb;border-radius:10px;color:#2563eb;text-decoration:none;font-weight:600;font-size:15px;transition:background 0.2s,color 0.2s;">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;">
+      <a href="<?php echo esc_url($ranking_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:2px solid #2563eb;border-radius:10px;color:#2563eb;text-decoration:none;font-weight:600;font-size:15px;">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15l-2 5l9-11h-5l2-5l-9 11h5z"/></svg>
         Ver ranking
       </a>
+      <?php if ($tiene_punt): ?>
+      <a href="<?php echo esc_url($punt_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:2px solid #e2e8f0;border-radius:10px;color:#64748b;text-decoration:none;font-weight:600;font-size:15px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        Puntuaciones
+      </a>
+      <?php endif; ?>
     </div>
     <?php endif; ?>
 
