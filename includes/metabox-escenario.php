@@ -157,6 +157,9 @@ function gc_render_escenario_metabox($post) {
             <div class="gc-wiz-step-tab" data-step="5">
                 <div class="gc-wiz-num">5</div><br>Contenido
             </div>
+            <div class="gc-wiz-step-tab" data-step="6">
+                <div class="gc-wiz-num">6</div><br>Info
+            </div>
         </div>
 
         <!-- ========== PASO 1: TIPO ========== -->
@@ -492,6 +495,45 @@ function gc_render_escenario_metabox($post) {
 
             <div class="gc-wiz-nav">
                 <button type="button" class="gc-wiz-btn gc-wiz-btn-prev" data-prev="4">&larr; Anterior</button>
+                <button type="button" class="gc-wiz-btn gc-wiz-btn-next" data-next="6">Siguiente &rarr;</button>
+            </div>
+        </div>
+
+        <!-- ========== PASO 6: PÁGINAS INFORMATIVAS ========== -->
+        <div class="gc-wiz-panel" data-step="6">
+            <h3>Páginas informativas</h3>
+            <p class="gc-wiz-subtitle">Contenido de las páginas de instrucciones y puntuaciones de este escenario.</p>
+
+            <div class="gc-wiz-field">
+                <label>Instrucciones del escenario</label>
+                <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Explica el recorrido, las reglas y como participar. Se muestra con <code>[gincana_instrucciones]</code>.</p>
+                <?php
+                wp_editor(get_post_meta($post->ID, 'gc_instrucciones', true) ?: '', 'gc_esc_instrucciones', [
+                    'textarea_name' => 'gc_instrucciones',
+                    'textarea_rows' => 8,
+                    'media_buttons' => true,
+                    'teeny'         => false,
+                    'quicktags'     => true,
+                ]);
+                ?>
+            </div>
+
+            <div class="gc-wiz-field" style="margin-top:20px;">
+                <label>Sistema de puntuaciones</label>
+                <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Explica como se puntua en este escenario. Se muestra con <code>[gincana_puntuaciones]</code>.</p>
+                <?php
+                wp_editor(get_post_meta($post->ID, 'gc_puntuaciones', true) ?: '', 'gc_esc_puntuaciones', [
+                    'textarea_name' => 'gc_puntuaciones',
+                    'textarea_rows' => 8,
+                    'media_buttons' => true,
+                    'teeny'         => false,
+                    'quicktags'     => true,
+                ]);
+                ?>
+            </div>
+
+            <div class="gc-wiz-nav">
+                <button type="button" class="gc-wiz-btn gc-wiz-btn-prev" data-prev="5">&larr; Anterior</button>
                 <div style="font-size:13px;color:#64748b;display:flex;align-items:center;gap:6px;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     Pulsa <strong style="margin:0 4px;">Publicar</strong> o <strong style="margin:0 4px;">Actualizar</strong> para guardar
@@ -507,7 +549,7 @@ function gc_render_escenario_metabox($post) {
         if (!wizard) return;
 
         var currentStep = 1;
-        var totalSteps = 5;
+        var totalSteps = 6;
 
         function goToStep(n) {
             if (n < 1 || n > totalSteps) return;
@@ -787,6 +829,8 @@ add_action('save_post', function ($post_id) {
         update_post_meta($post_id, 'gc_ranking_url', $ranking_url_manual);
     }
 
+    update_post_meta($post_id, 'gc_instrucciones', wp_kses_post($_POST['gc_instrucciones'] ?? ''));
+    update_post_meta($post_id, 'gc_puntuaciones', wp_kses_post($_POST['gc_puntuaciones'] ?? ''));
     update_post_meta($post_id, 'gc_portada', esc_url_raw($_POST['gc_portada'] ?? ''));
     update_post_meta($post_id, 'gc_fondo_textos', esc_url_raw($_POST['gc_fondo_textos'] ?? ''));
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));

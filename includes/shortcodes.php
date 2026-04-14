@@ -441,7 +441,7 @@ add_action('init', function(){
 
     $a = shortcode_atts([
       'escenario'      => '',
-      'limit'          => '20',
+      'limit'          => '10',
       'show_avatars'   => '0',
       'title'          => '',
       'show_self_below'=> '1',
@@ -522,7 +522,7 @@ add_action('init', function(){
       <table class="gincana-ranking-table" style="width:100%;border-collapse:collapse;">
         <thead>
           <tr>
-            <th style="text-align:left;border-bottom:1px solid #ddd;padding:8px;width:60px;">#</th>
+            <th style="text-align:left;border-bottom:1px solid #ddd;padding:8px;width:60px;">Pos.</th>
             <th style="text-align:left;border-bottom:1px solid #ddd;padding:8px;">Usuario</th>
             <th style="text-align:right;border-bottom:1px solid #ddd;padding:8px;width:120px;">Puntos</th>
           </tr>
@@ -590,9 +590,21 @@ add_action('init', function(){
       </div>
       <?php endif; ?>
 
-      <!-- Enlace volver al escenario -->
-      <div style="text-align:center;margin-top:24px;">
-        <a href="<?php echo esc_url($esc_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid #e2e8f0;border-radius:10px;color:#2563eb;text-decoration:none;font-weight:600;font-size:14px;transition:background 0.2s,border-color 0.2s;">
+      <!-- Botones inferiores -->
+      <div style="text-align:center;margin-top:24px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;">
+        <?php
+        // Botón puntuaciones (solo si hay contenido configurado)
+        $tiene_puntuaciones = get_post_meta($escenario_id, 'gc_puntuaciones', true);
+        if ($tiene_puntuaciones):
+          $puntuaciones_page = get_page_by_path('puntuaciones');
+          $punt_url = $puntuaciones_page ? add_query_arg('escenario', $escenario_id, get_permalink($puntuaciones_page)) : '#';
+        ?>
+        <a href="<?php echo esc_url($punt_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid #e2e8f0;border-radius:10px;color:#64748b;text-decoration:none;font-weight:600;font-size:14px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          Puntuaciones
+        </a>
+        <?php endif; ?>
+        <a href="<?php echo esc_url($esc_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid #e2e8f0;border-radius:10px;color:#2563eb;text-decoration:none;font-weight:600;font-size:14px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
           Volver al escenario
         </a>
@@ -986,6 +998,122 @@ add_action('init', function(){
       <?php if ($show_points): ?>
         <div style="margin-top:12px;text-align:right;"><strong>Total:</strong> <?php echo (int)$total_points; ?> puntos</div>
       <?php endif; ?>
+    </div>
+    <?php
+    return ob_get_clean();
+  });
+});
+
+
+// === Shortcode Instrucciones: [gincana_instrucciones escenario="ID"] ===
+add_action('init', function(){
+  add_shortcode('gincana_instrucciones', function($atts){
+
+    if ( function_exists('gincana_is_divi_builder') && gincana_is_divi_builder() ) {
+      return '<div class="gincana-placeholder et_pb_module" style="padding:12px;border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc;">
+        <strong>Gincana — Instrucciones</strong><br/><small>(Vista previa)</small>
+      </div>';
+    }
+
+    $a = shortcode_atts(['escenario' => ''], $atts);
+    $escenario_id = (int) $a['escenario'];
+    if (!$escenario_id) {
+      if (!empty($_GET['escenario'])) {
+        $escenario_id = (int) $_GET['escenario'];
+      } else {
+        $ctx = get_the_ID();
+        if ($ctx && get_post_type($ctx) === 'escenario') $escenario_id = (int)$ctx;
+      }
+    }
+    if (!$escenario_id) return '<div>No se pudo determinar el escenario.</div>';
+
+    $contenido = get_post_meta($escenario_id, 'gc_instrucciones', true);
+    if (!$contenido) return '<div style="padding:20px;text-align:center;color:#64748b;">No hay instrucciones configuradas para este escenario.</div>';
+
+    $esc_title = get_the_title($escenario_id);
+    $esc_url   = get_permalink($escenario_id);
+
+    ob_start();
+    echo '<style>.gincana-info-page .entry-title, .gincana-info-page .page-title, .gincana-info-page .et_pb_post_title { display:none !important; }</style>';
+    echo '<script>document.body.classList.add("gincana-info-page");</script>';
+    ?>
+    <div class="gincana-instrucciones" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:14px;font-weight:600;color:#2563eb;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Instrucciones
+        </div>
+        <h2 style="margin:0;font-size:24px;font-weight:700;color:#1e293b;"><?php echo esc_html($esc_title); ?></h2>
+      </div>
+
+      <div style="font-size:15px;line-height:1.7;color:#334155;">
+        <?php echo wp_kses_post($contenido); ?>
+      </div>
+
+      <div style="text-align:center;margin-top:32px;">
+        <a href="<?php echo esc_url($esc_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid #e2e8f0;border-radius:10px;color:#2563eb;text-decoration:none;font-weight:600;font-size:14px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Volver al escenario
+        </a>
+      </div>
+    </div>
+    <?php
+    return ob_get_clean();
+  });
+});
+
+
+// === Shortcode Puntuaciones: [gincana_puntuaciones escenario="ID"] ===
+add_action('init', function(){
+  add_shortcode('gincana_puntuaciones', function($atts){
+
+    if ( function_exists('gincana_is_divi_builder') && gincana_is_divi_builder() ) {
+      return '<div class="gincana-placeholder et_pb_module" style="padding:12px;border:1px dashed #cbd5e1;border-radius:10px;background:#f8fafc;">
+        <strong>Gincana — Puntuaciones</strong><br/><small>(Vista previa)</small>
+      </div>';
+    }
+
+    $a = shortcode_atts(['escenario' => ''], $atts);
+    $escenario_id = (int) $a['escenario'];
+    if (!$escenario_id) {
+      if (!empty($_GET['escenario'])) {
+        $escenario_id = (int) $_GET['escenario'];
+      } else {
+        $ctx = get_the_ID();
+        if ($ctx && get_post_type($ctx) === 'escenario') $escenario_id = (int)$ctx;
+      }
+    }
+    if (!$escenario_id) return '<div>No se pudo determinar el escenario.</div>';
+
+    $contenido = get_post_meta($escenario_id, 'gc_puntuaciones', true);
+    if (!$contenido) return '<div style="padding:20px;text-align:center;color:#64748b;">No hay informacion de puntuaciones configurada para este escenario.</div>';
+
+    $esc_title = get_the_title($escenario_id);
+    $esc_url   = get_permalink($escenario_id);
+
+    ob_start();
+    echo '<style>.gincana-info-page .entry-title, .gincana-info-page .page-title, .gincana-info-page .et_pb_post_title { display:none !important; }</style>';
+    echo '<script>document.body.classList.add("gincana-info-page");</script>';
+    ?>
+    <div class="gincana-puntuaciones" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:14px;font-weight:600;color:#2563eb;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          Puntuaciones
+        </div>
+        <h2 style="margin:0;font-size:24px;font-weight:700;color:#1e293b;"><?php echo esc_html($esc_title); ?></h2>
+      </div>
+
+      <div style="font-size:15px;line-height:1.7;color:#334155;">
+        <?php echo wp_kses_post($contenido); ?>
+      </div>
+
+      <div style="text-align:center;margin-top:32px;">
+        <a href="<?php echo esc_url($esc_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid #e2e8f0;border-radius:10px;color:#2563eb;text-decoration:none;font-weight:600;font-size:14px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Volver al escenario
+        </a>
+      </div>
     </div>
     <?php
     return ob_get_clean();
