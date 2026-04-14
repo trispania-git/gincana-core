@@ -318,16 +318,21 @@ if ( ! function_exists('gc_default_instrucciones') ) {
     $title   = get_the_title($id);
     $portada = get_post_meta($id, 'gc_portada', true);
 
-    $sp = 'style="margin-bottom:12px;"'; // spacing para los <li>
+    // URL de puntuaciones para enlazar
+    $punt_url = function_exists('gc_escenario_subpage_url') ? gc_escenario_subpage_url($id, 'puntuaciones') : '';
+
+    $blue = '#2563eb';
+    $sp = 'style="margin-bottom:14px;"'; // spacing para los <li>
+    $sub = 'style="color:' . $blue . ';"'; // subtítulos en azul
 
     $html  = "<h3>¿Cómo funciona?</h3>\n";
     $html .= "<p>Bienvenido a <strong>{$title}</strong>. ";
-    $html .= "El recorrido consta de <strong>{$num_est} " . rtrim($plural, 's') . "</strong> que deberás completar en orden.</p>\n";
+    $html .= "El recorrido consta de <strong>{$num_est} {$label}s</strong> que deberás completar en orden.</p>\n";
 
     $html .= "<ol>\n";
 
     // Paso 1: como acceder
-    $html .= "<li {$sp}><strong>Accede a cada {$label}</strong> — ";
+    $html .= "<li {$sp}><strong {$sub}>Accede a cada {$label}</strong> — ";
     switch ($qr) {
       case 'enlace':
         $html .= "Escanea el código QR que encontrarás en cada punto del recorrido.</li>\n";
@@ -345,22 +350,26 @@ if ( ! function_exists('gc_default_instrucciones') ) {
 
     // Paso 2: prueba/quiz
     if ($prueba) {
-      $html .= "<li {$sp}><strong>Responde al desafío</strong> — En cada {$label} tendrás que resolver una pregunta o prueba.</li>\n";
+      $html .= "<li {$sp}><strong {$sub}>Responde al desafío</strong> — En cada {$label} tendrás que resolver una pregunta o prueba.</li>\n";
     }
 
     // Paso 3: puntos
     if ($puntos) {
-      $html .= "<li {$sp}><strong>Consigue puntos</strong> — Cuanto más rápido respondas, más puntos obtendrás. Acertar a la primera también suma puntos extra.</li>\n";
+      $html .= "<li {$sp}><strong {$sub}>Consigue puntos</strong> — Cuanto más rápido respondas, más puntos obtendrás. Acertar a la primera también suma puntos extra.";
+      if ($punt_url) {
+        $html .= " <a href=\"{$punt_url}\" style=\"color:{$blue};font-weight:600;\">Ver sistema de puntuaciones</a>.";
+      }
+      $html .= "</li>\n";
     }
 
     // Paso 4: accion final
     if ($accion === 'subir_foto') {
-      $html .= "<li {$sp}><strong>Sube tu foto</strong> — Al completar {$plural}, podrás subir una foto como recuerdo de tu aventura.</li>\n";
+      $html .= "<li {$sp}><strong {$sub}>Sube tu foto</strong> — Al completar {$plural}, podrás subir una foto como recuerdo de tu aventura.</li>\n";
     }
 
     // Paso 5: diploma
     if ($diploma) {
-      $html .= "<li {$sp}><strong>Descarga tu diploma</strong> — Al finalizar recibirás un diploma personalizado que podrás descargar.</li>\n";
+      $html .= "<li {$sp}><strong {$sub}>Descarga tu diploma</strong> — Al finalizar recibirás un diploma personalizado que podrás descargar.</li>\n";
     }
 
     $html .= "</ol>\n";
