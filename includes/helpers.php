@@ -399,13 +399,15 @@ if ( ! function_exists('gc_default_puntuaciones') ) {
       return '<p>Este escenario no tiene sistema de puntuaciones activado.</p>';
     }
 
-    $html  = "<h3>Sistema de puntuaciones</h3>\n";
-    $html .= "<p>En cada {$label} puedes obtener hasta <strong>100 puntos</strong>. La puntuacion depende de dos factores:</p>\n";
+    $blue = '#2563eb';
 
-    $html .= "<h4>Puntos por velocidad</h4>\n";
-    $html .= "<table style=\"width:100%;border-collapse:collapse;margin-bottom:16px;\">\n";
-    $html .= "<thead><tr><th style=\"text-align:left;padding:8px;border-bottom:2px solid #e2e8f0;\">Tiempo de respuesta</th>";
-    $html .= "<th style=\"text-align:right;padding:8px;border-bottom:2px solid #e2e8f0;\">Puntos</th></tr></thead>\n<tbody>\n";
+    $html  = "<h3>Sistema de puntuaciones</h3>\n";
+    $html .= "<p style=\"margin-bottom:16px;\">En cada {$label} puedes obtener hasta <strong>100 puntos</strong>. La puntuación depende de dos factores:</p>\n";
+
+    $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Puntos por velocidad</h4>\n";
+    $html .= "<table style=\"width:100%;border-collapse:collapse;margin-bottom:24px;\">\n";
+    $html .= "<thead><tr><th style=\"text-align:left;padding:10px 8px;border-bottom:2px solid {$blue};color:{$blue};\">Tiempo de respuesta</th>";
+    $html .= "<th style=\"text-align:right;padding:10px 8px;border-bottom:2px solid {$blue};color:{$blue};\">Puntos</th></tr></thead>\n<tbody>\n";
 
     $rules = [
       ['Menos de 5 segundos', 90],
@@ -414,19 +416,19 @@ if ( ! function_exists('gc_default_puntuaciones') ) {
       ['15 — 20 segundos', 45],
       ['20 — 25 segundos', 30],
       ['25 — 30 segundos', 15],
-      ['Mas de 30 segundos', 0],
+      ['Más de 30 segundos', 0],
     ];
     foreach ($rules as $r) {
-      $html .= "<tr><td style=\"padding:6px 8px;border-bottom:1px solid #f1f5f9;\">{$r[0]}</td>";
-      $html .= "<td style=\"text-align:right;padding:6px 8px;border-bottom:1px solid #f1f5f9;font-weight:600;\">{$r[1]}</td></tr>\n";
+      $html .= "<tr><td style=\"padding:8px;border-bottom:1px solid #e2e8f0;\">{$r[0]}</td>";
+      $html .= "<td style=\"text-align:right;padding:8px;border-bottom:1px solid #e2e8f0;font-weight:700;\">{$r[1]}</td></tr>\n";
     }
     $html .= "</tbody></table>\n";
 
-    $html .= "<h4>Bonus por primer intento</h4>\n";
-    $html .= "<p>Si aciertas la pregunta <strong>a la primera</strong>, obtienes <strong>+10 puntos</strong> adicionales.</p>\n";
+    $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Bonus por primer intento</h4>\n";
+    $html .= "<p style=\"margin-bottom:20px;\">Si aciertas la pregunta <strong>a la primera</strong>, obtienes <strong>+10 puntos</strong> adicionales.</p>\n";
 
-    $html .= "<h4>Puntuacion maxima</h4>\n";
-    $html .= "<p>La puntuacion maxima por {$label} es <strong>100 puntos</strong> (90 por velocidad + 10 por primer intento).</p>";
+    $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Puntuación máxima</h4>\n";
+    $html .= "<p style=\"margin-bottom:16px;\">La puntuación máxima por {$label} es <strong>100 puntos</strong> (90 por velocidad + 10 por primer intento).</p>";
 
     return $html;
   }
