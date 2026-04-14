@@ -727,10 +727,17 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
          data-q-index="<?php echo esc_attr($q_index); ?>">
 
         <!-- CTA desafío (visible por defecto) -->
+        <?php $img_pregunta = get_post_meta($escenario_id, 'gc_img_pregunta', true); ?>
         <div id="gc-challenge-cta" style="padding:24px 20px;border:2px solid #2563eb;border-radius:14px;background:linear-gradient(135deg,#eff6ff,#dbeafe);text-align:center;">
+            <?php if ($img_pregunta): ?>
+            <div style="margin-bottom:12px;">
+                <img src="<?php echo esc_url($img_pregunta); ?>" alt="" style="max-width:100%;height:auto;border-radius:12px;" />
+            </div>
+            <?php else: ?>
             <div style="font-size:40px;margin-bottom:12px;">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
+            <?php endif; ?>
             <h3 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1e293b;">¿Preparado para el desafío?</h3>
             <p style="margin:0 0 18px;font-size:15px;color:#475569;line-height:1.5;">Pon a prueba tus conocimientos sobre este lugar. ¡Solo tienes una oportunidad!</p>
             <button type="button" id="gc-start-challenge"
@@ -854,19 +861,24 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
                     <?php
                     $tipo_qr_redirect = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';
                     $escenario_url_js = get_permalink($escenario_id) ?: home_url('/');
+                    $img_acierto_url = get_post_meta($escenario_id, 'gc_img_acierto', true);
+                    $acierto_html = $img_acierto_url
+                        ? '<img src="' . esc_url($img_acierto_url) . '" alt="" style="max-width:100%;height:auto;border-radius:12px;margin-bottom:12px;" />'
+                        : '';
                     ?>
                     <?php if ($tipo_qr_redirect === 'validacion_gps'): ?>
                     // GPS: mostrar resumen en la misma página
                     var wrap = document.querySelector('.gc-adult-station');
                     if (wrap) {
                         wrap.innerHTML = '<div style="padding:24px 20px;border-radius:14px;background:#f7fff7;border:2px solid #16a34a;text-align:center;">'
+                            + <?php echo json_encode($acierto_html); ?>
                             + '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Ubicación verificada</p>'
                             + '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Desafío completado — ' + pts + ' puntos</p>'
                             + '<a href="<?php echo esc_url($escenario_url_js); ?>" style="display:inline-block;margin-top:16px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>'
                             + '</div>';
                     }
                     <?php else: ?>
-                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;">✅ Respuesta correcta. Has conseguido <strong>' + pts + ' puntos</strong>.</div>';
+                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;"><?php echo $acierto_html ? addslashes($acierto_html) : ''; ?>✅ Respuesta correcta. Has conseguido <strong>' + pts + ' puntos</strong>.</div>';
                     setTimeout(function(){
                         window.location.href = <?php echo json_encode($escenario_url_js); ?>;
                     }, 1800);

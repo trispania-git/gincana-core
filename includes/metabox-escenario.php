@@ -48,6 +48,8 @@ function gc_render_escenario_metabox($post) {
     $img_encontrada  = get_post_meta($post->ID, 'gc_img_encontrada', true);
     $ranking_imagen  = get_post_meta($post->ID, 'gc_ranking_imagen', true);
     $img_busca_qr    = get_post_meta($post->ID, 'gc_img_busca_qr', true);
+    $img_pregunta    = get_post_meta($post->ID, 'gc_img_pregunta', true);
+    $img_acierto     = get_post_meta($post->ID, 'gc_img_acierto', true);
     ?>
 
     <style>
@@ -485,11 +487,21 @@ function gc_render_escenario_metabox($post) {
                 </div>
             </div>
 
-            <div style="margin-top:16px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px;">
                 <div class="gc-wiz-field">
-                    <label>Imagen de "Busca el código QR"</label>
-                    <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Sustituye la lupa en la pantalla de buscar QR. Si no se sube imagen, se muestra el icono por defecto.</p>
-                    <?php gc_render_media_field('gc_img_busca_qr', $img_busca_qr, 'image', 'Seleccionar imagen'); ?>
+                    <label>Imagen "Busca el QR"</label>
+                    <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Sustituye la lupa en la pantalla de buscar QR.</p>
+                    <?php gc_render_media_field('gc_img_busca_qr', $img_busca_qr, 'image', 'Seleccionar'); ?>
+                </div>
+                <div class="gc-wiz-field">
+                    <label>Imagen "Pregunta"</label>
+                    <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Sustituye el icono en "¿Preparado para el desafío?".</p>
+                    <?php gc_render_media_field('gc_img_pregunta', $img_pregunta, 'image', 'Seleccionar'); ?>
+                </div>
+                <div class="gc-wiz-field">
+                    <label>Imagen "Acierto"</label>
+                    <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Se muestra al acertar la pregunta (en lugar del ✅).</p>
+                    <?php gc_render_media_field('gc_img_acierto', $img_acierto, 'image', 'Seleccionar'); ?>
                 </div>
             </div>
 
@@ -885,6 +897,8 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_img_encontrada', esc_url_raw($_POST['gc_img_encontrada'] ?? ''));
     update_post_meta($post_id, 'gc_ranking_imagen', esc_url_raw($_POST['gc_ranking_imagen'] ?? ''));
     update_post_meta($post_id, 'gc_img_busca_qr', esc_url_raw($_POST['gc_img_busca_qr'] ?? ''));
+    update_post_meta($post_id, 'gc_img_pregunta', esc_url_raw($_POST['gc_img_pregunta'] ?? ''));
+    update_post_meta($post_id, 'gc_img_acierto', esc_url_raw($_POST['gc_img_acierto'] ?? ''));
 
 });
 
