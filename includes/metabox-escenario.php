@@ -47,6 +47,7 @@ function gc_render_escenario_metabox($post) {
     $img1            = get_post_meta($post->ID, 'gc_img_1', true);
     $img2            = get_post_meta($post->ID, 'gc_img_2', true);
     $img_encontrada  = get_post_meta($post->ID, 'gc_img_encontrada', true);
+    $ranking_imagen  = get_post_meta($post->ID, 'gc_ranking_imagen', true);
     ?>
 
     <style>
@@ -476,10 +477,17 @@ function gc_render_escenario_metabox($post) {
                 </div>
             </div>
 
-            <div class="gc-wiz-field" style="margin-top:16px;">
-                <label>Imagen de estacion encontrada</label>
-                <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Se muestra al escanear un QR de validacion. Si no se sube ninguna, se usa un icono por defecto.</p>
-                <?php gc_render_media_field('gc_img_encontrada', $img_encontrada, 'image', 'Seleccionar imagen'); ?>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+                <div class="gc-wiz-field">
+                    <label>Imagen de estacion encontrada</label>
+                    <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Se muestra al escanear un QR de validacion.</p>
+                    <?php gc_render_media_field('gc_img_encontrada', $img_encontrada, 'image', 'Seleccionar imagen'); ?>
+                </div>
+                <div class="gc-wiz-field">
+                    <label>Imagen del ranking</label>
+                    <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Se muestra debajo de la tabla de ranking.</p>
+                    <?php gc_render_media_field('gc_ranking_imagen', $ranking_imagen, 'image', 'Seleccionar imagen'); ?>
+                </div>
             </div>
 
             <div class="gc-wiz-nav">
@@ -786,6 +794,7 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));
     update_post_meta($post_id, 'gc_img_2', esc_url_raw($_POST['gc_img_2'] ?? ''));
     update_post_meta($post_id, 'gc_img_encontrada', esc_url_raw($_POST['gc_img_encontrada'] ?? ''));
+    update_post_meta($post_id, 'gc_ranking_imagen', esc_url_raw($_POST['gc_ranking_imagen'] ?? ''));
 
     // Auto-crear página de ranking si no existe
     gc_maybe_create_ranking_page($post_id);

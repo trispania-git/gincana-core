@@ -582,6 +582,14 @@ add_action('init', function(){
       }
       ?>
 
+      <?php
+      $ranking_img = get_post_meta($escenario_id, 'gc_ranking_imagen', true);
+      if ($ranking_img): ?>
+      <div style="text-align:center;margin-top:24px;">
+        <img src="<?php echo esc_url($ranking_img); ?>" alt="" style="max-width:100%;height:auto;border-radius:12px;">
+      </div>
+      <?php endif; ?>
+
       <!-- Enlace volver al escenario -->
       <div style="text-align:center;margin-top:24px;">
         <a href="<?php echo esc_url($esc_url); ?>" style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:1px solid #e2e8f0;border-radius:10px;color:#2563eb;text-decoration:none;font-weight:600;font-size:14px;transition:background 0.2s,border-color 0.2s;">
