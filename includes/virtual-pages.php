@@ -74,11 +74,10 @@ add_action('template_redirect', function () {
 });
 
 /**
- * Renderiza una "página virtual" usando el theme activo (header + footer de WP/Divi).
- * Suplanta $post con una página falsa para que Divi use su layout base.
+ * Renderiza una "página virtual" limpia: solo wp_head/wp_footer para CSS/JS,
+ * sin header ni footer de Divi. Incluye el header-nav de gincana.
  */
 function gc_render_virtual_page($escenario_id, $type) {
-    global $wp_query, $post;
 
     $titles = [
         'ranking'        => 'Ranking',
@@ -96,79 +95,43 @@ function gc_render_virtual_page($escenario_id, $type) {
     $page_title = ($titles[$type] ?? ucfirst($type)) . ' — ' . $esc_title;
     $shortcode  = $shortcodes[$type] ?? '';
 
-    // Crear un post virtual para que el theme lo renderice
-    $virtual = new stdClass();
-    $virtual->ID            = 0;
-    $virtual->post_author   = 1;
-    $virtual->post_date     = current_time('mysql');
-    $virtual->post_date_gmt = current_time('mysql', 1);
-    $virtual->post_content  = $shortcode;
-    $virtual->post_title    = $page_title;
-    $virtual->post_excerpt  = '';
-    $virtual->post_status   = 'publish';
-    $virtual->comment_status = 'closed';
-    $virtual->ping_status   = 'closed';
-    $virtual->post_password = '';
-    $virtual->post_name     = $type;
-    $virtual->to_ping       = '';
-    $virtual->pinged        = '';
-    $virtual->post_modified     = current_time('mysql');
-    $virtual->post_modified_gmt = current_time('mysql', 1);
-    $virtual->post_content_filtered = '';
-    $virtual->post_parent   = 0;
-    $virtual->guid          = '';
-    $virtual->menu_order    = 0;
-    $virtual->post_type     = 'page';
-    $virtual->post_mime_type = '';
-    $virtual->comment_count = 0;
-    $virtual->filter        = 'raw';
-
-    // Suplantar globals
-    $post = new WP_Post($virtual);
-    $wp_query->post  = $post;
-    $wp_query->posts = [$post];
-    $wp_query->found_posts    = 1;
-    $wp_query->post_count     = 1;
-    $wp_query->max_num_pages  = 1;
-    $wp_query->is_page        = true;
-    $wp_query->is_singular    = true;
-    $wp_query->is_single      = false;
-    $wp_query->is_attachment  = false;
-    $wp_query->is_archive     = false;
-    $wp_query->is_category    = false;
-    $wp_query->is_tag         = false;
-    $wp_query->is_tax         = false;
-    $wp_query->is_author      = false;
-    $wp_query->is_date        = false;
-    $wp_query->is_year        = false;
-    $wp_query->is_month       = false;
-    $wp_query->is_day         = false;
-    $wp_query->is_time        = false;
-    $wp_query->is_search      = false;
-    $wp_query->is_feed        = false;
-    $wp_query->is_comment_feed = false;
-    $wp_query->is_trackback   = false;
-    $wp_query->is_home        = false;
-    $wp_query->is_404         = false;
-    $wp_query->is_embed       = false;
-    $wp_query->is_paged       = false;
-
     // Título del documento
     add_filter('document_title_parts', function ($parts) use ($page_title) {
         $parts['title'] = $page_title;
         return $parts;
     });
 
-    // Cargar la plantilla de página del theme
-    $template = get_page_template();
-    if ( ! $template ) {
-        $template = get_index_template();
-    }
-    if ( ! $template ) {
-        $template = ABSPATH . WPINC . '/template-canvas.php';
+    // Renderizar shortcode
+    $content = do_shortcode($shortcode);
+
+    // Header nav de gincana (si existe)
+    $header_nav = '';
+    if (shortcode_exists('gincana_header_nav')) {
+        $header_nav = do_shortcode('[gincana_header_nav escenario="' . (int) $escenario_id . '"]');
     }
 
-    include $template;
+    status_header(200);
+    ?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+<head>
+<meta charset="<?php bloginfo('charset'); ?>">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<?php wp_head(); ?>
+<style>
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; }
+  .gc-virtual-page { max-width: 860px; margin: 0 auto; padding: 16px; }
+</style>
+</head>
+<body class="gc-virtual-body">
+<?php echo $header_nav; ?>
+<div class="gc-virtual-page">
+  <?php echo $content; ?>
+</div>
+<?php wp_footer(); ?>
+</body>
+</html>
+    <?php
     exit;
 }
 
