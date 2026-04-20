@@ -516,18 +516,18 @@ function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
 
         <?php if ($pista || $pista_2): ?>
         <div style="margin:16px 0 0;">
-            <button type="button" id="gc-pistas-toggle-btn" data-show-text="💡 Ver pistas" data-hide-text="Ocultar pistas" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:2px solid #f59e0b;border-radius:12px;background:#fff;color:#92400e;font-size:15px;font-weight:700;cursor:pointer;transition:background 0.2s;">
-                💡 Ver pistas
+            <button type="button" id="gc-pistas-toggle-btn" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:2px solid #f59e0b;border-radius:12px;background:#fff;color:#92400e;font-size:15px;font-weight:700;cursor:pointer;transition:background 0.2s;">
+                💡 Ver pista
             </button>
             <div id="gc-pistas-container" style="display:none;margin-top:12px;flex-direction:column;gap:10px;">
                 <?php if ($pista): ?>
-                <div style="padding:14px 16px;border-radius:10px;background:#fff;border:1px dashed #f59e0b;text-align:left;">
+                <div class="gc-pista-item" data-idx="1" style="display:none;padding:14px 16px;border-radius:10px;background:#fff;border:1px dashed #f59e0b;text-align:left;">
                     <p style="margin:0;font-size:13px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">💡 Pista 1</p>
                     <p style="margin:6px 0 0;font-size:15px;color:#451a03;"><?php echo esc_html($pista); ?></p>
                 </div>
                 <?php endif; ?>
                 <?php if ($pista_2): ?>
-                <div style="padding:14px 16px;border-radius:10px;background:#fff;border:1px dashed #f59e0b;text-align:left;">
+                <div class="gc-pista-item" data-idx="2" style="display:none;padding:14px 16px;border-radius:10px;background:#fff;border:1px dashed #f59e0b;text-align:left;">
                     <p style="margin:0;font-size:13px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">💡 Pista 2</p>
                     <p style="margin:6px 0 0;font-size:15px;color:#451a03;"><?php echo esc_html($pista_2); ?></p>
                 </div>
@@ -538,11 +538,34 @@ function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
                 var btn = document.getElementById('gc-pistas-toggle-btn');
                 var box = document.getElementById('gc-pistas-container');
                 if (!btn || !box) return;
+                var items = box.querySelectorAll('.gc-pista-item');
+                var total = items.length;
+                var shown = 0; // nº de pistas visibles actualmente
+
+                function render() {
+                    for (var i = 0; i < items.length; i++) {
+                        items[i].style.display = (i < shown) ? 'block' : 'none';
+                    }
+                    box.style.display = shown > 0 ? 'flex' : 'none';
+                    if (shown === 0) {
+                        btn.innerHTML = total > 1 ? '💡 Ver pista 1' : '💡 Ver pista';
+                    } else if (shown < total) {
+                        btn.innerHTML = '💡 Ver pista ' + (shown + 1);
+                    } else {
+                        btn.innerHTML = 'Ocultar pistas';
+                    }
+                }
+
                 btn.addEventListener('click', function(){
-                    var visible = box.style.display !== 'none';
-                    box.style.display = visible ? 'none' : 'flex';
-                    btn.innerHTML = visible ? btn.dataset.showText : btn.dataset.hideText;
+                    if (shown < total) {
+                        shown++;
+                    } else {
+                        shown = 0;
+                    }
+                    render();
                 });
+
+                render();
             })();
             </script>
         </div>
