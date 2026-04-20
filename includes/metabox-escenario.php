@@ -27,6 +27,8 @@ function gc_render_escenario_metabox($post) {
     if ($mostrar_puntos === '') $mostrar_puntos = '1';
     $requiere_prueba = get_post_meta($post->ID, 'gc_requiere_prueba', true);
     if ($requiere_prueba === '') $requiere_prueba = '1';
+    $pistas_activas = get_post_meta($post->ID, 'gc_pistas_activas', true);
+    if ($pistas_activas === '') $pistas_activas = '0';
     $origen_preguntas = get_post_meta($post->ID, 'gc_origen_preguntas', true) ?: 'por_estacion';
     $pool_prueba_ref  = (int) get_post_meta($post->ID, 'gc_pool_prueba_ref', true);
     $geo_radio       = get_post_meta($post->ID, 'gc_geo_radio', true);
@@ -247,6 +249,15 @@ function gc_render_escenario_metabox($post) {
                 <div>
                     <div class="gc-toggle-label">Gamificacion (puntos y ranking)</div>
                     <div class="gc-toggle-desc">Desactiva para escenarios sin puntuacion ni clasificacion</div>
+                </div>
+            </label>
+
+            <label class="gc-wiz-toggle">
+                <input type="checkbox" name="gc_pistas_activas" value="1" id="gc_pistas_activas" <?php checked($pistas_activas, '1'); ?> />
+                <span class="gc-switch"></span>
+                <div>
+                    <div class="gc-toggle-label">Pistas para encontrar el QR</div>
+                    <div class="gc-toggle-desc">Muestra un botón de "Pistas" en el recuadro de "¡Busca el código QR!". Las pistas se configuran en cada estación.</div>
                 </div>
             </label>
 
@@ -785,10 +796,12 @@ function gc_render_escenario_metabox($post) {
                     ['Tipo', lb('tipo_escenario', tipoEsc)]
                 ]);
 
+                var pistas = ch('gc_pistas_activas');
                 var mecRows = [
                     ['Tipo de QR', lb('tipo_qr', tipoQr)],
                     ['Prueba/quiz', prueba ? si : no],
-                    ['Gamificacion', puntos ? si : no]
+                    ['Gamificacion', puntos ? si : no],
+                    ['Pistas', pistas ? si : no]
                 ];
                 if (prueba) {
                     mecRows.push(['Origen preguntas', lb('origen_preguntas', origen)]);
@@ -851,6 +864,7 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_tipo_qr', $tipo_qr);
     update_post_meta($post_id, 'gc_mostrar_puntos', isset($_POST['gc_mostrar_puntos']) ? '1' : '0');
     update_post_meta($post_id, 'gc_requiere_prueba', isset($_POST['gc_requiere_prueba']) ? '1' : '0');
+    update_post_meta($post_id, 'gc_pistas_activas', isset($_POST['gc_pistas_activas']) ? '1' : '0');
     $geo_radio = isset($_POST['gc_geo_radio']) ? max(0, (int) $_POST['gc_geo_radio']) : 0;
     update_post_meta($post_id, 'gc_geo_radio', $geo_radio);
 
