@@ -373,7 +373,8 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
  */
 function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
     $label = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
-    $pista = get_post_meta($station_id, 'gc_pista_busqueda', true);
+    $pista   = get_post_meta($station_id, 'gc_pista_busqueda', true);
+    $pista_2 = get_post_meta($station_id, 'gc_pista_busqueda_2', true);
     $img_busca_qr = get_post_meta($escenario_id, 'gc_img_busca_qr', true);
 
     ob_start();
@@ -512,10 +513,20 @@ function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
         })();
         </script>
 
-        <?php if ($pista): ?>
-        <div style="margin:16px 0 0;padding:14px 16px;border-radius:10px;background:#fff;border:1px dashed #f59e0b;">
-            <p style="margin:0;font-size:13px;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">💡 Pista</p>
-            <p style="margin:6px 0 0;font-size:15px;color:#451a03;"><?php echo esc_html($pista); ?></p>
+        <?php if ($pista || $pista_2): ?>
+        <div style="margin:16px 0 0;display:flex;flex-direction:column;gap:10px;">
+            <?php if ($pista): ?>
+            <div style="padding:14px 16px;border-radius:10px;background:#fff;border:1px dashed #f59e0b;text-align:left;">
+                <p style="margin:0;font-size:13px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">💡 Pista 1</p>
+                <p style="margin:6px 0 0;font-size:15px;color:#451a03;"><?php echo esc_html($pista); ?></p>
+            </div>
+            <?php endif; ?>
+            <?php if ($pista_2): ?>
+            <div style="padding:14px 16px;border-radius:10px;background:#fff;border:1px dashed #f59e0b;text-align:left;">
+                <p style="margin:0;font-size:13px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">💡 Pista 2</p>
+                <p style="margin:6px 0 0;font-size:15px;color:#451a03;"><?php echo esc_html($pista_2); ?></p>
+            </div>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
     </div>
