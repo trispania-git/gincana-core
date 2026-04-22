@@ -632,6 +632,10 @@ add_shortcode('gincana_estaciones_lista', function($atts){
         $diploma_fondo   = get_post_meta($escenario_id, 'gc_diploma_fondo', true);
         $diploma_mostrar_puntos = get_post_meta($escenario_id, 'gc_mostrar_puntos', true) === '1';
         $diploma_portada = get_post_meta($escenario_id, 'gc_portada', true);
+        $diploma_pie_activo = get_post_meta($escenario_id, 'gc_diploma_pie_activo', true);
+        if ($diploma_pie_activo === '') $diploma_pie_activo = '1';
+        $diploma_pie_texto  = get_post_meta($escenario_id, 'gc_diploma_pie_texto', true);
+        if ($diploma_pie_texto === '') $diploma_pie_texto = 'Generado por Gincana';
         $current_user    = wp_get_current_user();
         $user_display    = $current_user->display_name ?: $current_user->user_login;
         $esc_title       = get_the_title($escenario_id);
@@ -679,6 +683,8 @@ add_shortcode('gincana_estaciones_lista', function($atts){
               var fondoUrl  = <?php echo wp_json_encode($diploma_fondo ?: ''); ?>;
               var portadaUrl = <?php echo wp_json_encode($diploma_portada ?: ''); ?>;
               var mostrarPuntos = <?php echo $diploma_mostrar_puntos ? 'true' : 'false'; ?>;
+              var pieActivo = <?php echo $diploma_pie_activo === '1' ? 'true' : 'false'; ?>;
+              var pieTexto  = <?php echo wp_json_encode($diploma_pie_texto); ?>;
               var fecha     = new Date().toLocaleDateString('es-ES', {day:'numeric',month:'long',year:'numeric'});
               var font = function(w, s) { return w + ' ' + s + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'; };
 
@@ -726,25 +732,21 @@ add_shortcode('gincana_estaciones_lista', function($atts){
 
                   ctx.textAlign = 'center';
 
-                  // Trofeo
-                  ctx.font = '100px serif';
-                  ctx.fillText('\uD83C\uDFC6', W/2, 160);
-
                   // Titulo
                   ctx.fillStyle = '#14532d';
                   ctx.font = font('bold', 66);
-                  ctx.fillText('\u00A1Enhorabuena!', W/2, 270);
+                  ctx.fillText('\u00A1Enhorabuena!', W/2, 150);
 
                   // Separador
                   ctx.strokeStyle = '#86efac';
                   ctx.lineWidth = 2;
-                  ctx.beginPath(); ctx.moveTo(W/2 - 140, 300); ctx.lineTo(W/2 + 140, 300); ctx.stroke();
+                  ctx.beginPath(); ctx.moveTo(W/2 - 140, 180); ctx.lineTo(W/2 + 140, 180); ctx.stroke();
 
                   // Nombre del usuario
                   ctx.fillStyle = '#166534';
                   ctx.font = font('bold', 56);
                   var nameLines = wrapText(ctx, userName, W - 120);
-                  var nameY = 390;
+                  var nameY = 260;
                   for (var n = 0; n < nameLines.length; n++) {
                     ctx.fillText(nameLines[n], W/2, nameY + n * 66);
                   }
@@ -828,10 +830,12 @@ add_shortcode('gincana_estaciones_lista', function($atts){
                 }
 
                 function finishAndDownload() {
-                  // Pie
-                  ctx.fillStyle = '#94a3b8';
-                  ctx.font = font('normal', 22);
-                  ctx.fillText('Generado por Gincana', W/2, H - 45);
+                  // Pie (opcional)
+                  if (pieActivo && pieTexto) {
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.font = font('normal', 22);
+                    ctx.fillText(pieTexto, W/2, H - 45);
+                  }
 
                   // Descargar
                   var link = document.createElement('a');

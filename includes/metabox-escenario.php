@@ -37,6 +37,9 @@ function gc_render_escenario_metabox($post) {
     $enhorabuena_msg = get_post_meta($post->ID, 'gc_enhorabuena_msg', true);
     $diploma_activo  = get_post_meta($post->ID, 'gc_diploma_activo', true);
     $diploma_msg     = get_post_meta($post->ID, 'gc_diploma_msg', true);
+    $diploma_pie_activo = get_post_meta($post->ID, 'gc_diploma_pie_activo', true);
+    if ($diploma_pie_activo === '') $diploma_pie_activo = '1';
+    $diploma_pie_texto = get_post_meta($post->ID, 'gc_diploma_pie_texto', true);
     $diploma_fondo   = get_post_meta($post->ID, 'gc_diploma_fondo', true);
     $label_estacion  = get_post_meta($post->ID, 'gc_label_estacion', true);
     $label_plural    = get_post_meta($post->ID, 'gc_label_estacion_plural', true);
@@ -381,10 +384,27 @@ function gc_render_escenario_metabox($post) {
                                placeholder="Ensena esta imagen en la oficina de turismo y recibe tu premio" />
                         <div class="gc-hint">Texto que aparece en la parte inferior de la imagen.</div>
                     </div>
-                    <div class="gc-wiz-field" style="margin:0;">
+                    <div class="gc-wiz-field" style="margin:0 0 12px;">
                         <label>Imagen de fondo del diploma</label>
                         <?php gc_render_media_field('gc_diploma_fondo', $diploma_fondo, 'image', 'Seleccionar fondo'); ?>
                         <div class="gc-hint">Opcional (800&times;1200px recomendado, vertical). La imagen se oscurece automaticamente para que el texto sea legible. Si no se sube, se usa un degradado por defecto.</div>
+                    </div>
+
+                    <label class="gc-wiz-toggle" style="margin:0 0 10px;">
+                        <input type="checkbox" name="gc_diploma_pie_activo" value="1" id="gc_diploma_pie_activo" <?php checked($diploma_pie_activo, '1'); ?> />
+                        <span class="gc-switch"></span>
+                        <div>
+                            <div class="gc-toggle-label">Incluir pie en el diploma</div>
+                            <div class="gc-toggle-desc">Texto pequeño al pie de la imagen (por defecto "Generado por Gincana")</div>
+                        </div>
+                    </label>
+
+                    <div id="gc_diploma_pie_row" class="gc-wiz-field" style="margin:0;<?php echo $diploma_pie_activo !== '1' ? 'display:none;' : ''; ?>">
+                        <label for="gc_diploma_pie_texto">Texto del pie</label>
+                        <input type="text" name="gc_diploma_pie_texto" id="gc_diploma_pie_texto"
+                               value="<?php echo esc_attr($diploma_pie_texto); ?>"
+                               placeholder="Generado por Gincana" />
+                        <div class="gc-hint">Si se deja vacio se usa "Generado por Gincana".</div>
                     </div>
                 </div>
             </div>
@@ -730,6 +750,15 @@ function gc_render_escenario_metabox($post) {
             });
         }
 
+        // Toggle pie del diploma
+        var piePieCheck = document.getElementById('gc_diploma_pie_activo');
+        if (piePieCheck) {
+            piePieCheck.addEventListener('change', function() {
+                var row = document.getElementById('gc_diploma_pie_row');
+                if (row) row.style.display = this.checked ? '' : 'none';
+            });
+        }
+
         // Mark done tabs for existing data
         var tipo = document.getElementById('gc_tipo_escenario').value;
         if (tipo) goToStep(1);
@@ -820,6 +849,12 @@ function gc_render_escenario_metabox($post) {
                         var dipMsg = v('gc_diploma_msg');
                         if (dipMsg) accRows.push(['Mensaje diploma', esc(dipMsg)]);
                         accRows.push(['Fondo diploma', v('gc_diploma_fondo') ? dot('#16a34a') + 'Si' : dot('#dc2626') + 'No']);
+                        var pieActivo = ch('gc_diploma_pie_activo');
+                        accRows.push(['Pie en diploma', pieActivo ? si : no]);
+                        if (pieActivo) {
+                            var pieTxt = v('gc_diploma_pie_texto');
+                            if (pieTxt) accRows.push(['Texto del pie', esc(pieTxt)]);
+                        }
                     }
                 }
                 html += section('3. Accion final', accRows);
@@ -882,6 +917,8 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_enhorabuena_msg', sanitize_text_field($_POST['gc_enhorabuena_msg'] ?? ''));
     update_post_meta($post_id, 'gc_diploma_activo', isset($_POST['gc_diploma_activo']) ? '1' : '0');
     update_post_meta($post_id, 'gc_diploma_msg', sanitize_text_field($_POST['gc_diploma_msg'] ?? ''));
+    update_post_meta($post_id, 'gc_diploma_pie_activo', isset($_POST['gc_diploma_pie_activo']) ? '1' : '0');
+    update_post_meta($post_id, 'gc_diploma_pie_texto', sanitize_text_field($_POST['gc_diploma_pie_texto'] ?? ''));
     update_post_meta($post_id, 'gc_diploma_fondo', esc_url_raw($_POST['gc_diploma_fondo'] ?? ''));
 
     update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
