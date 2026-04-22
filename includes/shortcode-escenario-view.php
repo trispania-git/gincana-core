@@ -630,6 +630,8 @@ add_shortcode('gincana_estaciones_lista', function($atts){
         $diploma_activo  = get_post_meta($escenario_id, 'gc_diploma_activo', true) === '1';
         $diploma_msg     = get_post_meta($escenario_id, 'gc_diploma_msg', true);
         $diploma_fondo   = get_post_meta($escenario_id, 'gc_diploma_fondo', true);
+        $diploma_mostrar_puntos = get_post_meta($escenario_id, 'gc_mostrar_puntos', true) === '1';
+        $diploma_portada = get_post_meta($escenario_id, 'gc_portada', true);
         $current_user    = wp_get_current_user();
         $user_display    = $current_user->display_name ?: $current_user->user_login;
         $esc_title       = get_the_title($escenario_id);
@@ -675,6 +677,8 @@ add_shortcode('gincana_estaciones_lista', function($atts){
               var totalPts  = <?php echo (int) $user_total_pts; ?>;
               var diplomaMsg = <?php echo wp_json_encode($diploma_msg ?: ''); ?>;
               var fondoUrl  = <?php echo wp_json_encode($diploma_fondo ?: ''); ?>;
+              var portadaUrl = <?php echo wp_json_encode($diploma_portada ?: ''); ?>;
+              var mostrarPuntos = <?php echo $diploma_mostrar_puntos ? 'true' : 'false'; ?>;
               var fecha     = new Date().toLocaleDateString('es-ES', {day:'numeric',month:'long',year:'numeric'});
               var font = function(w, s) { return w + ' ' + s + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'; };
 
@@ -761,8 +765,8 @@ add_shortcode('gincana_estaciones_lista', function($atts){
                   }
                   var afterEsc = escY + escLines.length * 60 + 40;
 
-                  // Ranking y puntos
-                  if (totalPts > 0) {
+                  // Ranking y puntos (solo si hay gamificacion)
+                  if (mostrarPuntos && totalPts > 0) {
                     ctx.fillStyle = '#334155';
                     ctx.font = font('bold', 36);
                     ctx.fillText('Posicion #' + ranking + '  \u00B7  ' + totalPts + ' puntos', W/2, afterEsc);
@@ -775,31 +779,55 @@ add_shortcode('gincana_estaciones_lista', function($atts){
                   ctx.fillText(fecha, W/2, afterEsc);
                   afterEsc += 70;
 
-                  // Mensaje diploma (premio / instrucciones)
+                  // Mensaje diploma (premio / instrucciones) — sin fondo
+                  var contentEndY = afterEsc;
                   if (diplomaMsg) {
-                    ctx.font = font('bold', 34);
-                    var msgLines = wrapText(ctx, diplomaMsg, W - 120);
-                    var msgH = msgLines.length * 46 + 36;
-                    var msgY = afterEsc;
-
-                    // Fondo del mensaje
-                    ctx.fillStyle = 'rgba(254,242,242,0.85)';
-                    var rx = 60, ry = msgY - 30, rw = W - 120, rh = msgH;
-                    ctx.beginPath();
-                    ctx.moveTo(rx + 14, ry);
-                    ctx.arcTo(rx + rw, ry, rx + rw, ry + rh, 14);
-                    ctx.arcTo(rx + rw, ry + rh, rx, ry + rh, 14);
-                    ctx.arcTo(rx, ry + rh, rx, ry, 14);
-                    ctx.arcTo(rx, ry, rx + rw, ry, 14);
-                    ctx.fill();
-
                     ctx.fillStyle = '#991b1b';
                     ctx.font = font('bold', 34);
+                    var msgLines = wrapText(ctx, diplomaMsg, W - 120);
+                    var msgY = afterEsc;
                     for (var j = 0; j < msgLines.length; j++) {
                       ctx.fillText(msgLines[j], W/2, msgY + j * 46);
                     }
+                    contentEndY = msgY + msgLines.length * 46 + 10;
                   }
 
+                  // Portada del escenario (si hay) debajo del mensaje
+                  if (portadaUrl) {
+                    var pImg = new Image();
+                    pImg.crossOrigin = 'anonymous';
+                    pImg.onload = function() {
+                      var maxImgH = H - 80 - contentEndY;
+                      var maxImgW = W - 200;
+                      if (maxImgH > 60 && maxImgW > 60) {
+                        var s = Math.min(maxImgW / pImg.width, maxImgH / pImg.height);
+                        var iw = pImg.width * s;
+                        var ih = pImg.height * s;
+                        var ix = (W - iw) / 2;
+                        var iy = contentEndY + 10;
+                        ctx.save();
+                        var r = 10;
+                        ctx.beginPath();
+                        ctx.moveTo(ix + r, iy);
+                        ctx.arcTo(ix + iw, iy, ix + iw, iy + ih, r);
+                        ctx.arcTo(ix + iw, iy + ih, ix, iy + ih, r);
+                        ctx.arcTo(ix, iy + ih, ix, iy, r);
+                        ctx.arcTo(ix, iy, ix + iw, iy, r);
+                        ctx.closePath();
+                        ctx.clip();
+                        ctx.drawImage(pImg, ix, iy, iw, ih);
+                        ctx.restore();
+                      }
+                      finishAndDownload();
+                    };
+                    pImg.onerror = finishAndDownload;
+                    pImg.src = portadaUrl;
+                  } else {
+                    finishAndDownload();
+                  }
+                }
+
+                function finishAndDownload() {
                   // Pie
                   ctx.fillStyle = '#94a3b8';
                   ctx.font = font('normal', 22);
