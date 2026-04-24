@@ -244,6 +244,59 @@ if ( ! function_exists('gc_es_solo_pregunta') ) {
 }
 
 /**
+ * Sincroniza la relación prueba ↔ estación en ambos lados:
+ * - prueba->gc_estacion_ref = estacion_id
+ * - estacion->gc_prueba_ref  = prueba_id
+ *
+ * Además, si había una prueba previa ligada a esa estación o esta prueba
+ * estaba ligada a otra estación, limpia esos punteros huérfanos.
+ *
+ * Pasar $estacion_id=0 para desvincular la prueba (la estación quedará
+ * sin prueba; la prueba podrá usarse como pool).
+ */
+if ( ! function_exists('gc_sync_estacion_prueba') ) {
+  function gc_sync_estacion_prueba($prueba_id, $estacion_id) {
+    $prueba_id   = (int) $prueba_id;
+    $estacion_id = (int) $estacion_id;
+    if ($prueba_id <= 0) return;
+
+    $prev_est = (int) get_post_meta($prueba_id, 'gc_estacion_ref', true);
+
+    if ($estacion_id <= 0) {
+      // Desvincular: limpia prueba y el puntero de la estación previa si apunta a esta prueba
+      update_post_meta($prueba_id, 'gc_estacion_ref', 0);
+      if ($prev_est > 0) {
+        $prev_ref = (int) get_post_meta($prev_est, 'gc_prueba_ref', true);
+        if ($prev_ref === $prueba_id) {
+          delete_post_meta($prev_est, 'gc_prueba_ref');
+        }
+      }
+      return;
+    }
+
+    // Si la estación previa era otra, quitar el puntero antiguo
+    if ($prev_est > 0 && $prev_est !== $estacion_id) {
+      $prev_ref = (int) get_post_meta($prev_est, 'gc_prueba_ref', true);
+      if ($prev_ref === $prueba_id) {
+        delete_post_meta($prev_est, 'gc_prueba_ref');
+      }
+    }
+
+    // Si la nueva estación ya apuntaba a OTRA prueba, limpiar esa prueba
+    $old_test_on_station = (int) get_post_meta($estacion_id, 'gc_prueba_ref', true);
+    if ($old_test_on_station > 0 && $old_test_on_station !== $prueba_id) {
+      $old_est_on_test = (int) get_post_meta($old_test_on_station, 'gc_estacion_ref', true);
+      if ($old_est_on_test === $estacion_id) {
+        update_post_meta($old_test_on_station, 'gc_estacion_ref', 0);
+      }
+    }
+
+    update_post_meta($prueba_id, 'gc_estacion_ref', $estacion_id);
+    update_post_meta($estacion_id, 'gc_prueba_ref', $prueba_id);
+  }
+}
+
+/**
  * ¿Requiere prueba este escenario? Default true para escenarios legacy sin valor guardado.
  */
 if ( ! function_exists('gc_requiere_prueba') ) {

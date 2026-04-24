@@ -349,7 +349,11 @@ add_action('save_post', function ($post_id) {
     ]);
     if (empty($is_pool_now) && isset($_POST['gc_estacion_ref'])) {
         $new_ref = (int) $_POST['gc_estacion_ref'];
-        update_post_meta($post_id, 'gc_estacion_ref', $new_ref);
+        if (function_exists('gc_sync_estacion_prueba')) {
+            gc_sync_estacion_prueba($post_id, $new_ref);
+        } else {
+            update_post_meta($post_id, 'gc_estacion_ref', $new_ref);
+        }
     }
 
     // Procesar preguntas
@@ -397,6 +401,34 @@ add_action('save_post', function ($post_id) {
 });
 
 /**
+ * Migración única: sincroniza estaciones que tengan una prueba apuntando
+ * vía gc_estacion_ref pero que aún no tengan el meta inverso gc_prueba_ref.
+ * Se ejecuta una sola vez (flag en options).
+ */
+add_action('admin_init', function () {
+    if (get_option('gc_prueba_estacion_sync_done')) return;
+    if (!current_user_can('manage_options')) return;
+    $pruebas = get_posts([
+        'post_type'      => 'prueba',
+        'post_status'    => 'any',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'meta_query'     => [['key' => 'gc_estacion_ref', 'compare' => 'EXISTS']],
+        'no_found_rows'  => true,
+    ]);
+    foreach ($pruebas as $pid) {
+        $est_id = (int) get_post_meta($pid, 'gc_estacion_ref', true);
+        if ($est_id <= 0) continue;
+        $existing = (int) get_post_meta($est_id, 'gc_prueba_ref', true);
+        if ($existing === (int) $pid) continue;
+        if (function_exists('gc_sync_estacion_prueba')) {
+            gc_sync_estacion_prueba($pid, $est_id);
+        }
+    }
+    update_option('gc_prueba_estacion_sync_done', '1');
+});
+
+/**
  * Al crear una nueva prueba con ?gc_estacion_id=X en la URL, pre-asigna
  * la estación enlazada en el auto-draft (antes de que el admin guarde).
  * Así se puede "Crear prueba" directamente desde el metabox de la estación.
@@ -416,7 +448,11 @@ add_action('admin_init', function () {
         if ($post->post_type !== 'prueba') return;
         if ($post->post_status !== 'auto-draft') return;
         if (get_post_meta($post_id, 'gc_estacion_ref', true)) return; // ya tiene
-        update_post_meta($post_id, 'gc_estacion_ref', $est_id);
+        if (function_exists('gc_sync_estacion_prueba')) {
+            gc_sync_estacion_prueba($post_id, $est_id);
+        } else {
+            update_post_meta($post_id, 'gc_estacion_ref', $est_id);
+        }
         // Título por defecto
         $est_title = get_the_title($est_id) ?: ('Estación #' . $est_id);
         wp_update_post([

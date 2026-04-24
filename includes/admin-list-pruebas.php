@@ -177,24 +177,33 @@ add_action('manage_prueba_posts_custom_column', function($col, $post_id){
 
   if ($col === 'gc_estacion_ref_by' || $col === 'gc_escenario_ref_by') {
 
-    // Buscar la Estación que referencia esta Prueba vía gc_prueba_ref
-    $est = get_posts([
-      'post_type'       => 'estacion',
-      'post_status'     => 'any',
-      'numberposts'     => 1,
-      'fields'          => 'ids',
-      'meta_query'      => [[
-        'key'     => 'gc_prueba_ref',
-        'value'   => (int)$post_id,
-        'compare' => '=',
-      ]],
-      'no_found_rows'   => true,
-      'suppress_filters'=> true,
-    ]);
+    $est_id = 0;
 
-    if (!empty($est)) {
-      $est_id = (int)$est[0];
+    // 1) Vía directa: meta gc_estacion_ref en la prueba
+    $direct = (int) get_post_meta($post_id, 'gc_estacion_ref', true);
+    if ($direct > 0 && get_post_status($direct)) {
+      $est_id = $direct;
+    }
 
+    // 2) Fallback inverso: estación que referencia esta prueba vía gc_prueba_ref
+    if (!$est_id) {
+      $est = get_posts([
+        'post_type'       => 'estacion',
+        'post_status'     => 'any',
+        'numberposts'     => 1,
+        'fields'          => 'ids',
+        'meta_query'      => [[
+          'key'     => 'gc_prueba_ref',
+          'value'   => (int)$post_id,
+          'compare' => '=',
+        ]],
+        'no_found_rows'   => true,
+        'suppress_filters'=> true,
+      ]);
+      if (!empty($est)) $est_id = (int) $est[0];
+    }
+
+    if ($est_id) {
       if ($col === 'gc_estacion_ref_by') {
         $t = get_the_title($est_id) ?: ('Estación #'.$est_id);
         $link = get_edit_post_link($est_id);
@@ -215,7 +224,30 @@ add_action('manage_prueba_posts_custom_column', function($col, $post_id){
       }
     }
 
-    // Sin estación asociada
+    // Sin estación asociada — puede ser pool
+    $pool_use = get_posts([
+      'post_type'       => 'escenario',
+      'post_status'     => 'any',
+      'numberposts'     => 1,
+      'fields'          => 'ids',
+      'meta_query'      => [['key' => 'gc_pool_prueba_ref', 'value' => (int)$post_id, 'compare' => '=']],
+      'no_found_rows'   => true,
+      'suppress_filters'=> true,
+    ]);
+    if (!empty($pool_use)) {
+      if ($col === 'gc_estacion_ref_by') {
+        echo '<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#f5f3ff;color:#5b21b6;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;">Pool</span>';
+        return;
+      }
+      if ($col === 'gc_escenario_ref_by') {
+        $esc_id = (int) $pool_use[0];
+        $t = get_the_title($esc_id) ?: ('Escenario #'.$esc_id);
+        $link = get_edit_post_link($esc_id);
+        echo $link ? '<a href="'.esc_url($link).'">'.esc_html($t).'</a>' : esc_html($t);
+        return;
+      }
+    }
+
     echo '<span style="color:#999">—</span>';
   }
 }, 10, 2);

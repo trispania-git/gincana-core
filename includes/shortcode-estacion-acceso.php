@@ -740,8 +740,23 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
             $q_index  = $pool_data['index'];
         }
     } else {
-        // Por estación: elegir pregunta aleatoria de la prueba vinculada
-        $test_id = (int) get_post_meta($station_id, 'gc_prueba_ref', true);
+        // Por estación: elegir pregunta aleatoria de la prueba vinculada.
+        // Fuente de verdad: meta 'gc_estacion_ref' en la prueba apuntando a la estación.
+        // Compatibilidad: se mantiene el meta legacy 'gc_prueba_ref' en la estación si existiera.
+        $legacy_ref = (int) get_post_meta($station_id, 'gc_prueba_ref', true);
+        if ($legacy_ref > 0) {
+            $test_id = $legacy_ref;
+        } else {
+            $pq = get_posts([
+                'post_type'      => 'prueba',
+                'post_status'    => 'publish',
+                'posts_per_page' => 1,
+                'meta_query'     => [['key' => 'gc_estacion_ref', 'value' => (int) $station_id, 'compare' => '=']],
+                'fields'         => 'ids',
+                'no_found_rows'  => true,
+            ]);
+            $test_id = !empty($pq) ? (int) $pq[0] : 0;
+        }
         if ($test_id > 0) {
             $preguntas = get_post_meta($test_id, 'gc_preguntas', true);
             if (is_array($preguntas) && !empty($preguntas)) {
