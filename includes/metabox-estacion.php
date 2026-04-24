@@ -66,6 +66,24 @@ function gc_render_estacion_metabox($post) {
     }
 
     $qr_url = gc_get_station_entry_url($post->ID);
+
+    // Prueba asociada a esta estación (origen = por_estacion)
+    $prueba_asociada = null;
+    if ($post->ID) {
+        $pq = get_posts([
+            'post_type'      => 'prueba',
+            'post_status'    => 'any',
+            'posts_per_page' => 1,
+            'meta_query'     => [['key' => 'gc_estacion_ref', 'value' => (int) $post->ID, 'compare' => '=']],
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        ]);
+        if (!empty($pq)) $prueba_asociada = (int) $pq[0];
+    }
+
+    // Información del origen de preguntas del escenario
+    $origen_preg = $escenario_ref && function_exists('gc_get_origen_preguntas') ? gc_get_origen_preguntas($escenario_ref) : '';
+    $requiere_prueba_esc = $escenario_ref && function_exists('gc_requiere_prueba') ? gc_requiere_prueba($escenario_ref) : false;
     ?>
     <?php if ($deshabilitada === '1'): ?>
     <div style="margin:12px 0 14px;padding:14px 16px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;display:flex;align-items:center;gap:12px;">
@@ -119,6 +137,72 @@ function gc_render_estacion_metabox($post) {
                 <p class="description">Posicion de esta estacion dentro del escenario (1, 2, 3...).</p>
             </td>
         </tr>
+
+        <?php if ($requiere_prueba_esc && $origen_preg === 'por_estacion'): ?>
+        <tr>
+            <th><label>Prueba / pregunta</label></th>
+            <td>
+                <?php if ($prueba_asociada):
+                    $edit_url = get_edit_post_link($prueba_asociada);
+                    $t_title  = get_the_title($prueba_asociada) ?: '(sin título)';
+                    $preguntas_arr = get_post_meta($prueba_asociada, 'gc_preguntas', true);
+                    $n_preg = is_array($preguntas_arr) ? count($preguntas_arr) : 0;
+                ?>
+                <div style="padding:12px 14px;border-radius:10px;background:#ecfdf5;border:1px solid #86efac;display:flex;gap:10px;align-items:center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <div style="flex:1;">
+                        <strong style="color:#166534;"><?php echo esc_html($t_title); ?></strong>
+                        <div style="font-size:12px;color:#15803d;margin-top:2px;">
+                            <?php echo (int) $n_preg; ?> pregunta<?php echo $n_preg === 1 ? '' : 's'; ?> configurada<?php echo $n_preg === 1 ? '' : 's'; ?>.
+                        </div>
+                    </div>
+                    <a href="<?php echo esc_url($edit_url); ?>" class="button button-primary">Editar prueba</a>
+                </div>
+                <?php else:
+                    $create_url = admin_url('post-new.php?post_type=prueba&gc_estacion_id=' . (int) $post->ID);
+                ?>
+                <div style="padding:12px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;display:flex;gap:10px;align-items:center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <div style="flex:1;">
+                        <strong style="color:#92400e;">Sin prueba asociada</strong>
+                        <div style="font-size:12px;color:#a16207;margin-top:2px;">
+                            Este escenario usa "preguntas por estación" y requiere que cada <?php echo esc_html(function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_ref) : 'estación'); ?> tenga su propia prueba.
+                        </div>
+                    </div>
+                    <a href="<?php echo esc_url($create_url); ?>" class="button button-primary">Crear prueba</a>
+                </div>
+                <p class="description" style="margin-top:8px;">Guarda primero la estación si acabas de crearla, luego pulsa "Crear prueba" para configurar la pregunta que validará esta <?php echo esc_html(function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_ref) : 'estación'); ?>.</p>
+                <?php endif; ?>
+            </td>
+        </tr>
+        <?php elseif ($requiere_prueba_esc && $origen_preg === 'pool' && $escenario_ref): ?>
+        <tr>
+            <th><label>Prueba / pregunta</label></th>
+            <td>
+                <?php
+                $pool_id = (int) get_post_meta($escenario_ref, 'gc_pool_prueba_ref', true);
+                if ($pool_id):
+                    $pool_title = get_the_title($pool_id) ?: '(sin título)';
+                    $pool_edit  = get_edit_post_link($pool_id);
+                ?>
+                <div style="padding:12px 14px;border-radius:10px;background:#f5f3ff;border:1px solid #c4b5fd;display:flex;gap:10px;align-items:center;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 12l-4-4-4 4"/><path d="M12 16V8"/></svg>
+                    <div style="flex:1;">
+                        <strong style="color:#5b21b6;">Pool aleatorio</strong>
+                        <div style="font-size:12px;color:#6d28d9;margin-top:2px;">
+                            Esta estación toma una pregunta al azar de <strong><?php echo esc_html($pool_title); ?></strong>.
+                        </div>
+                    </div>
+                    <a href="<?php echo esc_url($pool_edit); ?>" class="button">Editar pool</a>
+                </div>
+                <?php else: ?>
+                <div style="padding:12px 14px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;">
+                    El escenario usa <strong>pool aleatorio</strong> pero no tiene ninguna prueba asignada como pool. Edita el escenario para configurarlo.
+                </div>
+                <?php endif; ?>
+            </td>
+        </tr>
+        <?php endif; ?>
 
         <tr>
             <th><label for="gc_descripcion">Descripcion cultural</label></th>

@@ -62,17 +62,50 @@ function gc_render_prueba_metabox($post) {
     <?php endif; ?>
 
     <table class="form-table">
-        <?php if (!$is_pool): ?>
+        <?php if (!$is_pool):
+            // Cargar estaciones disponibles agrupadas por escenario
+            $all_est = get_posts([
+                'post_type'      => 'estacion',
+                'post_status'    => 'any',
+                'posts_per_page' => -1,
+                'orderby'        => 'meta_value_num title',
+                'order'          => 'ASC',
+                'meta_key'       => 'gc_orden',
+                'fields'         => 'ids',
+                'no_found_rows'  => true,
+            ]);
+            // Agrupar por escenario
+            $grouped = [];
+            foreach ($all_est as $e_id) {
+                $esc_id  = (int) get_post_meta($e_id, 'gc_escenario_ref', true);
+                $esc_key = $esc_id ?: 0;
+                if (!isset($grouped[$esc_key])) $grouped[$esc_key] = [];
+                $grouped[$esc_key][] = $e_id;
+            }
+        ?>
         <tr>
-            <th><label>Estacion enlazada</label></th>
+            <th><label for="gc_estacion_ref">Estacion enlazada</label></th>
             <td>
+                <select name="gc_estacion_ref" id="gc_estacion_ref" style="min-width:340px;">
+                    <option value="">— Sin estación (usar como pool) —</option>
+                    <?php foreach ($grouped as $esc_id => $eids):
+                        $esc_title = $esc_id ? (get_the_title($esc_id) ?: '#'.$esc_id) : 'Sin escenario';
+                    ?>
+                    <optgroup label="<?php echo esc_attr($esc_title); ?>">
+                        <?php foreach ($eids as $eid):
+                            $order = (int) get_post_meta($eid, 'gc_orden', true);
+                            $label_title = get_the_title($eid) ?: ('Estación #' . $eid);
+                            if ($order) $label_title = $order . '. ' . $label_title;
+                        ?>
+                        <option value="<?php echo (int)$eid; ?>" <?php selected((int)$estacion_ref, (int)$eid); ?>><?php echo esc_html($label_title); ?></option>
+                        <?php endforeach; ?>
+                    </optgroup>
+                    <?php endforeach; ?>
+                </select>
                 <?php if ($estacion_ref): ?>
-                    <a href="<?php echo esc_url(get_edit_post_link((int)$estacion_ref)); ?>">
-                        <?php echo esc_html(get_the_title((int)$estacion_ref) ?: '#'.$estacion_ref); ?>
-                    </a>
-                <?php else: ?>
-                    <span style="color:#999;">Sin estacion enlazada — puede usarse como pool desde un escenario</span>
+                    <a href="<?php echo esc_url(get_edit_post_link((int)$estacion_ref)); ?>" style="margin-left:8px;">Ver estación</a>
                 <?php endif; ?>
+                <p class="description">Asocia esta prueba a una estación concreta (modo "por estación"). Déjalo en blanco si la prueba se usará como pool aleatorio.</p>
             </td>
         </tr>
         <?php endif; ?>
@@ -305,6 +338,20 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_tiempo_max_s', max(5, (int)($_POST['gc_tiempo_max_s'] ?? 30)));
     update_post_meta($post_id, 'gc_intentos_max', max(1, (int)($_POST['gc_intentos_max'] ?? 2)));
 
+    // Solo permitimos modificar gc_estacion_ref si la prueba NO es pool
+    $is_pool_now = get_posts([
+        'post_type'      => 'escenario',
+        'post_status'    => 'any',
+        'posts_per_page' => 1,
+        'meta_query'     => [['key' => 'gc_pool_prueba_ref', 'value' => $post_id, 'compare' => '=']],
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+    ]);
+    if (empty($is_pool_now) && isset($_POST['gc_estacion_ref'])) {
+        $new_ref = (int) $_POST['gc_estacion_ref'];
+        update_post_meta($post_id, 'gc_estacion_ref', $new_ref);
+    }
+
     // Procesar preguntas
     $raw_preguntas = $_POST['gc_preguntas'] ?? [];
     $preguntas = [];
@@ -347,4 +394,34 @@ add_action('save_post', function ($post_id) {
     }
 
     update_post_meta($post_id, 'gc_preguntas', $preguntas);
+});
+
+/**
+ * Al crear una nueva prueba con ?gc_estacion_id=X en la URL, pre-asigna
+ * la estación enlazada en el auto-draft (antes de que el admin guarde).
+ * Así se puede "Crear prueba" directamente desde el metabox de la estación.
+ */
+add_action('admin_init', function () {
+    global $pagenow;
+    if ($pagenow !== 'post-new.php') return;
+    if (!isset($_GET['post_type']) || $_GET['post_type'] !== 'prueba') return;
+    if (empty($_GET['gc_estacion_id'])) return;
+
+    $est_id = (int) $_GET['gc_estacion_id'];
+    if ($est_id <= 0 || get_post_type($est_id) !== 'estacion') return;
+
+    // Al crear un auto-draft nuevo, asociar la estación
+    add_action('wp_insert_post', function ($post_id, $post, $update) use ($est_id) {
+        if ($update) return;
+        if ($post->post_type !== 'prueba') return;
+        if ($post->post_status !== 'auto-draft') return;
+        if (get_post_meta($post_id, 'gc_estacion_ref', true)) return; // ya tiene
+        update_post_meta($post_id, 'gc_estacion_ref', $est_id);
+        // Título por defecto
+        $est_title = get_the_title($est_id) ?: ('Estación #' . $est_id);
+        wp_update_post([
+            'ID'         => $post_id,
+            'post_title' => 'Prueba — ' . $est_title,
+        ]);
+    }, 10, 3);
 });
