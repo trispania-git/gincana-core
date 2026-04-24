@@ -87,6 +87,8 @@ function gincana_core_render_qr_codes_page() {
 
       if (empty($stations)):
         echo '<div class="notice notice-warning"><p>Este escenario no tiene estaciones.</p></div>';
+      elseif (function_exists('gc_es_solo_pregunta') && gc_es_solo_pregunta($selected_esc)):
+        echo '<div class="notice notice-info" style="padding:14px 16px;"><p style="margin:0;"><strong>Este escenario no usa códigos QR.</strong> Su tipo de mecánica es <em>&quot;Sin QR · Solo pregunta&quot;</em>, así que los jugadores acceden a las estaciones desde la lista del escenario y las validan respondiendo a una pregunta.</p></div>';
       else:
         $tipo_qr = function_exists('gc_get_tipo_qr') ? gc_get_tipo_qr($selected_esc) : 'enlace';
 

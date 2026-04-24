@@ -105,8 +105,8 @@ function gc_shortcode_estacion_acceso() {
         // Adulto: acceso via QR — depende del tipo de QR
         $tipo_qr = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';
 
-        if ($tipo_qr === 'validacion_quiz') {
-            // QR valida mediante quiz
+        if ($tipo_qr === 'validacion_quiz' || $tipo_qr === 'solo_pregunta') {
+            // Valida mediante pregunta (con QR o sin él)
             echo gc_render_adulto_station($station_id, $title, $escenario_id);
         } elseif ($tipo_qr === 'validacion_gps') {
             // GPS verificado (token URL = ya pasó la verificación): quiz si hay prueba, si no botón
@@ -1076,6 +1076,9 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         if ($tipo_qr === 'validacion_gps') {
             // GPS: mostrar verificación por geolocalización
             echo gc_render_station_gps($station_id, $title, $escenario_id);
+        } elseif ($tipo_qr === 'solo_pregunta') {
+            // Sin QR: el quiz es la validación. Mostrar pregunta directamente.
+            echo gc_render_adulto_station($station_id, $title, $escenario_id);
         } elseif ($tipo_qr === 'validacion_boton' || $tipo_qr === 'validacion_quiz' || $tipo_qr === 'validacion') {
             // QR obligatorio (botón o quiz): solo mostrar pista para buscar el QR
             echo gc_render_infantil_station_pista($station_id, $title, $escenario_id);

@@ -210,7 +210,7 @@ if ( ! function_exists('gc_get_tipo_qr') ) {
   function gc_get_tipo_qr($escenario_id) {
     $val = get_post_meta((int)$escenario_id, 'gc_tipo_qr', true);
     if ($val === 'validacion') $val = 'validacion_boton'; // migración automática
-    return in_array($val, ['enlace', 'validacion_boton', 'validacion_quiz', 'validacion_gps'], true) ? $val : 'enlace';
+    return in_array($val, ['enlace', 'validacion_boton', 'validacion_quiz', 'validacion_gps', 'solo_pregunta'], true) ? $val : 'enlace';
   }
 }
 
@@ -225,7 +225,8 @@ if ( ! function_exists('gc_get_qr_url') ) {
       $escenario_id = (int) get_post_meta((int)$station_id, 'gc_escenario_ref', true);
     }
     $tipo_qr = gc_get_tipo_qr($escenario_id);
-    if ($tipo_qr === 'enlace') {
+    if ($tipo_qr === 'enlace' || $tipo_qr === 'solo_pregunta') {
+      // Sin QR físico: permalink directo (solo_pregunta no genera QR real)
       return get_permalink((int)$station_id);
     }
     // validacion_boton, validacion_quiz o validacion_gps: URL con token
@@ -234,10 +235,21 @@ if ( ! function_exists('gc_get_qr_url') ) {
 }
 
 /**
+ * ¿El escenario es de tipo "solo pregunta" (sin QR físico)?
+ */
+if ( ! function_exists('gc_es_solo_pregunta') ) {
+  function gc_es_solo_pregunta($escenario_id) {
+    return gc_get_tipo_qr($escenario_id) === 'solo_pregunta';
+  }
+}
+
+/**
  * ¿Requiere prueba este escenario? Default true para escenarios legacy sin valor guardado.
  */
 if ( ! function_exists('gc_requiere_prueba') ) {
   function gc_requiere_prueba($escenario_id) {
+    // 'solo_pregunta' siempre requiere prueba (la pregunta ES la validación)
+    if (function_exists('gc_get_tipo_qr') && gc_get_tipo_qr($escenario_id) === 'solo_pregunta') return true;
     $val = get_post_meta((int)$escenario_id, 'gc_requiere_prueba', true);
     return ($val === '' || $val === '1'); // vacío (legacy) o '1' = sí
   }
@@ -341,6 +353,9 @@ if ( ! function_exists('gc_default_instrucciones') ) {
         break;
       case 'validacion_gps':
         $html .= "<p style=\"margin-bottom:20px;\">Acércate al punto indicado; tu ubicación GPS se verificará automáticamente.</p>\n";
+        break;
+      case 'solo_pregunta':
+        $html .= "<p style=\"margin-bottom:20px;\">Entra en cada {$label} desde la lista del escenario y responde correctamente a la pregunta para validarla. No necesitas código QR.</p>\n";
         break;
     }
 
