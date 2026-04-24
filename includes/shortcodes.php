@@ -590,6 +590,67 @@ add_action('init', function(){
       </div>
       <?php endif; ?>
 
+      <!-- Compartir -->
+      <?php
+      $share_url  = $esc_url;
+      $share_text = sprintf('¡Mira el ranking de "%s"!', $esc_title);
+      $share_url_enc  = rawurlencode($share_url);
+      $share_text_enc = rawurlencode($share_text);
+      $wa_url  = "https://api.whatsapp.com/send?text={$share_text_enc}%20{$share_url_enc}";
+      $fb_url  = "https://www.facebook.com/sharer/sharer.php?u={$share_url_enc}";
+      $tw_url  = "https://twitter.com/intent/tweet?text={$share_text_enc}&url={$share_url_enc}";
+      $tg_url  = "https://t.me/share/url?url={$share_url_enc}&text={$share_text_enc}";
+      $em_url  = "mailto:?subject=" . rawurlencode($esc_title) . "&body={$share_text_enc}%20{$share_url_enc}";
+      ?>
+      <div class="gincana-ranking-share" style="margin-top:28px;padding:18px 16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;text-align:center;">
+        <div style="font-size:13px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;">Compartir ranking</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">
+          <a href="<?php echo esc_url($wa_url); ?>" target="_blank" rel="noopener" aria-label="WhatsApp" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:#25D366;color:#fff;text-decoration:none;font-weight:600;font-size:13px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.89.5 3.66 1.37 5.19L2 22l5.05-1.33a9.9 9.9 0 0 0 4.99 1.28c5.46 0 9.91-4.45 9.91-9.92A9.93 9.93 0 0 0 12.04 2zm0 18.15a8.13 8.13 0 0 1-4.16-1.14l-.3-.18-3 .78.8-2.92-.19-.31a8.18 8.18 0 0 1-1.26-4.37c0-4.52 3.68-8.2 8.21-8.2 2.19 0 4.26.86 5.81 2.41a8.15 8.15 0 0 1 2.4 5.81c0 4.53-3.68 8.22-8.2 8.22zm4.51-6.15c-.25-.12-1.47-.72-1.69-.8-.23-.09-.39-.13-.56.12s-.64.8-.79.97c-.14.17-.29.18-.54.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.39.11-.51.11-.11.25-.29.38-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.77-1.84-.2-.48-.41-.42-.56-.42l-.48-.01c-.17 0-.44.06-.66.31-.23.25-.87.85-.87 2.08 0 1.22.89 2.41 1.02 2.58.12.17 1.75 2.67 4.23 3.74.59.25 1.05.41 1.41.53.59.19 1.13.16 1.55.1.47-.07 1.47-.6 1.67-1.18.2-.57.2-1.07.14-1.17-.06-.1-.22-.17-.47-.29z"/></svg>
+            WhatsApp
+          </a>
+          <a href="<?php echo esc_url($fb_url); ?>" target="_blank" rel="noopener" aria-label="Facebook" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:#1877F2;color:#fff;text-decoration:none;font-weight:600;font-size:13px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.5-3.89 3.78-3.89 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.77l-.44 2.89h-2.33v6.99A10 10 0 0 0 22 12z"/></svg>
+            Facebook
+          </a>
+          <a href="<?php echo esc_url($tw_url); ?>" target="_blank" rel="noopener" aria-label="X / Twitter" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:#000;color:#fff;text-decoration:none;font-weight:600;font-size:13px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#fff"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            X
+          </a>
+          <a href="<?php echo esc_url($tg_url); ?>" target="_blank" rel="noopener" aria-label="Telegram" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:#229ED9;color:#fff;text-decoration:none;font-weight:600;font-size:13px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm4.64 7.04-1.56 7.35c-.12.52-.42.65-.85.4l-2.35-1.73-1.13 1.09a.59.59 0 0 1-.47.23l.17-2.39 4.36-3.94c.19-.17-.04-.26-.3-.09l-5.39 3.4-2.32-.72c-.5-.16-.51-.5.11-.74l9.08-3.5c.42-.15.79.1.65.64z"/></svg>
+            Telegram
+          </a>
+          <a href="<?php echo esc_url($em_url); ?>" aria-label="Email" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:#64748b;color:#fff;text-decoration:none;font-weight:600;font-size:13px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+            Email
+          </a>
+          <button type="button" class="gc-share-copy" data-url="<?php echo esc_attr($share_url); ?>" aria-label="Copiar enlace" style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:#fff;border:1px solid #cbd5e1;color:#334155;font-weight:600;font-size:13px;cursor:pointer;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span class="gc-share-copy-label">Copiar enlace</span>
+          </button>
+        </div>
+      </div>
+      <script>
+      (function(){
+        document.querySelectorAll('.gc-share-copy').forEach(function(btn){
+          btn.addEventListener('click', function(){
+            var url = btn.getAttribute('data-url') || location.href;
+            var label = btn.querySelector('.gc-share-copy-label');
+            var setOk = function(){ if (label) { var orig = label.textContent; label.textContent = '¡Copiado!'; setTimeout(function(){ label.textContent = orig; }, 1600); } };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(url).then(setOk).catch(function(){ setOk(); });
+            } else {
+              var ta = document.createElement('textarea');
+              ta.value = url; document.body.appendChild(ta); ta.select();
+              try { document.execCommand('copy'); } catch(e) {}
+              document.body.removeChild(ta); setOk();
+            }
+          });
+        });
+      })();
+      </script>
+
       <!-- Botones inferiores -->
       <div style="text-align:center;margin-top:24px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;">
         <?php
@@ -668,6 +729,12 @@ add_action('init', function(){
     $est_ids = array_map('intval', $q->posts);
     wp_reset_postdata();
 
+    // Detectar deshabilitadas
+    $disabled_ids = [];
+    foreach ($est_ids as $eid) {
+      if (get_post_meta($eid, 'gc_deshabilitada', true) === '1') $disabled_ids[$eid] = true;
+    }
+
     // Estación actual: parámetro explícito > GET gc_station > contexto CPT
     $current_est_id = 0;
     if (!empty($a['estacion'])) {
@@ -697,12 +764,15 @@ add_action('init', function(){
       }
     }
 
-    // Siguiente desbloqueada
+    // Siguiente desbloqueada (ignorando deshabilitadas)
+    $active_ids = array_values(array_filter($est_ids, function($id) use ($disabled_ids) {
+      return empty($disabled_ids[$id]);
+    }));
     $next_unlocked_id = 0;
-    foreach ($est_ids as $i => $eid) {
+    foreach ($active_ids as $i => $eid) {
       $is_passed = !empty($progress[$eid]['passed']);
       if ($is_passed) continue;
-      $prev_ok = ($i === 0) ? true : !empty($progress[$est_ids[$i-1]]['passed']);
+      $prev_ok = ($i === 0) ? true : !empty($progress[$active_ids[$i-1]]['passed']);
       if ($prev_ok) { $next_unlocked_id = $eid; break; }
     }
     if (!$current_est_id && $next_unlocked_id) $current_est_id = $next_unlocked_id;
@@ -770,26 +840,33 @@ add_action('init', function(){
             $title = get_the_title($eid) ?: ('Estación '.$order);
             $url   = get_permalink($eid);
 
-            $is_current   = ($eid === $current_est_id);
-            $is_passed    = !empty($progress[$eid]['passed']);
-            $is_unlocked  = (!$is_passed && $eid === $next_unlocked_id);
+            $is_disabled  = !empty($disabled_ids[$eid]);
+            $is_current   = !$is_disabled && ($eid === $current_est_id);
+            $is_passed    = !$is_disabled && !empty($progress[$eid]['passed']);
+            $is_unlocked  = !$is_disabled && (!$is_passed && $eid === $next_unlocked_id);
 
-            $bg   = $is_current ? '#2563eb' : ($is_passed ? '#16a34a' : ($is_unlocked ? '#f59e0b' : '#e2e8f0'));
-            $fg   = $is_current || $is_passed || $is_unlocked ? '#ffffff' : '#334155';
+            if ($is_disabled) {
+              $bg = '#fecaca'; $fg = '#991b1b';
+            } else {
+              $bg   = $is_current ? '#2563eb' : ($is_passed ? '#16a34a' : ($is_unlocked ? '#f59e0b' : '#e2e8f0'));
+              $fg   = $is_current || $is_passed || $is_unlocked ? '#ffffff' : '#334155';
+            }
             $ring = $is_current ? '0 0 0 3px rgba(37,99,235,0.25)' : 'none';
             $title_attr = $title . ' (Orden ' . (int)$order . ')'
-                          . ($is_passed ? ' — Completada' : ($is_unlocked ? ' — Desbloqueada' : ' — Pendiente'));
+                          . ($is_disabled ? ' — Deshabilitada' : ($is_passed ? ' — Completada' : ($is_unlocked ? ' — Desbloqueada' : ' — Pendiente')));
             $current_cls = $is_current ? ' is-current' : '';
+            $extra_style = $is_disabled ? 'opacity:0.75;text-decoration:line-through;border:1.5px dashed #dc2626;' : '';
 
+            $inner = $is_disabled ? '&times;' : (int)$order;
             $circle_html = '<div class="gqi-step'.$current_cls.'" role="listitem" aria-label="'.esc_attr($title_attr).'"
-                style="background:'.$bg.';color:'.$fg.';box-shadow:'.$ring.';">
-                  '.(int)$order.'
+                style="background:'.$bg.';color:'.$fg.';box-shadow:'.$ring.';'.$extra_style.'">
+                  '.$inner.'
                 </div>';
 
-            if ($url) {
+            if ($url && !$is_disabled) {
               echo '<a href="'.esc_url($url).'" class="gqi-item" style="text-decoration:none" title="'.esc_attr($title).'">'.$circle_html.'</a>';
             } else {
-              echo '<div class="gqi-item" title="'.esc_attr($title).'">'.$circle_html.'</div>';
+              echo '<div class="gqi-item" title="'.esc_attr($title_attr).'">'.$circle_html.'</div>';
             }
           endforeach; ?>
         </div>

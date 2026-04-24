@@ -74,9 +74,27 @@ add_filter('manage_edit-estacion_columns', function($cols){
     if ($key === 'title') {
       $new['gc_escenario'] = 'Escenario';
       $new['gc_orden']     = 'Orden';
+      $new['gc_estado']    = 'Estado';
     }
   }
   return $new;
+});
+
+// Marcar visualmente las estaciones deshabilitadas en la lista
+add_filter('post_class', function($classes, $class, $post_id){
+  if (get_post_type($post_id) === 'estacion' && get_post_meta($post_id, 'gc_deshabilitada', true) === '1') {
+    $classes[] = 'gc-estacion-deshabilitada';
+  }
+  return $classes;
+}, 10, 3);
+
+add_action('admin_head-edit.php', function(){
+  $screen = get_current_screen();
+  if (!$screen || $screen->post_type !== 'estacion') return;
+  echo '<style>
+    .wp-list-table tr.gc-estacion-deshabilitada td { background:#fef2f2 !important; }
+    .wp-list-table tr.gc-estacion-deshabilitada td.column-title strong a { color:#991b1b !important; text-decoration:line-through; }
+  </style>';
 });
 
 add_action('manage_estacion_posts_custom_column', function($col, $post_id){
@@ -95,6 +113,15 @@ add_action('manage_estacion_posts_custom_column', function($col, $post_id){
   if ($col === 'gc_orden') {
     $orden = get_post_meta($post_id, 'gc_orden', true);
     echo $orden !== '' ? (int)$orden : '<span style="color:#999">—</span>';
+  }
+
+  if ($col === 'gc_estado') {
+    $deshabilitada = get_post_meta($post_id, 'gc_deshabilitada', true) === '1';
+    if ($deshabilitada) {
+      echo '<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#fee2e2;color:#991b1b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;">Deshabilitada</span>';
+    } else {
+      echo '<span style="display:inline-block;padding:2px 8px;border-radius:999px;background:#dcfce7;color:#166534;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.3px;">Activa</span>';
+    }
   }
 }, 10, 2);
 

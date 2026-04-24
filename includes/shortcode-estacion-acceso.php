@@ -30,6 +30,11 @@ function gc_shortcode_estacion_acceso() {
         return gc_station_wrap_message('QR no válido.', 'error');
     }
 
+    // Estación deshabilitada temporalmente
+    if ( get_post_meta($station_id, 'gc_deshabilitada', true) === '1' ) {
+        return gc_station_wrap_message('Esta estación está temporalmente deshabilitada. Por favor, vuelve más tarde.', 'warning');
+    }
+
     $escenario_id = (int) get_post_meta($station_id, 'gc_escenario_ref', true);
     if ($escenario_id <= 0) {
         return gc_station_wrap_message('La estación no tiene escenario enlazado.', 'error');
@@ -1097,6 +1102,10 @@ function gc_station_wrap_message($message, $type = 'info') {
         $bg = '#fff2f0';
         $border = '#ffccc7';
         $color = '#a8071a';
+    } elseif ($type === 'warning') {
+        $bg = '#fef3c7';
+        $border = '#fcd34d';
+        $color = '#92400e';
     }
 
     return '<div style="width:100%;margin:24px 0;padding:16px 18px;border:1px solid ' . esc_attr($border) . ';background:' . esc_attr($bg) . ';color:' . esc_attr($color) . ';border-radius:12px;">' . esc_html($message) . '</div>';

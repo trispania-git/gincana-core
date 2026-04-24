@@ -165,20 +165,32 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     }
   }
 
-  // Calcular siguiente desbloqueada
+  // Marcar deshabilitadas
+  $disabled_ids = [];
+  foreach ($est_ids as $eid) {
+    if (get_post_meta($eid, 'gc_deshabilitada', true) === '1') {
+      $disabled_ids[$eid] = true;
+    }
+  }
+
+  // Calcular siguiente desbloqueada (ignorando deshabilitadas)
   $next_unlocked = 0;
-  foreach ($est_ids as $i => $eid) {
+  // Construir secuencia "activa" (sin deshabilitadas) para calcular dependencias
+  $active_ids = array_values(array_filter($est_ids, function($id) use ($disabled_ids) {
+    return empty($disabled_ids[$id]);
+  }));
+  foreach ($active_ids as $i => $eid) {
     if (!empty($progress[$eid]) && $progress[$eid] === 'passed') continue;
-    $prev_ok = ($i === 0) || (!empty($progress[$est_ids[$i-1]]) && $progress[$est_ids[$i-1]] === 'passed');
+    $prev_ok = ($i === 0) || (!empty($progress[$active_ids[$i-1]]) && $progress[$active_ids[$i-1]] === 'passed');
     if ($prev_ok) { $next_unlocked = $eid; break; }
   }
 
-  // Contar completadas
+  // Contar completadas y total (excluyendo deshabilitadas)
   $completed = 0;
-  foreach ($est_ids as $eid) {
+  foreach ($active_ids as $eid) {
     if (!empty($progress[$eid]) && $progress[$eid] === 'passed') $completed++;
   }
-  $total = count($est_ids);
+  $total = count($active_ids);
   $pct   = $total > 0 ? round(($completed / $total) * 100) : 0;
 
   // ── ID único para scope CSS ────────────────────────────
@@ -400,12 +412,22 @@ add_shortcode('gincana_estaciones_lista', function($atts){
         $title  = get_the_title($eid) ?: ('Estacion ' . $order);
         $url    = get_permalink($eid);
 
-        $is_passed  = !empty($progress[$eid]) && $progress[$eid] === 'passed';
-        $is_current = ($eid === $next_unlocked);
-        $is_locked  = !$is_passed && !$is_current;
+        $is_disabled = !empty($disabled_ids[$eid]);
+        $is_passed   = !$is_disabled && !empty($progress[$eid]) && $progress[$eid] === 'passed';
+        $is_current  = !$is_disabled && ($eid === $next_unlocked);
+        $is_locked   = !$is_disabled && !$is_passed && !$is_current;
 
+        $extra_style = '';
         // Estado visual
-        if ($is_passed) {
+        if ($is_disabled) {
+          $icon_bg     = '#fecaca';
+          $icon_fg     = '#991b1b';
+          $icon_text   = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#991b1b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>';
+          $status_text = 'No disponible';
+          $status_cls  = 'disabled';
+          $card_cls    = 'is-disabled';
+          $extra_style = 'background:repeating-linear-gradient(45deg,#fff5f5 0 10px,#fff 10px 20px);border:1.5px dashed #fca5a5;opacity:0.9;';
+        } elseif ($is_passed) {
           $icon_bg     = '#16a34a';
           $icon_fg     = '#ffffff';
           $icon_text   = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
@@ -428,21 +450,21 @@ add_shortcode('gincana_estaciones_lista', function($atts){
           $card_cls    = 'is-locked';
         }
 
-        $tag = ($is_passed || $is_current) ? 'a' : 'div';
+        $tag = (!$is_disabled && ($is_passed || $is_current)) ? 'a' : 'div';
         $href = ($tag === 'a') ? ' href="' . esc_url($url) . '"' : '';
       ?>
 
-        <<?php echo $tag; ?> class="gc-card <?php echo esc_attr($card_cls); ?>"<?php echo $href; ?>>
+        <<?php echo $tag; ?> class="gc-card <?php echo esc_attr($card_cls); ?>"<?php echo $href; ?> style="<?php echo esc_attr($extra_style); ?>">
           <div class="gc-card-icon" style="background:<?php echo $icon_bg; ?>;">
-            <?php if ($is_passed): ?>
+            <?php if ($is_passed || $is_disabled): ?>
               <?php echo $icon_text; ?>
             <?php else: ?>
               <span style="color:<?php echo $icon_fg; ?>;line-height:1;"><?php echo $icon_text; ?></span>
             <?php endif; ?>
           </div>
           <div class="gc-card-body">
-            <div class="gc-card-title"><?php echo esc_html($title); ?></div>
-            <div class="gc-card-status <?php echo esc_attr($status_cls); ?>"><?php
+            <div class="gc-card-title" style="<?php echo $is_disabled ? 'text-decoration:line-through;color:#991b1b;' : ''; ?>"><?php echo esc_html($title); ?></div>
+            <div class="gc-card-status <?php echo esc_attr($status_cls); ?>" style="<?php echo $is_disabled ? 'color:#dc2626;font-weight:700;' : ''; ?>"><?php
               echo esc_html($status_text);
               if ($is_passed && $show_points) {
                 $eid_pts = isset($points_per_station[$eid]) ? (int)$points_per_station[$eid] : 0;

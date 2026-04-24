@@ -58,6 +58,7 @@ function gc_render_estacion_metabox($post) {
     $img1     = get_post_meta($post->ID, 'gc_img_1', true);
     $img2     = get_post_meta($post->ID, 'gc_img_2', true);
     $token    = get_post_meta($post->ID, 'gc_qr_token', true);
+    $deshabilitada = get_post_meta($post->ID, 'gc_deshabilitada', true);
 
     if (empty($token)) {
         $token = gc_generate_station_token($post->ID);
@@ -66,7 +67,27 @@ function gc_render_estacion_metabox($post) {
 
     $qr_url = gc_get_station_entry_url($post->ID);
     ?>
+    <?php if ($deshabilitada === '1'): ?>
+    <div style="margin:12px 0 14px;padding:14px 16px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;display:flex;align-items:center;gap:12px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        <div>
+            <div style="font-weight:700;color:#991b1b;">Estación deshabilitada</div>
+            <div style="font-size:13px;color:#7f1d1d;">No se mostrará como accesible a los jugadores y no contará en el progreso del escenario.</div>
+        </div>
+    </div>
+    <?php endif; ?>
     <table class="form-table">
+
+        <tr>
+            <th><label for="gc_deshabilitada">Estado</label></th>
+            <td>
+                <label style="display:inline-flex;align-items:center;gap:8px;font-size:14px;">
+                    <input type="checkbox" name="gc_deshabilitada" id="gc_deshabilitada" value="1" <?php checked($deshabilitada, '1'); ?> />
+                    <span>Deshabilitar temporalmente esta estación</span>
+                </label>
+                <p class="description">Si se marca, la estación queda inhabilitada pero sin borrarse ni pasar a borrador. Los jugadores la verán claramente deshabilitada y no se podrá acceder a ella. Tampoco se cuenta para calcular el progreso del escenario.</p>
+            </td>
+        </tr>
 
         <tr>
             <th><label for="gc_escenario_ref">Escenario</label></th>
@@ -276,6 +297,7 @@ add_action('save_post', function ($post_id) {
 
     update_post_meta($post_id, 'gc_escenario_ref', (int) ($_POST['gc_escenario_ref'] ?? 0));
     update_post_meta($post_id, 'gc_orden', (int) ($_POST['gc_orden'] ?? 0));
+    update_post_meta($post_id, 'gc_deshabilitada', isset($_POST['gc_deshabilitada']) ? '1' : '0');
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
     update_post_meta($post_id, 'gc_pista_busqueda', sanitize_text_field($_POST['gc_pista_busqueda'] ?? ''));
     update_post_meta($post_id, 'gc_pista_busqueda_2', sanitize_text_field($_POST['gc_pista_busqueda_2'] ?? ''));
