@@ -57,6 +57,7 @@ function gc_render_estacion_metabox($post) {
     $longitud  = get_post_meta($post->ID, 'gc_longitud', true);
     $img1     = get_post_meta($post->ID, 'gc_img_1', true);
     $img2     = get_post_meta($post->ID, 'gc_img_2', true);
+    $img3     = get_post_meta($post->ID, 'gc_img_3', true);
     $token    = get_post_meta($post->ID, 'gc_qr_token', true);
     $deshabilitada = get_post_meta($post->ID, 'gc_deshabilitada', true);
 
@@ -316,6 +317,13 @@ function gc_render_estacion_metabox($post) {
             </td>
         </tr>
 
+        <tr>
+            <th><label for="gc_img_3">Imagen 3</label></th>
+            <td>
+                <?php gc_render_media_field('gc_img_3', $img3, 'image', 'Seleccionar imagen'); ?>
+            </td>
+        </tr>
+
         <?php
         $escenario_ref = (int) get_post_meta($post->ID, 'gc_escenario_ref', true);
         $tipo_qr = ($escenario_ref && function_exists('gc_get_tipo_qr')) ? gc_get_tipo_qr($escenario_ref) : 'enlace';
@@ -395,6 +403,7 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_longitud', $lng);
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));
     update_post_meta($post_id, 'gc_img_2', esc_url_raw($_POST['gc_img_2'] ?? ''));
+    update_post_meta($post_id, 'gc_img_3', esc_url_raw($_POST['gc_img_3'] ?? ''));
 
     $token = get_post_meta($post_id, 'gc_qr_token', true);
     if (empty($token)) {

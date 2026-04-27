@@ -50,6 +50,7 @@ function gc_shortcode_estacion_acceso() {
     $direccion = get_post_meta($station_id, 'gc_direccion', true);
     $img1      = get_post_meta($station_id, 'gc_img_1', true);
     $img2      = get_post_meta($station_id, 'gc_img_2', true);
+    $img3      = get_post_meta($station_id, 'gc_img_3', true);
     $title     = get_the_title($station_id);
     $orden     = (int) get_post_meta($station_id, 'gc_orden', true);
     $label     = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
@@ -88,10 +89,11 @@ function gc_shortcode_estacion_acceso() {
         echo '</div>';
     }
 
-    if ($img1 || $img2) {
+    if ($img1 || $img2 || $img3) {
         echo '<div style="display:flex;flex-direction:column;gap:12px;margin:0 0 24px;">';
         if ($img1) echo '<img src="' . esc_url($img1) . '" alt="" style="width:100%;height:auto;border-radius:10px;">';
         if ($img2) echo '<img src="' . esc_url($img2) . '" alt="" style="width:100%;height:auto;border-radius:10px;">';
+        if ($img3) echo '<img src="' . esc_url($img3) . '" alt="" style="width:100%;height:auto;border-radius:10px;">';
         echo '</div>';
     }
 
@@ -1015,12 +1017,13 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     $direccion   = get_post_meta($station_id, 'gc_direccion', true);
     $img1        = get_post_meta($station_id, 'gc_img_1', true);
     $img2        = get_post_meta($station_id, 'gc_img_2', true);
+    $img3        = get_post_meta($station_id, 'gc_img_3', true);
     $is_logged   = is_user_logged_in();
 
     $user_id     = get_current_user_id();
 
     // Helper para renderizar contenido visual (cabecera + iconos + descripcion + media)
-    $render_content = function() use ($title, $esc_title, $orden, $descripcion, $audio, $maps_url, $direccion, $img1, $img2, $bg_inline) {
+    $render_content = function() use ($title, $esc_title, $orden, $descripcion, $audio, $maps_url, $direccion, $img1, $img2, $img3, $bg_inline) {
         echo '<h3 style="margin:0 0 6px;font-size:18px;font-weight:600;color:#2563eb;line-height:1.3;">' . esc_html($esc_title) . '</h3>';
         echo '<h2 style="margin:0 0 8px;font-size:22px;font-weight:700;line-height:1.3;">';
         if ($orden) echo '<span style="color:#64748b;">' . $orden . '.</span> ';
@@ -1031,10 +1034,11 @@ add_shortcode('gincana_estacion_contenido', function($atts){
             echo wp_kses_post($descripcion);
             echo '</div>';
         }
-        if ($img1 || $img2) {
+        if ($img1 || $img2 || $img3) {
             echo '<div style="display:flex;flex-direction:column;gap:12px;margin:0 0 24px;">';
             if ($img1) echo '<img src="' . esc_url($img1) . '" alt="" style="width:100%;height:auto;border-radius:10px;">';
             if ($img2) echo '<img src="' . esc_url($img2) . '" alt="" style="width:100%;height:auto;border-radius:10px;">';
+            if ($img3) echo '<img src="' . esc_url($img3) . '" alt="" style="width:100%;height:auto;border-radius:10px;">';
             echo '</div>';
         }
     };
