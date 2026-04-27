@@ -411,4 +411,14 @@ add_action('save_post', function ($post_id) {
     }
 
     update_post_meta($post_id, 'gc_qr_url', gc_get_station_entry_url($post_id));
+
+    // Invalidar cachés de Divi (Static CSS, Theme Builder) y de WP al guardar la estación
+    if ( function_exists('et_core_clear_wp_cache') ) {
+        et_core_clear_wp_cache();
+    }
+    if ( function_exists('et_fb_delete_static_resources') ) {
+        et_fb_delete_static_resources();
+    }
+    clean_post_cache($post_id);
+    wp_cache_delete('alloptions', 'options');
 });
