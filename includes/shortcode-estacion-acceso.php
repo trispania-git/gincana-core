@@ -89,7 +89,7 @@ function gc_shortcode_estacion_acceso() {
         echo '</div>';
     }
 
-    echo '<!-- gincana_estacion_acceso v0.2.1 img1=' . ($img1 ? 'set' : 'empty') . ' img2=' . ($img2 ? 'set' : 'empty') . ' img3=' . ($img3 ? 'set' : 'empty') . ' -->';
+    echo '<!-- gincana_estacion_acceso v' . (defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?') . ' img1=' . ($img1 ? 'set' : 'empty') . ' img2=' . ($img2 ? 'set' : 'empty') . ' img3=' . ($img3 ? 'set' : 'empty') . ' -->';
     if ($img1 || $img2 || $img3) {
         echo '<div style="display:flex;flex-direction:column;gap:12px;margin:0 0 24px;">';
         if ($img1) echo '<img src="' . esc_url($img1) . '" alt="" style="width:100%;height:auto;border-radius:10px;">';
@@ -1035,7 +1035,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
             echo wp_kses_post($descripcion);
             echo '</div>';
         }
-        echo '<!-- gincana_estacion_contenido v0.2.1 img1=' . ($img1 ? 'set' : 'empty') . ' img2=' . ($img2 ? 'set' : 'empty') . ' img3=' . ($img3 ? 'set' : 'empty') . ' -->';
+        echo '<!-- gincana_estacion_contenido v' . (defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?') . ' img1=' . ($img1 ? 'set' : 'empty') . ' img2=' . ($img2 ? 'set' : 'empty') . ' img3=' . ($img3 ? 'set' : 'empty') . ' -->';
         if ($img1 || $img2 || $img3) {
             echo '<div style="display:flex;flex-direction:column;gap:12px;margin:0 0 24px;">';
             if ($img1) echo '<img src="' . esc_url($img1) . '" alt="" style="width:100%;height:auto;border-radius:10px;">';

@@ -6,6 +6,19 @@ if ( ! defined('ABSPATH') ) exit;
  * - Top-level + submenús
  */
 
+// Mostrar la versión del plugin en el footer del admin (en pantallas del plugin)
+add_filter('admin_footer_text', function ($text) {
+  $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+  if (!$screen) return $text;
+  $is_gincana_screen = (
+    (isset($_GET['page']) && strpos((string)$_GET['page'], 'gincana') === 0) ||
+    in_array($screen->post_type ?? '', ['escenario', 'estacion', 'prueba'], true)
+  );
+  if (!$is_gincana_screen) return $text;
+  $version = defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?';
+  return $text . ' &nbsp;|&nbsp; <strong>Gincana Core v' . esc_html($version) . '</strong>';
+});
+
 add_action('admin_menu', function(){
 
   // Top-level
@@ -55,9 +68,13 @@ add_action('admin_menu', function(){
 /** ===== Callbacks ===== */
 
 function gincana_core_dashboard_cb(){
+  $version = defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?';
   ?>
   <div class="wrap">
-    <h1 style="margin-bottom:12px;">Gincana Core</h1>
+    <h1 style="margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+      Gincana Core
+      <span style="display:inline-block;padding:3px 10px;border-radius:999px;background:#dbeafe;color:#1e40af;font-size:12px;font-weight:700;letter-spacing:0.3px;">v<?php echo esc_html($version); ?></span>
+    </h1>
     <p>Centro de control. Usa el menú de la izquierda para acceder a <strong>Usuarios & Hitos</strong> o a los tipos <em>Escenarios / Estaciones / Pruebas</em>.</p>
     <hr/>
     <h2>Atajos rápidos</h2>
