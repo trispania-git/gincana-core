@@ -50,6 +50,7 @@ function gc_render_escenario_metabox($post) {
     $audio           = get_post_meta($post->ID, 'gc_audio', true);
     $img1            = get_post_meta($post->ID, 'gc_img_1', true);
     $img2            = get_post_meta($post->ID, 'gc_img_2', true);
+    $img3            = get_post_meta($post->ID, 'gc_img_3', true);
     $img_encontrada  = get_post_meta($post->ID, 'gc_img_encontrada', true);
     $ranking_imagen  = get_post_meta($post->ID, 'gc_ranking_imagen', true);
     $img_busca_qr    = get_post_meta($post->ID, 'gc_img_busca_qr', true);
@@ -501,7 +502,7 @@ function gc_render_escenario_metabox($post) {
                 <?php gc_render_media_field('gc_audio', $audio, 'audio', 'Seleccionar audio'); ?>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
                 <div class="gc-wiz-field">
                     <label>Imagen 1</label>
                     <?php gc_render_media_field('gc_img_1', $img1, 'image', 'Seleccionar imagen'); ?>
@@ -509,6 +510,10 @@ function gc_render_escenario_metabox($post) {
                 <div class="gc-wiz-field">
                     <label>Imagen 2</label>
                     <?php gc_render_media_field('gc_img_2', $img2, 'image', 'Seleccionar imagen'); ?>
+                </div>
+                <div class="gc-wiz-field">
+                    <label>Imagen 3</label>
+                    <?php gc_render_media_field('gc_img_3', $img3, 'image', 'Seleccionar imagen'); ?>
                 </div>
             </div>
 
@@ -806,6 +811,7 @@ function gc_render_escenario_metabox($post) {
                 var audio = v('gc_audio');
                 var img1 = v('gc_img_1');
                 var img2 = v('gc_img_2');
+                var img3 = v('gc_img_3');
                 var imgEnc = v('gc_img_encontrada');
 
                 var section = function(title, rows) {
@@ -876,6 +882,7 @@ function gc_render_escenario_metabox($post) {
                 contRows.push(['Audio', audio ? dot('#16a34a') + 'Si' : dot('#dc2626') + 'No']);
                 contRows.push(['Imagen 1', img1 ? dot('#16a34a') + 'Si' : dot('#dc2626') + 'No']);
                 contRows.push(['Imagen 2', img2 ? dot('#16a34a') + 'Si' : dot('#dc2626') + 'No']);
+                contRows.push(['Imagen 3', img3 ? dot('#16a34a') + 'Si' : dot('#dc2626') + 'No']);
                 contRows.push(['Img encontrada', imgEnc ? dot('#16a34a') + 'Si' : dot('#dc2626') + 'No']);
                 html += section('5. Contenido', contRows);
 
@@ -955,6 +962,7 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));
     update_post_meta($post_id, 'gc_img_1', esc_url_raw($_POST['gc_img_1'] ?? ''));
     update_post_meta($post_id, 'gc_img_2', esc_url_raw($_POST['gc_img_2'] ?? ''));
+    update_post_meta($post_id, 'gc_img_3', esc_url_raw($_POST['gc_img_3'] ?? ''));
     update_post_meta($post_id, 'gc_img_encontrada', esc_url_raw($_POST['gc_img_encontrada'] ?? ''));
     update_post_meta($post_id, 'gc_ranking_imagen', esc_url_raw($_POST['gc_ranking_imagen'] ?? ''));
     update_post_meta($post_id, 'gc_img_busca_qr', esc_url_raw($_POST['gc_img_busca_qr'] ?? ''));

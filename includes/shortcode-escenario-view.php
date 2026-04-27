@@ -35,6 +35,7 @@ add_shortcode('gincana_escenario_contenido', function($atts){
   $audio       = get_post_meta($escenario_id, 'gc_audio', true);
   $img1        = get_post_meta($escenario_id, 'gc_img_1', true);
   $img2        = get_post_meta($escenario_id, 'gc_img_2', true);
+  $img3        = get_post_meta($escenario_id, 'gc_img_3', true);
 
   $bg_inline = function_exists('gc_bg_featured_inline') ? gc_bg_featured_inline($escenario_id) : '';
 
@@ -56,10 +57,11 @@ add_shortcode('gincana_escenario_contenido', function($atts){
       </div>
     <?php endif; ?>
 
-    <?php if ($img1 || $img2): ?>
+    <?php if ($img1 || $img2 || $img3): ?>
       <div style="display:flex;flex-direction:column;gap:12px;margin:0 0 24px;">
         <?php if ($img1): ?><img src="<?php echo esc_url($img1); ?>" alt="" style="width:100%;height:auto;border-radius:10px;"><?php endif; ?>
         <?php if ($img2): ?><img src="<?php echo esc_url($img2); ?>" alt="" style="width:100%;height:auto;border-radius:10px;"><?php endif; ?>
+        <?php if ($img3): ?><img src="<?php echo esc_url($img3); ?>" alt="" style="width:100%;height:auto;border-radius:10px;"><?php endif; ?>
       </div>
     <?php endif; ?>
 
