@@ -668,6 +668,11 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
       var stLng = <?php echo (float) $st_lng; ?>;
       var maxDist = <?php echo (int) $geo_radio; ?>;
       var tokenUrl = <?php echo wp_json_encode(gc_get_station_entry_url($station_id)); ?>;
+      var requiereQuiz = <?php echo gc_requiere_prueba($escenario_id) ? 'true' : 'false'; ?>;
+      var stationId = <?php echo (int) $station_id; ?>;
+      var escenarioUrl = <?php echo wp_json_encode($escenario_url); ?>;
+      var imgAciertoHtml = <?php echo wp_json_encode( get_post_meta($escenario_id, 'gc_img_acierto', true) ? '<img src="' . esc_url(get_post_meta($escenario_id, 'gc_img_acierto', true)) . '" alt="" style="max-width:100%;height:auto;border-radius:12px;margin-bottom:12px;" />' : '' ); ?>;
+      var nonce = (window.wpApiSettings && window.wpApiSettings.nonce) || window.gincanaNonce || '<?php echo esc_js(wp_create_nonce('wp_rest')); ?>';
 
       function haversine(lat1, lon1, lat2, lon2) {
         var R = 6371000;
@@ -677,6 +682,35 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
               + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
               * Math.sin(dLon/2) * Math.sin(dLon/2);
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
+      function autoComplete(distRound) {
+        // Sin quiz: la verificación GPS ES la validación. Marcamos passed
+        // automáticamente y mostramos el éxito sin pasos adicionales.
+        fetch('/wp-json/gincana/v1/progress/skip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+          credentials: 'same-origin',
+          body: JSON.stringify({ estacion_id: stationId, time_ms: 0 })
+        }).then(function(r){ return r.json(); }).then(function(data){
+          var wrap = btn.closest('div');
+          if (data && data.ok && wrap) {
+            wrap.style.background = '#f7fff7';
+            wrap.style.borderColor = '#16a34a';
+            wrap.innerHTML = imgAciertoHtml
+              + '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Ubicación verificada</p>'
+              + '<p style="margin:0 0 8px;font-size:15px;color:#166534;">Estabas a <strong>' + distRound + 'm</strong>. ¡' + <?php echo wp_json_encode($label_uc); ?> + ' validada!</p>'
+              + '<a href="' + escenarioUrl + '" style="display:inline-block;margin-top:12px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
+          } else {
+            msg.style.color = '#dc2626';
+            msg.textContent = 'No se pudo validar. Inténtalo de nuevo.';
+            btn.disabled = false;
+          }
+        }).catch(function(err){
+          msg.style.color = '#dc2626';
+          msg.textContent = 'Error al validar: ' + err.message;
+          btn.disabled = false;
+        });
       }
 
       btn.addEventListener('click', function(){
@@ -697,9 +731,14 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
 
           if (dist <= maxDist) {
             msg.style.color = '#16a34a';
-            msg.innerHTML = '<strong>✅ ¡Ubicacion verificada!</strong> Estas a ' + distRound + 'm. Continuando...';
-            // Redirigir a la URL con token: allí se mostrará quiz o validación directa
-            setTimeout(function(){ window.location.href = tokenUrl; }, 800);
+            if (requiereQuiz) {
+              msg.innerHTML = '<strong>✅ ¡Ubicacion verificada!</strong> Estas a ' + distRound + 'm. Continuando al desafío...';
+              // Redirigir a la URL con token: allí se mostrará el quiz
+              setTimeout(function(){ window.location.href = tokenUrl; }, 800);
+            } else {
+              msg.innerHTML = '<strong>✅ ¡Ubicacion verificada!</strong> Estas a ' + distRound + 'm. Validando...';
+              autoComplete(distRound);
+            }
           } else {
             msg.style.color = '#dc2626';
             msg.innerHTML = '❌ Estas a <strong>' + distRound + 'm</strong>. Necesitas estar a menos de ' + maxDist + 'm.';
