@@ -84,7 +84,7 @@ function gc_get_pruebas_vacias() {
     return $vacias;
 }
 
-// Botón + handler de la acción de limpieza
+// Handler de la acción de limpieza (vía POST desde el listado)
 add_action('admin_post_gc_clean_pruebas_vacias', function () {
     if (!current_user_can('manage_options')) wp_die('No autorizado');
     check_admin_referer('gc_clean_pruebas_vacias');
@@ -112,28 +112,33 @@ add_action('admin_notices', function () {
     }
 });
 
-// Botón en la cabecera del listado (junto a "Añadir nueva")
+// Botón en la cabecera del listado (junto a "Añadir nueva") — vía POST con nonce fresco
 add_action('admin_head-edit.php', function () {
     $screen = get_current_screen();
     if (!$screen || $screen->id !== 'edit-prueba') return;
     $count = count(gc_get_pruebas_vacias());
     if ($count <= 0) return; // No mostrar el botón si no hay nada que limpiar
-    $url = wp_nonce_url(admin_url('admin-post.php?action=gc_clean_pruebas_vacias'), 'gc_clean_pruebas_vacias');
-    $confirm = "¿Enviar a la papelera {$count} prueba" . ($count === 1 ? '' : 's') . " vacía" . ($count === 1 ? '' : 's') . " (sin preguntas, sin estación enlazada y no usadas como pool)?";
+    $form_action = admin_url('admin-post.php');
+    $nonce       = wp_create_nonce('gc_clean_pruebas_vacias');
+    $confirm     = "¿Enviar a la papelera {$count} prueba" . ($count === 1 ? '' : 's') . " vacía" . ($count === 1 ? '' : 's') . " (sin preguntas, sin estación enlazada y no usadas como pool)?";
     ?>
     <script>
     document.addEventListener('DOMContentLoaded', function () {
         var addNew = document.querySelector('.wrap .page-title-action');
         if (!addNew) return;
-        var btn = document.createElement('a');
-        btn.href = <?php echo wp_json_encode($url); ?>;
-        btn.className = 'page-title-action';
-        btn.style.cssText = 'background:#fef2f2;border-color:#fca5a5;color:#991b1b;';
-        btn.textContent = '🧹 Limpiar pruebas vacías (<?php echo (int) $count; ?>)';
-        btn.addEventListener('click', function (e) {
+        var form = document.createElement('form');
+        form.method = 'post';
+        form.action = <?php echo wp_json_encode($form_action); ?>;
+        form.style.display = 'inline-block';
+        form.style.marginLeft = '6px';
+        form.innerHTML =
+            '<input type="hidden" name="action" value="gc_clean_pruebas_vacias">' +
+            '<input type="hidden" name="_wpnonce" value="<?php echo esc_js($nonce); ?>">' +
+            '<button type="submit" class="page-title-action" style="background:#fef2f2;border-color:#fca5a5;color:#991b1b;">🧹 Limpiar pruebas vacías (<?php echo (int) $count; ?>)</button>';
+        form.addEventListener('submit', function (e) {
             if (!confirm(<?php echo wp_json_encode($confirm); ?>)) e.preventDefault();
         });
-        addNew.parentNode.insertBefore(btn, addNew.nextSibling);
+        addNew.parentNode.insertBefore(form, addNew.nextSibling);
     });
     </script>
     <?php
