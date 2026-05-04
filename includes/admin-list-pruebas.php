@@ -11,6 +11,134 @@ if ( ! defined('ABSPATH') ) exit;
  * - En "estacion": gc_prueba_ref    (ID de la prueba)
  */
 
+// ====== 0) Acción: limpiar pruebas vacías (sin preguntas, sin estación, sin uso como pool) ======
+
+/**
+ * Considera una prueba "vacía" si:
+ *  - No tiene preguntas configuradas (gc_preguntas vacío o sin enunciados).
+ *  - No está enlazada a ninguna estación (gc_estacion_ref vacío).
+ *  - Ningún escenario la usa como pool (gc_pool_prueba_ref).
+ */
+function gc_prueba_esta_vacia($prueba_id) {
+    $prueba_id = (int) $prueba_id;
+    if ($prueba_id <= 0) return false;
+    if (get_post_type($prueba_id) !== 'prueba') return false;
+
+    // ¿Tiene enunciados?
+    $preguntas = get_post_meta($prueba_id, 'gc_preguntas', true);
+    if (is_array($preguntas)) {
+        foreach ($preguntas as $p) {
+            if (is_array($p) && !empty(trim((string) ($p['enunciado'] ?? '')))) {
+                return false; // tiene al menos una pregunta con texto
+            }
+        }
+    }
+
+    // ¿Estación enlazada?
+    $est = (int) get_post_meta($prueba_id, 'gc_estacion_ref', true);
+    if ($est > 0 && get_post_status($est)) {
+        // ¿Esa estación realmente apunta de vuelta a esta prueba?
+        $back = (int) get_post_meta($est, 'gc_prueba_ref', true);
+        if ($back === $prueba_id) return false;
+    }
+    // O al revés (estación con gc_prueba_ref hacia esta prueba)
+    $back_est = get_posts([
+        'post_type'      => 'estacion',
+        'post_status'    => 'any',
+        'posts_per_page' => 1,
+        'meta_query'     => [['key' => 'gc_prueba_ref', 'value' => $prueba_id, 'compare' => '=']],
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+    ]);
+    if (!empty($back_est)) return false;
+
+    // ¿Algún escenario la usa como pool?
+    $pool = get_posts([
+        'post_type'      => 'escenario',
+        'post_status'    => 'any',
+        'posts_per_page' => 1,
+        'meta_query'     => [['key' => 'gc_pool_prueba_ref', 'value' => $prueba_id, 'compare' => '=']],
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+    ]);
+    if (!empty($pool)) return false;
+
+    return true;
+}
+
+/**
+ * Devuelve los IDs de pruebas vacías (publicadas, draft, auto-draft, etc.).
+ */
+function gc_get_pruebas_vacias() {
+    $ids = get_posts([
+        'post_type'      => 'prueba',
+        'post_status'    => ['publish', 'draft', 'pending', 'private', 'auto-draft'],
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+    ]);
+    $vacias = [];
+    foreach ($ids as $pid) {
+        if (gc_prueba_esta_vacia($pid)) $vacias[] = (int) $pid;
+    }
+    return $vacias;
+}
+
+// Botón + handler de la acción de limpieza
+add_action('admin_post_gc_clean_pruebas_vacias', function () {
+    if (!current_user_can('manage_options')) wp_die('No autorizado');
+    check_admin_referer('gc_clean_pruebas_vacias');
+    $vacias = gc_get_pruebas_vacias();
+    $deleted = 0;
+    foreach ($vacias as $pid) {
+        if (wp_trash_post($pid)) $deleted++;
+    }
+    set_transient('gc_clean_pruebas_result', $deleted, 30);
+    wp_safe_redirect(add_query_arg('post_type', 'prueba', admin_url('edit.php')));
+    exit;
+});
+
+// Aviso tras la limpieza
+add_action('admin_notices', function () {
+    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+    if (!$screen || $screen->id !== 'edit-prueba') return;
+    $deleted = get_transient('gc_clean_pruebas_result');
+    if ($deleted === false) return;
+    delete_transient('gc_clean_pruebas_result');
+    if ((int) $deleted > 0) {
+        echo '<div class="notice notice-success is-dismissible"><p>Se han enviado a la papelera <strong>' . (int) $deleted . '</strong> prueba' . ((int) $deleted === 1 ? '' : 's') . ' vacía' . ((int) $deleted === 1 ? '' : 's') . '.</p></div>';
+    } else {
+        echo '<div class="notice notice-info is-dismissible"><p>No había pruebas vacías que limpiar.</p></div>';
+    }
+});
+
+// Botón en la cabecera del listado (junto a "Añadir nueva")
+add_action('admin_head-edit.php', function () {
+    $screen = get_current_screen();
+    if (!$screen || $screen->id !== 'edit-prueba') return;
+    $count = count(gc_get_pruebas_vacias());
+    if ($count <= 0) return; // No mostrar el botón si no hay nada que limpiar
+    $url = wp_nonce_url(admin_url('admin-post.php?action=gc_clean_pruebas_vacias'), 'gc_clean_pruebas_vacias');
+    $confirm = "¿Enviar a la papelera {$count} prueba" . ($count === 1 ? '' : 's') . " vacía" . ($count === 1 ? '' : 's') . " (sin preguntas, sin estación enlazada y no usadas como pool)?";
+    ?>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var addNew = document.querySelector('.wrap .page-title-action');
+        if (!addNew) return;
+        var btn = document.createElement('a');
+        btn.href = <?php echo wp_json_encode($url); ?>;
+        btn.className = 'page-title-action';
+        btn.style.cssText = 'background:#fef2f2;border-color:#fca5a5;color:#991b1b;';
+        btn.textContent = '🧹 Limpiar pruebas vacías (<?php echo (int) $count; ?>)';
+        btn.addEventListener('click', function (e) {
+            if (!confirm(<?php echo wp_json_encode($confirm); ?>)) e.preventDefault();
+        });
+        addNew.parentNode.insertBefore(btn, addNew.nextSibling);
+    });
+    </script>
+    <?php
+});
+
 // ====== 1) Filtros en el admin (Escenario / Estación) ======
 add_action('restrict_manage_posts', function($post_type){
   if ($post_type !== 'prueba') return;

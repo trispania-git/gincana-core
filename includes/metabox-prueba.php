@@ -401,6 +401,23 @@ add_action('save_post', function ($post_id) {
 });
 
 /**
+ * Limpieza automática: cuando se guarda manualmente una prueba que queda vacía
+ * (sin enunciados, sin estación enlazada y no es pool), enviarla a la papelera
+ * para que no aparezca en el listado principal.
+ */
+add_action('save_post_prueba', function ($post_id, $post, $update) {
+    if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return;
+    // Solo cuando el usuario guarda explícitamente (no auto-draft ni revisiones)
+    if ( in_array($post->post_status, ['auto-draft', 'inherit', 'trash'], true) ) return;
+    if ( ! isset($_POST['gc_prueba_nonce']) ) return;
+    if ( ! function_exists('gc_prueba_esta_vacia') ) return;
+
+    if ( gc_prueba_esta_vacia($post_id) ) {
+        wp_trash_post($post_id);
+    }
+}, 99, 3);
+
+/**
  * Migración única: sincroniza estaciones que tengan una prueba apuntando
  * vía gc_estacion_ref pero que aún no tengan el meta inverso gc_prueba_ref.
  * Se ejecuta una sola vez (flag en options).
