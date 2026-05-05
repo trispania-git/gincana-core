@@ -386,61 +386,94 @@ if ( ! function_exists('gc_default_instrucciones') ) {
     // URL de puntuaciones para enlazar
     $punt_url = function_exists('gc_escenario_subpage_url') ? gc_escenario_subpage_url($id, 'puntuaciones') : '';
 
-    $blue = '#2563eb';
+    $blue   = '#2563eb';
+    $blueDk = '#1e40af';
+    $blueLt = '#eff6ff';
 
-    $html  = "<h3>¿Cómo funciona?</h3>\n";
-    $html .= "<p style=\"margin-bottom:16px;\">Bienvenido a <strong>{$title}</strong>. ";
-    $html .= "El recorrido consta de <strong>{$num_est} {$label}s</strong> que deberás completar en orden.</p>\n";
-
-    // Paso 1: como acceder
-    $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Accede a cada {$label}</h4>\n";
+    // Mensaje de validación según el tipo de QR
     switch ($qr) {
       case 'enlace':
-        $html .= "<p style=\"margin-bottom:20px;\">Escanea el código QR que encontrarás en cada punto del recorrido.</p>\n";
+        $valida_txt = "Escanea el código QR que encontrarás en cada punto del recorrido.";
         break;
       case 'validacion_boton':
-        $html .= "<p style=\"margin-bottom:20px;\">Escanea el código QR y confirma tu llegada pulsando el botón de validación.</p>\n";
+        $valida_txt = "Escanea el código QR y confirma tu llegada pulsando el botón de validación.";
         break;
       case 'validacion_quiz':
-        $html .= "<p style=\"margin-bottom:20px;\">Escanea el código QR y responde correctamente a la pregunta para validar el {$label}.</p>\n";
+        $valida_txt = "Escanea el código QR y responde correctamente a la pregunta para validar el {$label}.";
         break;
       case 'validacion_gps':
-        $html .= "<p style=\"margin-bottom:20px;\">Acércate al punto indicado; tu ubicación GPS se verificará automáticamente.</p>\n";
+        $valida_txt = "Acércate al punto indicado; tu ubicación GPS se verificará automáticamente.";
         break;
       case 'solo_pregunta':
-        $html .= "<p style=\"margin-bottom:20px;\">Entra en cada {$label} desde la lista del escenario y responde correctamente a la pregunta para validarla. No necesitas código QR.</p>\n";
+        $valida_txt = "Entra en cada {$label} desde la lista del escenario y responde correctamente a la pregunta para validarla. No necesitas código QR.";
         break;
+      default:
+        $valida_txt = "Sigue las indicaciones de cada {$label} para validarla.";
     }
 
-    // Paso 2: prueba/quiz
+    // Cabecera
+    $html  = "<h3 style=\"margin-bottom:6px;\">¿Cómo funciona?</h3>\n";
+    $html .= "<p style=\"margin:0 0 22px;font-size:16px;line-height:1.6;\">Bienvenido a <strong>{$title}</strong>. ";
+    $html .= "El recorrido consta de <strong>{$num_est} {$plural}</strong> que deberás completar <strong>en orden</strong>.</p>\n";
+
+    // === Card 1: Cómo seguir la ruta ===
+    $html .= "<div style=\"margin:0 0 18px;padding:18px 20px;border-radius:14px;background:{$blueLt};border-left:4px solid {$blue};\">\n";
+    $html .= "  <h4 style=\"margin:0 0 12px;color:{$blueDk};font-size:18px;\">🧭 Cómo seguir la ruta de la gymkana</h4>\n";
+    $html .= "  <ul style=\"margin:0 0 14px;padding:0;list-style:none;\">\n";
+    $html .= "    <li style=\"margin-bottom:10px;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">📍</span> En cada prueba encontrarás una <strong>dirección</strong> acompañada de un icono de ubicación.</li>\n";
+    $html .= "    <li style=\"margin-bottom:10px;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">👉</span> Pulsa directamente sobre el icono de ubicación. Automáticamente se abrirá el mapa en tu móvil (<em>Google Maps</em>).</li>\n";
+    $html .= "    <li style=\"margin-bottom:10px;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">🔢</span> Sigue los números <strong>en orden</strong> (1, 2, 3, 4…). Cada uno te llevará al siguiente punto de la gymkana.</li>\n";
+    $html .= "    <li style=\"margin-bottom:0;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">🚫</span> <strong>No saltes ninguno</strong>: cada parada forma parte del recorrido y te guía correctamente hasta el final.</li>\n";
+    $html .= "  </ul>\n";
+    $html .= "  <div style=\"margin-top:14px;padding:10px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fcd34d;font-size:14px;color:#78350f;\">\n";
+    $html .= "    <strong>💡 Consejo:</strong> asegúrate de tener activada la ubicación de tu móvil para que el mapa te guíe correctamente.\n";
+    $html .= "  </div>\n";
+    $html .= "</div>\n";
+
+    // === Card 2: Responde al desafío ===
     if ($prueba) {
-      $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Responde al desafío</h4>\n";
-      $html .= "<p style=\"margin-bottom:20px;\">En cada {$label} tendrás que resolver una pregunta o prueba.</p>\n";
+      $html .= "<div style=\"margin:0 0 18px;padding:18px 20px;border-radius:14px;background:#f5f3ff;border-left:4px solid #7c3aed;\">\n";
+      $html .= "  <h4 style=\"margin:0 0 12px;color:#5b21b6;font-size:18px;\">🎯 Responde al desafío</h4>\n";
+      $html .= "  <p style=\"margin:0 0 8px;line-height:1.6;\"><strong>📍 Cómo se valida cada {$label}:</strong> {$valida_txt}</p>\n";
+      $html .= "  <p style=\"margin:0;line-height:1.6;color:#475569;\">En cada {$label} tendrás que resolver una pregunta o prueba.</p>\n";
+      $html .= "</div>\n";
+    } else {
+      $html .= "<div style=\"margin:0 0 18px;padding:18px 20px;border-radius:14px;background:#f5f3ff;border-left:4px solid #7c3aed;\">\n";
+      $html .= "  <h4 style=\"margin:0 0 12px;color:#5b21b6;font-size:18px;\">📍 Cómo se valida cada {$label}</h4>\n";
+      $html .= "  <p style=\"margin:0;line-height:1.6;\">{$valida_txt}</p>\n";
+      $html .= "</div>\n";
     }
 
-    // Paso 3: puntos
+    // === Card 3: Consigue puntos ===
     if ($puntos) {
-      $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Consigue puntos</h4>\n";
-      $html .= "<p style=\"margin-bottom:20px;\">Cuanto más rápido respondas, más puntos obtendrás. Acertar a la primera también suma puntos extra.";
+      $html .= "<div style=\"margin:0 0 18px;padding:18px 20px;border-radius:14px;background:#ecfdf5;border-left:4px solid #16a34a;\">\n";
+      $html .= "  <h4 style=\"margin:0 0 12px;color:#166534;font-size:18px;\">🏆 Consigue puntos</h4>\n";
+      $html .= "  <p style=\"margin:0;line-height:1.6;\">Cuanto más rápido respondas, <strong>más puntos obtendrás</strong>. Acertar a la primera también suma puntos extra.";
       if ($punt_url) {
-        $html .= " <a href=\"{$punt_url}\" style=\"color:{$blue};font-weight:600;\">Ver sistema de puntuaciones</a>.";
+        $html .= " <a href=\"{$punt_url}\" style=\"color:#166534;font-weight:600;text-decoration:underline;\">Ver sistema de puntuaciones</a>.";
       }
       $html .= "</p>\n";
+      $html .= "</div>\n";
     }
 
-    // Paso 4: accion final
+    // === Card 4: Acción final (foto) ===
     if ($accion === 'subir_foto') {
-      $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Sube tu foto</h4>\n";
-      $html .= "<p style=\"margin-bottom:20px;\">Al completar {$plural}, podrás subir una foto como recuerdo de tu aventura.</p>\n";
+      $html .= "<div style=\"margin:0 0 18px;padding:18px 20px;border-radius:14px;background:#fff7ed;border-left:4px solid #ea580c;\">\n";
+      $html .= "  <h4 style=\"margin:0 0 12px;color:#9a3412;font-size:18px;\">📸 Sube tu foto</h4>\n";
+      $html .= "  <p style=\"margin:0;line-height:1.6;\">Al completar {$plural}, podrás subir una foto como recuerdo de tu aventura.</p>\n";
+      $html .= "</div>\n";
     }
 
-    // Paso 5: diploma
+    // === Card 5: Diploma ===
     if ($diploma) {
-      $html .= "<h4 style=\"color:{$blue};margin-bottom:10px;\">Descarga tu diploma</h4>\n";
-      $html .= "<p style=\"margin-bottom:20px;\">Al finalizar recibirás un diploma personalizado que podrás descargar.</p>\n";
+      $html .= "<div style=\"margin:0 0 18px;padding:18px 20px;border-radius:14px;background:#fef3c7;border-left:4px solid #ca8a04;\">\n";
+      $html .= "  <h4 style=\"margin:0 0 12px;color:#854d0e;font-size:18px;\">🎓 Descarga tu diploma</h4>\n";
+      $html .= "  <p style=\"margin:0;line-height:1.6;\">Al finalizar recibirás un diploma personalizado que podrás descargar y compartir.</p>\n";
+      $html .= "</div>\n";
     }
 
-    $html .= "<p><strong>¡Buena suerte y disfruta del recorrido!</strong></p>\n";
+    // Cierre motivador
+    $html .= "<p style=\"margin:24px 0 0;text-align:center;font-size:18px;font-weight:700;color:{$blueDk};\">¡Buena suerte y disfruta del recorrido! 🚀</p>\n";
 
     // Portada del escenario al final
     if ($portada) {
