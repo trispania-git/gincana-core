@@ -144,11 +144,13 @@ add_action('rest_api_init', function(){
         $tipo = !empty($p['tipo']) ? $p['tipo'] : $tipo_global;
         $ans  = array_key_exists($i, $answers_to_check) ? $answers_to_check[$i] : null;
 
-        if ($tipo === 'texto') {
+        // Tipos de respuesta libre (string normalizado)
+        if ( in_array($tipo, ['texto', 'cifrado_cesar', 'anagrama'], true) ) {
           $correcta = $norm($p['respuesta_texto_correcta'] ?? '');
           $user     = $norm($ans);
           if ($correcta === '' || $user === '' || $user !== $correcta) { $all_ok = false; break; }
         } else {
+          // multiple, multiple_imagen, vf → comprobar índice de opciones
           $ops = $p['opciones'] ?? [];
           if (!is_numeric($ans) || !isset($ops[(int)$ans])) { $all_ok = false; break; }
           $is_ok = !empty($ops[(int)$ans]['es_correcta']);

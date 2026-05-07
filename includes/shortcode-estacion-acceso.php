@@ -861,21 +861,109 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
         </div>
 
         <!-- Quiz (oculto hasta pulsar) -->
+        <?php
+            $p_tipo = isset($pregunta['tipo']) ? $pregunta['tipo'] : 'multiple';
+            $p_resp_text = isset($pregunta['respuesta_texto_correcta']) ? (string) $pregunta['respuesta_texto_correcta'] : '';
+            $p_rotacion  = isset($pregunta['rotacion']) ? (int) $pregunta['rotacion'] : 0;
+
+            // Helpers para preview en el front
+            $cesar_encode = function($text, $rot) {
+                $rot = ((int) $rot) % 26;
+                if ($rot === 0) $rot = 1;
+                $out = '';
+                $len = mb_strlen($text);
+                for ($i = 0; $i < $len; $i++) {
+                    $ch = mb_substr($text, $i, 1);
+                    $up = strtoupper($ch);
+                    if ($up >= 'A' && $up <= 'Z') {
+                        $code = ord($up) - 65;
+                        $code = ($code + $rot) % 26;
+                        $out .= chr(65 + $code);
+                    } else {
+                        $out .= $ch;
+                    }
+                }
+                return $out;
+            };
+            $shuffle_letters = function($text) {
+                $clean = preg_replace('/\s+/', '', strtoupper($text));
+                $arr = preg_split('//u', $clean, -1, PREG_SPLIT_NO_EMPTY);
+                if (count($arr) > 1) {
+                    // Asegurar que el shuffle no devuelva la misma palabra
+                    $orig = implode('', $arr);
+                    $tries = 0;
+                    do {
+                        shuffle($arr);
+                        $tries++;
+                    } while (implode('', $arr) === $orig && $tries < 10);
+                }
+                return implode(' ', $arr);
+            };
+        ?>
         <div id="gc-quiz-panel" style="display:none;padding:20px;border:1px solid #dcdcde;border-radius:14px;background:#fff;">
             <h2 style="margin-top:0;">Pregunta del <?php echo esc_html($label); ?></h2>
             <p style="font-size:18px;line-height:1.5;"><strong><?php echo esc_html($enunciado); ?></strong></p>
 
-            <form id="gc-adult-station-form">
-                <?php foreach ($opciones as $index => $opcion):
-                    $value = $index;
-                    $texto = isset($opcion['texto']) ? $opcion['texto'] : '';
-                    if ($texto === '') continue;
-                ?>
-                    <label style="display:block;margin:12px 0;padding:14px 16px;border:1px solid #dcdcde;border-radius:12px;cursor:pointer;">
-                        <input type="radio" name="gc_station_answer" value="<?php echo esc_attr($value); ?>" style="margin-right:10px;">
-                        <?php echo esc_html($texto); ?>
-                    </label>
-                <?php endforeach; ?>
+            <form id="gc-adult-station-form" data-mode="<?php echo esc_attr($p_tipo); ?>">
+
+                <?php if ($p_tipo === 'multiple_imagen'): ?>
+                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px;">
+                        <?php foreach ($opciones as $index => $opcion):
+                            $img = isset($opcion['imagen']) ? $opcion['imagen'] : '';
+                            $cap = isset($opcion['texto']) ? $opcion['texto'] : '';
+                            if (!$img && !$cap) continue;
+                        ?>
+                        <label class="gc-img-option" style="display:block;cursor:pointer;border:3px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#f8fafc;transition:border-color 0.15s, transform 0.1s;">
+                            <input type="radio" name="gc_station_answer" value="<?php echo esc_attr($index); ?>" style="display:none;">
+                            <?php if ($img): ?>
+                                <div style="aspect-ratio:1/1;overflow:hidden;background:#fff;">
+                                    <img src="<?php echo esc_url($img); ?>" alt="<?php echo esc_attr($cap); ?>" style="width:100%;height:100%;object-fit:cover;display:block;">
+                                </div>
+                            <?php endif; ?>
+                            <?php if ($cap): ?>
+                                <div style="padding:8px 10px;font-size:13px;color:#334155;text-align:center;background:#fff;"><?php echo esc_html($cap); ?></div>
+                            <?php endif; ?>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <style>
+                        .gc-img-option:hover { border-color:#93c5fd !important; transform:translateY(-2px); }
+                        .gc-img-option.is-selected { border-color:#2563eb !important; box-shadow:0 0 0 3px rgba(37,99,235,0.18); }
+                    </style>
+
+                <?php elseif ($p_tipo === 'cifrado_cesar' && $p_resp_text !== ''): ?>
+                    <?php $cifrado = $cesar_encode($p_resp_text, $p_rotacion); ?>
+                    <div style="margin:14px 0;padding:18px 20px;border-radius:12px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:2px solid #c4b5fd;text-align:center;">
+                        <div style="font-size:13px;color:#6d28d9;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🔐 Mensaje cifrado</div>
+                        <div style="font-family:'Courier New',monospace;font-size:28px;font-weight:700;color:#4c1d95;letter-spacing:6px;word-break:break-all;"><?php echo esc_html($cifrado); ?></div>
+                        <div style="margin-top:10px;font-size:13px;color:#5b21b6;">Pista: cada letra está rotada <strong><?php echo (int)$p_rotacion; ?></strong> posiciones hacia delante en el abecedario. Resta <strong><?php echo (int)$p_rotacion; ?></strong> para descifrar.</div>
+                    </div>
+                    <input type="text" name="gc_station_answer" id="gc_station_answer_text" autocomplete="off" autocapitalize="characters" style="width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:18px;font-weight:600;letter-spacing:2px;text-transform:uppercase;text-align:center;" placeholder="Escribe la palabra descifrada…" />
+
+                <?php elseif ($p_tipo === 'anagrama' && $p_resp_text !== ''): ?>
+                    <?php $desordenada = $shuffle_letters($p_resp_text); ?>
+                    <div style="margin:14px 0;padding:18px 20px;border-radius:12px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #fbbf24;text-align:center;">
+                        <div style="font-size:13px;color:#92400e;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🔀 Letras desordenadas</div>
+                        <div style="font-family:'Courier New',monospace;font-size:28px;font-weight:700;color:#78350f;letter-spacing:6px;"><?php echo esc_html($desordenada); ?></div>
+                        <div style="margin-top:10px;font-size:13px;color:#92400e;">Reordena estas letras para formar la palabra correcta.</div>
+                    </div>
+                    <input type="text" name="gc_station_answer" id="gc_station_answer_text" autocomplete="off" autocapitalize="characters" style="width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:18px;font-weight:600;letter-spacing:2px;text-transform:uppercase;text-align:center;" placeholder="Escribe la palabra…" />
+
+                <?php elseif ($p_tipo === 'texto'): ?>
+                    <input type="text" name="gc_station_answer" id="gc_station_answer_text" autocomplete="off" style="width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:16px;" placeholder="Escribe tu respuesta…" />
+
+                <?php else: ?>
+                    <?php // multiple, vf: radios texto ?>
+                    <?php foreach ($opciones as $index => $opcion):
+                        $texto = isset($opcion['texto']) ? $opcion['texto'] : '';
+                        if ($texto === '') continue;
+                    ?>
+                        <label style="display:block;margin:12px 0;padding:14px 16px;border:1px solid #dcdcde;border-radius:12px;cursor:pointer;">
+                            <input type="radio" name="gc_station_answer" value="<?php echo esc_attr($index); ?>" style="margin-right:10px;">
+                            <?php echo esc_html($texto); ?>
+                        </label>
+                    <?php endforeach; ?>
+                <?php endif; ?>
 
                 <div style="margin-top:18px;">
                     <button type="submit"
@@ -920,16 +1008,36 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
 
         let startedAt = null;
 
+        // Estilo "seleccionada" para opciones de imagen
+        form.querySelectorAll('input[type="radio"][name="gc_station_answer"]').forEach(function(r){
+            r.addEventListener('change', function(){
+                form.querySelectorAll('.gc-img-option').forEach(function(lbl){ lbl.classList.remove('is-selected'); });
+                var lbl = r.closest('.gc-img-option');
+                if (lbl) lbl.classList.add('is-selected');
+            });
+        });
+
         form.addEventListener('submit', async function(e){
             e.preventDefault();
 
-            const checked = form.querySelector('input[name="gc_station_answer"]:checked');
-            if (!checked) {
-                msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">Selecciona una respuesta.</div>';
-                return;
-            }
+            const mode = form.dataset.mode || 'multiple';
+            let payloadAnswer = null;
 
-            const answerIndex = parseInt(checked.value, 10);
+            if (mode === 'texto' || mode === 'cifrado_cesar' || mode === 'anagrama') {
+                const txt = (form.querySelector('input[name="gc_station_answer"]') || {}).value || '';
+                if (!txt.trim()) {
+                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">Escribe tu respuesta.</div>';
+                    return;
+                }
+                payloadAnswer = txt.trim();
+            } else {
+                const checked = form.querySelector('input[name="gc_station_answer"]:checked');
+                if (!checked) {
+                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">Selecciona una respuesta.</div>';
+                    return;
+                }
+                payloadAnswer = parseInt(checked.value, 10);
+            }
             const timeMs = Date.now() - startedAt;
 
             try {
@@ -942,7 +1050,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
                     credentials: 'same-origin',
                     body: JSON.stringify({
                         prueba_id: pruebaId,
-                        answers: [answerIndex],
+                        answers: [payloadAnswer],
                         time_ms: timeMs,
                         q_index: qIndex
                     })

@@ -113,10 +113,18 @@ function gc_render_prueba_metabox($post) {
             <th><label for="gc_tipo">Tipo de prueba</label></th>
             <td>
                 <select name="gc_tipo" id="gc_tipo">
-                    <option value="multiple" <?php selected($tipo, 'multiple'); ?>>Multiple choice</option>
+                    <option value="multiple" <?php selected($tipo, 'multiple'); ?>>Multiple choice (texto)</option>
+                    <option value="multiple_imagen" <?php selected($tipo, 'multiple_imagen'); ?>>Multiple choice (imágenes) 🖼️</option>
                     <option value="vf" <?php selected($tipo, 'vf'); ?>>Verdadero / Falso</option>
                     <option value="texto" <?php selected($tipo, 'texto'); ?>>Respuesta de texto</option>
+                    <option value="cifrado_cesar" <?php selected($tipo, 'cifrado_cesar'); ?>>Descifrar mensaje (cifrado César) 🔐</option>
+                    <option value="anagrama" <?php selected($tipo, 'anagrama'); ?>>Anagrama (reordenar letras) 🔀</option>
                 </select>
+                <p class="description" style="margin-top:6px;">
+                    <strong>Multiple imágenes:</strong> el jugador elige la imagen correcta entre 4 opciones.
+                    <strong>Cifrado César:</strong> muestra un mensaje cifrado y el jugador escribe la palabra original.
+                    <strong>Anagrama:</strong> muestra letras desordenadas y el jugador escribe la palabra original.
+                </p>
             </td>
         </tr>
         <tr>
@@ -144,6 +152,7 @@ function gc_render_prueba_metabox($post) {
             $p_tipo    = $p['tipo'] ?? $tipo;
             $opciones  = $p['opciones'] ?? [];
             $resp_text = $p['respuesta_texto_correcta'] ?? '';
+            $rotacion  = isset($p['rotacion']) ? (int) $p['rotacion'] : 3;
         ?>
         <div class="gc-pregunta-block" style="border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:12px;background:#fafafa;">
             <p style="margin:0 0 8px;">
@@ -156,11 +165,54 @@ function gc_render_prueba_metabox($post) {
             </p>
             <input type="hidden" name="gc_preguntas[<?php echo $qi; ?>][tipo]" value="<?php echo esc_attr($p_tipo); ?>" />
 
-            <?php if ($p_tipo === 'texto'): ?>
+            <?php if ($p_tipo === 'texto' || $p_tipo === 'anagrama'): ?>
                 <p>
-                    <label>Respuesta correcta (texto):</label><br>
-                    <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" />
+                    <label><?php echo $p_tipo === 'anagrama' ? 'Palabra a adivinar (las letras se mostrarán desordenadas):' : 'Respuesta correcta (texto):'; ?></label><br>
+                    <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" placeholder="<?php echo $p_tipo === 'anagrama' ? 'Ej: GYMKANA' : ''; ?>" />
                 </p>
+            <?php elseif ($p_tipo === 'cifrado_cesar'): ?>
+                <p>
+                    <label>Mensaje original (lo que el jugador debe descifrar):</label><br>
+                    <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" placeholder="Ej: GYMKANA" />
+                </p>
+                <p>
+                    <label>Rotación del cifrado César (1-25):</label><br>
+                    <input type="number" name="gc_preguntas[<?php echo $qi; ?>][rotacion]" value="<?php echo (int)$rotacion; ?>" min="1" max="25" style="width:80px;" />
+                    <span style="color:#64748b;font-size:12px;margin-left:8px;">Ej: rotación 3 → 'GYMKANA' se mostrará como 'JBPNDQD'.</span>
+                </p>
+            <?php elseif ($p_tipo === 'multiple_imagen'): ?>
+                <p><strong>Opciones (imágenes):</strong></p>
+                <?php for ($oi = 0; $oi < max(4, count($opciones)); $oi++):
+                    $opt_texto = $opciones[$oi]['texto'] ?? '';
+                    $opt_imagen = $opciones[$oi]['imagen'] ?? '';
+                    $opt_correcta = !empty($opciones[$oi]['es_correcta']) ? 1 : 0;
+                ?>
+                <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
+                    <div style="flex-shrink:0;width:90px;text-align:center;">
+                        <?php if ($opt_imagen): ?>
+                            <img src="<?php echo esc_url($opt_imagen); ?>" alt="" style="width:90px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;">
+                        <?php else: ?>
+                            <div style="width:90px;height:90px;border:2px dashed #cbd5e1;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;text-align:center;">Sin imagen</div>
+                        <?php endif; ?>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+                            <input type="text" name="gc_preguntas[<?php echo $qi; ?>][opciones][<?php echo $oi; ?>][imagen]" value="<?php echo esc_attr($opt_imagen); ?>" class="gc-media-input" style="flex:1;" placeholder="URL imagen <?php echo ($oi+1); ?>" />
+                            <button type="button" class="button gc-media-select" data-type="image">Imagen</button>
+                            <?php if ($opt_imagen): ?>
+                                <button type="button" class="button gc-media-clear" title="Quitar">&times;</button>
+                            <?php endif; ?>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="text" name="gc_preguntas[<?php echo $qi; ?>][opciones][<?php echo $oi; ?>][texto]" value="<?php echo esc_attr($opt_texto); ?>" style="flex:1;" placeholder="Texto opcional (pie de imagen)" />
+                            <label style="white-space:nowrap;font-size:13px;">
+                                <input type="radio" name="gc_preguntas[<?php echo $qi; ?>][correcta]" value="<?php echo $oi; ?>" <?php checked($opt_correcta, 1); ?> />
+                                Correcta
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <?php endfor; ?>
             <?php else: ?>
                 <p><strong>Opciones:</strong></p>
                 <?php for ($oi = 0; $oi < max(4, count($opciones)); $oi++):
@@ -221,21 +273,58 @@ function gc_render_prueba_metabox($post) {
         var btn  = document.getElementById('gc-add-pregunta');
         if (!wrap || !btn) return;
 
+        // Helper: tipo actual del select
+        function currentTipo() {
+            var sel = document.getElementById('gc_tipo');
+            return sel ? sel.value : 'multiple';
+        }
+
         // === Añadir pregunta manual ===
         btn.addEventListener('click', function(){
             var count = wrap.querySelectorAll('.gc-pregunta-block').length;
             var idx = count;
+            var tipoNow = currentTipo();
             var html = '<div class="gc-pregunta-block" style="border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:12px;background:#fafafa;">'
                 + '<p style="margin:0 0 8px;"><strong>Pregunta ' + (idx+1) + '</strong>'
                 + '<button type="button" class="button gc-remove-pregunta" style="float:right;color:#dc2626;" onclick="this.closest(\'.gc-pregunta-block\').remove();">Eliminar</button></p>'
                 + '<p><label>Enunciado:</label><br><textarea name="gc_preguntas[' + idx + '][enunciado]" rows="2" style="width:100%;"></textarea></p>'
-                + '<input type="hidden" name="gc_preguntas[' + idx + '][tipo]" value="multiple" />'
-                + '<p><strong>Opciones:</strong></p>';
-            for (var i = 0; i < 4; i++) {
-                html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">'
-                    + '<input type="text" name="gc_preguntas[' + idx + '][opciones][' + i + '][texto]" style="flex:1;" placeholder="Opcion ' + (i+1) + '" />'
-                    + '<label style="white-space:nowrap;"><input type="radio" name="gc_preguntas[' + idx + '][correcta]" value="' + i + '" /> Correcta</label>'
-                    + '</div>';
+                + '<input type="hidden" name="gc_preguntas[' + idx + '][tipo]" value="' + tipoNow + '" />';
+
+            if (tipoNow === 'texto' || tipoNow === 'anagrama') {
+                var labelTxt = tipoNow === 'anagrama' ? 'Palabra a adivinar (las letras se mostrarán desordenadas):' : 'Respuesta correcta (texto):';
+                var ph = tipoNow === 'anagrama' ? 'Ej: GYMKANA' : '';
+                html += '<p><label>' + labelTxt + '</label><br>'
+                    + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="' + ph + '" /></p>';
+            } else if (tipoNow === 'cifrado_cesar') {
+                html += '<p><label>Mensaje original (lo que el jugador debe descifrar):</label><br>'
+                    + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="Ej: GYMKANA" /></p>'
+                    + '<p><label>Rotación del cifrado César (1-25):</label><br>'
+                    + '<input type="number" name="gc_preguntas[' + idx + '][rotacion]" value="3" min="1" max="25" style="width:80px;" />'
+                    + '<span style="color:#64748b;font-size:12px;margin-left:8px;">Ej: rotación 3 → \'GYMKANA\' se mostrará como \'JBPNDQD\'.</span></p>';
+            } else if (tipoNow === 'multiple_imagen') {
+                html += '<p><strong>Opciones (imágenes):</strong></p>';
+                for (var i = 0; i < 4; i++) {
+                    html += '<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">'
+                        + '<div style="flex-shrink:0;width:90px;text-align:center;"><div style="width:90px;height:90px;border:2px dashed #cbd5e1;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:11px;text-align:center;">Sin imagen</div></div>'
+                        + '<div style="flex:1;">'
+                        + '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">'
+                        + '<input type="text" name="gc_preguntas[' + idx + '][opciones][' + i + '][imagen]" class="gc-media-input" style="flex:1;" placeholder="URL imagen ' + (i+1) + '" />'
+                        + '<button type="button" class="button gc-media-select" data-type="image">Imagen</button>'
+                        + '</div>'
+                        + '<div style="display:flex;gap:8px;align-items:center;">'
+                        + '<input type="text" name="gc_preguntas[' + idx + '][opciones][' + i + '][texto]" style="flex:1;" placeholder="Texto opcional (pie de imagen)" />'
+                        + '<label style="white-space:nowrap;font-size:13px;"><input type="radio" name="gc_preguntas[' + idx + '][correcta]" value="' + i + '" /> Correcta</label>'
+                        + '</div></div></div>';
+                }
+            } else {
+                // multiple, vf
+                html += '<p><strong>Opciones:</strong></p>';
+                for (var i = 0; i < 4; i++) {
+                    html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">'
+                        + '<input type="text" name="gc_preguntas[' + idx + '][opciones][' + i + '][texto]" style="flex:1;" placeholder="Opcion ' + (i+1) + '" />'
+                        + '<label style="white-space:nowrap;"><input type="radio" name="gc_preguntas[' + idx + '][correcta]" value="' + i + '" /> Correcta</label>'
+                        + '</div>';
+                }
             }
             html += '</div>';
             wrap.insertAdjacentHTML('beforeend', html);
@@ -366,6 +455,9 @@ add_action('save_post', function ($post_id) {
             if ($enunciado === '') continue;
 
             $p_tipo = sanitize_text_field($p['tipo'] ?? 'multiple');
+            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama'], true) ) {
+                $p_tipo = 'multiple';
+            }
             $correcta_idx = isset($p['correcta']) ? (int)$p['correcta'] : -1;
 
             $pregunta = [
@@ -373,9 +465,33 @@ add_action('save_post', function ($post_id) {
                 'enunciado' => $enunciado,
             ];
 
-            if ($p_tipo === 'texto') {
+            if (in_array($p_tipo, ['texto', 'anagrama', 'cifrado_cesar'], true)) {
                 $pregunta['respuesta_texto_correcta'] = sanitize_text_field($p['respuesta_texto_correcta'] ?? '');
                 $pregunta['opciones'] = [];
+                if ($p_tipo === 'cifrado_cesar') {
+                    $rot = isset($p['rotacion']) ? (int) $p['rotacion'] : 3;
+                    if ($rot < 1) $rot = 1;
+                    if ($rot > 25) $rot = 25;
+                    $pregunta['rotacion'] = $rot;
+                }
+            } elseif ($p_tipo === 'multiple_imagen') {
+                $opciones = [];
+                $raw_opts = $p['opciones'] ?? [];
+                if (is_array($raw_opts)) {
+                    foreach ($raw_opts as $oi => $opt) {
+                        $texto  = sanitize_text_field($opt['texto'] ?? '');
+                        $imagen = esc_url_raw($opt['imagen'] ?? '');
+                        // Una opción es válida si tiene imagen O texto
+                        if ($imagen === '' && $texto === '') continue;
+                        $opciones[] = [
+                            'texto'       => $texto,
+                            'imagen'      => $imagen,
+                            'es_correcta' => ((int)$oi === $correcta_idx) ? 1 : 0,
+                        ];
+                    }
+                }
+                $pregunta['opciones'] = $opciones;
+                $pregunta['respuesta_texto_correcta'] = '';
             } else {
                 $opciones = [];
                 $raw_opts = $p['opciones'] ?? [];
