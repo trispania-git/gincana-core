@@ -26,6 +26,8 @@ function gincana_core_users_cb(){
     $deleted_pts  = 0;
     $deleted_prog = 0;
 
+    $tbl_attempts = $wpdb->prefix . 'gincana_attempts';
+
     if ($action === 'reset_user_escenario' && $reset_user && $reset_esc) {
       // Vaciar datos de UN usuario en UN escenario
       $deleted_pts  = (int) $wpdb->query($wpdb->prepare(
@@ -34,21 +36,49 @@ function gincana_core_users_cb(){
       $deleted_prog = (int) $wpdb->query($wpdb->prepare(
         "DELETE FROM $tbl_prog WHERE user_id=%d AND escenario_id=%d", $reset_user, $reset_esc
       ));
+      // Borrar intentos de pruebas (gincana_attempts) de este user en este escenario
+      $wpdb->query($wpdb->prepare(
+        "DELETE FROM $tbl_attempts WHERE user_id=%d AND escenario_id=%d", $reset_user, $reset_esc
+      ));
+      // Limpiar estado de quiz y ahorcado (user_meta) — afecta a las estaciones del escenario
+      $wpdb->query($wpdb->prepare(
+        "DELETE FROM $wpdb->usermeta WHERE user_id=%d AND (
+          meta_key LIKE 'gc_quiz_state_%%_started' OR
+          meta_key LIKE 'gc_ahorcado_revealed_%%' OR
+          meta_key LIKE 'gc_ahorcado_miss_%%'
+        )", $reset_user
+      ));
       // Limpiar asignaciones de pool de preguntas
       delete_user_meta($reset_user, 'gc_pool_assigned_' . $reset_esc);
     } elseif ($action === 'reset_user_all' && $reset_user) {
       // Vaciar TODOS los datos de un usuario
       $deleted_pts  = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_points WHERE user_id=%d", $reset_user));
       $deleted_prog = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_prog WHERE user_id=%d", $reset_user));
-      // Limpiar TODAS las asignaciones de pool de este usuario
+      $wpdb->query($wpdb->prepare("DELETE FROM $tbl_attempts WHERE user_id=%d", $reset_user));
+      // Limpiar TODAS las asignaciones de pool y estado de quiz de este usuario
       $wpdb->query($wpdb->prepare(
-        "DELETE FROM $wpdb->usermeta WHERE user_id=%d AND meta_key LIKE 'gc_pool_assigned_%%'", $reset_user
+        "DELETE FROM $wpdb->usermeta WHERE user_id=%d AND (
+          meta_key LIKE 'gc_pool_assigned_%%' OR
+          meta_key LIKE 'gc_quiz_state_%%_started' OR
+          meta_key LIKE 'gc_ahorcado_revealed_%%' OR
+          meta_key LIKE 'gc_ahorcado_miss_%%'
+        )", $reset_user
       ));
     } elseif ($action === 'reset_escenario' && $reset_esc) {
       // Vaciar TODOS los datos de un escenario (todos los usuarios)
       $deleted_pts  = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_points WHERE escenario_id=%d", $reset_esc));
       $deleted_prog = (int) $wpdb->query($wpdb->prepare("DELETE FROM $tbl_prog WHERE escenario_id=%d", $reset_esc));
-      // Limpiar asignaciones de pool de todos los usuarios para este escenario
+      $wpdb->query($wpdb->prepare("DELETE FROM $tbl_attempts WHERE escenario_id=%d", $reset_esc));
+      // Limpiar asignaciones de pool y estado de quiz/ahorcado de todos los usuarios
+      // afectados (todos los que tengan progreso en este escenario podían tener estado).
+      // Como las claves no llevan escenario_id, borramos TODAS las gc_quiz_state_*_started
+      // y gc_ahorcado_* de todos los usuarios — solo se afecta a partidas en curso.
+      $wpdb->query(
+        "DELETE FROM $wpdb->usermeta WHERE
+          meta_key LIKE 'gc_quiz_state_%_started' OR
+          meta_key LIKE 'gc_ahorcado_revealed_%' OR
+          meta_key LIKE 'gc_ahorcado_miss_%'"
+      );
       $wpdb->query($wpdb->prepare(
         "DELETE FROM $wpdb->usermeta WHERE meta_key = %s", 'gc_pool_assigned_' . $reset_esc
       ));

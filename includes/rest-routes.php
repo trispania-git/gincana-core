@@ -32,6 +32,23 @@ function gc_quiz_user_state($user_id, $prueba_id, $estacion_id) {
         $user_id, $prueba_id, $estacion_id
     ));
 
+    // Auto-reset defensivo: si el usuario no tiene fallos registrados pero sí
+    // un started_at huérfano (porque se limpió el progreso pero quedaron user_meta),
+    // limpiamos el started_at y el estado del ahorcado para empezar desde cero.
+    if ($started_at > 0 && $failed === 0) {
+        $progress_table_chk = $wpdb->prefix . 'gincana_user_progress';
+        $is_passed = $estacion_id > 0 ? $wpdb->get_var($wpdb->prepare(
+            "SELECT 1 FROM $progress_table_chk WHERE user_id=%d AND estacion_id=%d AND status='passed'",
+            $user_id, $estacion_id
+        )) : null;
+        if (!$is_passed) {
+            delete_user_meta($user_id, $state_key . '_started');
+            delete_user_meta($user_id, 'gc_ahorcado_revealed_' . $prueba_id . '_' . $estacion_id);
+            delete_user_meta($user_id, 'gc_ahorcado_miss_' . $prueba_id . '_' . $estacion_id);
+            $started_at = 0;
+        }
+    }
+
     $progress_table = $wpdb->prefix . 'gincana_user_progress';
     $passed = false;
     if ($estacion_id > 0) {
