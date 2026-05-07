@@ -857,6 +857,26 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
 
     $nonce = function_exists('wp_create_nonce') ? wp_create_nonce('wp_rest') : '';
 
+    // Atajo de emergencia: ?gc_quiz_reset=1 limpia el estado del usuario actual
+    // en esta prueba+estación (intentos en gincana_attempts, started_at y meta del
+    // ahorcado). Útil para salir de un bloqueo huérfano sin pasar por admin.
+    if ( isset($_GET['gc_quiz_reset']) && $_GET['gc_quiz_reset'] === '1' && $user_id > 0 ) {
+        global $wpdb;
+        $wpdb->query( $wpdb->prepare(
+            "DELETE FROM {$wpdb->prefix}gincana_attempts WHERE user_id=%d AND prueba_id=%d AND estacion_id=%d",
+            $user_id, $test_id, $station_id
+        ));
+        delete_user_meta($user_id, 'gc_quiz_state_' . $test_id . '_' . $station_id . '_started');
+        delete_user_meta($user_id, 'gc_ahorcado_revealed_' . $test_id . '_' . $station_id);
+        delete_user_meta($user_id, 'gc_ahorcado_miss_' . $test_id . '_' . $station_id);
+        // Quitar el parámetro para no entrar en bucle
+        $clean_url = remove_query_arg('gc_quiz_reset');
+        if ( ! headers_sent() ) {
+            wp_safe_redirect($clean_url);
+            exit;
+        }
+    }
+
     // Estado server-side del intento del usuario (intentos previos, tiempo, etc.)
     $quiz_state = function_exists('gc_quiz_user_state')
         ? gc_quiz_user_state($user_id, $test_id, $station_id)
@@ -868,14 +888,29 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
         $reason_msg = $quiz_state['blocked_reason'] === 'time'
             ? '⌛ Se acabó el tiempo para resolver este desafío.'
             : '❌ Has agotado los ' . (int) $quiz_state['max_attempts'] . ' intentos disponibles.';
+        $reset_url = add_query_arg('gc_quiz_reset', '1');
+        $is_admin  = current_user_can('manage_options');
         ob_start();
         ?>
+        <!-- gc_blocked v<?php echo defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?'; ?>
+             reason=<?php echo esc_html($quiz_state['blocked_reason']); ?>
+             started_at=<?php echo (int) $quiz_state['started_at']; ?>
+             failed=<?php echo (int) $quiz_state['failed_attempts']; ?>
+             max=<?php echo (int) $quiz_state['max_attempts']; ?>
+             time_max=<?php echo (int) $quiz_state['time_max_s']; ?>
+             time_left=<?php echo (int) $quiz_state['time_left_s']; ?>
+        -->
         <div style="padding:24px 20px;border-radius:14px;background:#fef2f2;border:2px solid #dc2626;text-align:center;">
             <div style="font-size:48px;margin-bottom:8px;"><?php echo $quiz_state['blocked_reason'] === 'time' ? '⏰' : '🚫'; ?></div>
             <h2 style="margin:0 0 8px;color:#991b1b;">Desafío no superado</h2>
             <p style="margin:0 0 16px;font-size:15px;color:#7f1d1d;"><?php echo esc_html($reason_msg); ?></p>
             <p style="margin:0 0 16px;font-size:14px;color:#7f1d1d;">Intentos usados: <strong><?php echo (int) $quiz_state['failed_attempts']; ?> / <?php echo (int) $quiz_state['max_attempts']; ?></strong></p>
-            <a href="<?php echo esc_url($escenario_url_b); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
+                <a href="<?php echo esc_url($escenario_url_b); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>
+                <?php if ($is_admin): ?>
+                <a href="<?php echo esc_url($reset_url); ?>" style="display:inline-block;padding:12px 24px;border:2px solid #dc2626;border-radius:10px;background:#fff;color:#dc2626;text-decoration:none;font-weight:600;" title="Solo visible para administradores">🔄 Reiniciar (admin)</a>
+                <?php endif; ?>
+            </div>
         </div>
         <?php
         return ob_get_clean();
