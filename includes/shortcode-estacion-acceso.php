@@ -988,17 +988,20 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
                   data-started-at="<?php echo (int) $started_at_srv; ?>">
 
                 <?php if ($p_tipo === 'multiple_imagen'): ?>
-                    <div class="gc-img-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:14px;">
+                    <div class="gc-img-grid" style="display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px;">
                         <?php foreach ($opciones as $index => $opcion):
                             $img = isset($opcion['imagen']) ? $opcion['imagen'] : '';
                             $cap = isset($opcion['texto']) ? $opcion['texto'] : '';
                             if (!$img && !$cap) continue;
                         ?>
-                        <label class="gc-img-option" style="display:block;cursor:pointer;border:3px solid #e2e8f0;border-radius:14px;overflow:hidden;background:#f8fafc;transition:border-color 0.15s, transform 0.1s, box-shadow 0.15s;">
+                        <label class="gc-img-option" data-img-url="<?php echo esc_attr($img); ?>" data-img-caption="<?php echo esc_attr($cap); ?>" style="display:block;cursor:pointer;border:3px solid #e2e8f0;border-radius:14px;overflow:hidden;background:#f8fafc;transition:border-color 0.15s, transform 0.1s, box-shadow 0.15s;position:relative;">
                             <input type="radio" name="gc_station_answer" value="<?php echo esc_attr($index); ?>" style="display:none;">
                             <?php if ($img): ?>
-                                <div style="aspect-ratio:4/3;overflow:hidden;background:#fff;">
+                                <div style="aspect-ratio:16/10;overflow:hidden;background:#fff;position:relative;">
                                     <img src="<?php echo esc_url($img); ?>" alt="<?php echo esc_attr($cap); ?>" style="width:100%;height:100%;object-fit:cover;display:block;">
+                                    <button type="button" class="gc-img-zoom" aria-label="Ver imagen grande" style="position:absolute;top:10px;right:10px;width:38px;height:38px;border:0;border-radius:999px;background:rgba(0,0,0,0.55);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                                    </button>
                                 </div>
                             <?php endif; ?>
                             <?php if ($cap): ?>
@@ -1007,18 +1010,57 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
                         </label>
                         <?php endforeach; ?>
                     </div>
+
+                    <!-- Lightbox para imágenes -->
+                    <div id="gc-img-lightbox" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;flex-direction:column;padding:20px;">
+                        <button type="button" id="gc-img-lightbox-close" aria-label="Cerrar" style="position:absolute;top:16px;right:16px;width:44px;height:44px;border:0;border-radius:999px;background:rgba(255,255,255,0.18);color:#fff;cursor:pointer;font-size:24px;display:flex;align-items:center;justify-content:center;">&times;</button>
+                        <img id="gc-img-lightbox-img" src="" alt="" style="max-width:96vw;max-height:80vh;object-fit:contain;border-radius:10px;">
+                        <div id="gc-img-lightbox-caption" style="color:#fff;font-size:15px;margin-top:14px;text-align:center;max-width:80vw;"></div>
+                    </div>
+
                     <style>
                         .gc-img-option:hover { border-color:#93c5fd !important; transform:translateY(-2px); box-shadow:0 6px 18px rgba(37,99,235,0.12); }
                         .gc-img-option.is-selected { border-color:#2563eb !important; box-shadow:0 0 0 4px rgba(37,99,235,0.22) !important; }
-                        /* En móviles muy pequeños, una sola columna para imágenes aún más grandes */
-                        @media (max-width: 380px) {
-                            .gc-img-grid { grid-template-columns: 1fr !important; }
-                        }
-                        /* Tablets y desktop: imágenes más grandes */
-                        @media (min-width: 700px) {
-                            .gc-img-grid { gap: 18px !important; }
+                        .gc-img-zoom:hover { background:rgba(0,0,0,0.8) !important; }
+                        /* Tablet y desktop: 2 columnas, las imágenes son grandes en cualquier caso */
+                        @media (min-width: 720px) {
+                            .gc-img-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 20px !important; }
                         }
                     </style>
+                    <script>
+                    (function(){
+                        var lb       = document.getElementById('gc-img-lightbox');
+                        var lbImg    = document.getElementById('gc-img-lightbox-img');
+                        var lbCap    = document.getElementById('gc-img-lightbox-caption');
+                        var lbClose  = document.getElementById('gc-img-lightbox-close');
+                        if (!lb || !lbImg) return;
+
+                        function openLb(url, caption) {
+                            lbImg.src = url;
+                            lbCap.textContent = caption || '';
+                            lb.style.display = 'flex';
+                            document.body.style.overflow = 'hidden';
+                        }
+                        function closeLb() {
+                            lb.style.display = 'none';
+                            lbImg.src = '';
+                            document.body.style.overflow = '';
+                        }
+                        document.querySelectorAll('.gc-img-zoom').forEach(function(btn){
+                            btn.addEventListener('click', function(e){
+                                e.preventDefault(); e.stopPropagation();
+                                var card = btn.closest('.gc-img-option');
+                                if (!card) return;
+                                openLb(card.dataset.imgUrl || '', card.dataset.imgCaption || '');
+                            });
+                        });
+                        if (lbClose) lbClose.addEventListener('click', closeLb);
+                        lb.addEventListener('click', function(e){ if (e.target === lb) closeLb(); });
+                        document.addEventListener('keydown', function(e){
+                            if (e.key === 'Escape' && lb.style.display === 'flex') closeLb();
+                        });
+                    })();
+                    </script>
 
                 <?php elseif ($p_tipo === 'cifrado_cesar' && $p_resp_text !== ''): ?>
                     <?php $cifrado = $cesar_encode($p_resp_text, $p_rotacion); ?>
