@@ -279,6 +279,29 @@ function gc_render_prueba_metabox($post) {
             return sel ? sel.value : 'multiple';
         }
 
+        // === Cambio de tipo de prueba: limpiar preguntas si hay diferencias ===
+        var tipoSelect = document.getElementById('gc_tipo');
+        if (tipoSelect) {
+            var prevTipo = tipoSelect.value;
+            tipoSelect.addEventListener('change', function () {
+                var newTipo = tipoSelect.value;
+                if (newTipo === prevTipo) return;
+                var existing = wrap.querySelectorAll('.gc-pregunta-block');
+                if (existing.length > 0) {
+                    var ok = confirm('Vas a cambiar el tipo de prueba de "' + prevTipo + '" a "' + newTipo + '". ' +
+                                     'Las preguntas actuales (' + existing.length + ') se eliminarán porque los datos no son compatibles. ¿Continuar?');
+                    if (!ok) {
+                        // Restaurar el valor anterior
+                        tipoSelect.value = prevTipo;
+                        return;
+                    }
+                    // Limpiar todas las preguntas
+                    existing.forEach(function (b) { b.remove(); });
+                }
+                prevTipo = newTipo;
+            });
+        }
+
         // === Añadir pregunta manual ===
         btn.addEventListener('click', function(){
             var count = wrap.querySelectorAll('.gc-pregunta-block').length;

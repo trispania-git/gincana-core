@@ -823,11 +823,29 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
         return gc_station_wrap_message('Este ' . $label . ' no tiene una prueba configurada.', 'error');
     }
 
-    $enunciado = isset($pregunta['enunciado']) ? $pregunta['enunciado'] : '';
-    $opciones  = isset($pregunta['opciones']) && is_array($pregunta['opciones']) ? $pregunta['opciones'] : [];
+    $enunciado   = isset($pregunta['enunciado']) ? $pregunta['enunciado'] : '';
+    $opciones    = isset($pregunta['opciones']) && is_array($pregunta['opciones']) ? $pregunta['opciones'] : [];
+    $tipo_preg   = isset($pregunta['tipo']) ? $pregunta['tipo'] : 'multiple';
+    $resp_text   = trim((string) ($pregunta['respuesta_texto_correcta'] ?? ''));
 
-    if (empty($enunciado) || empty($opciones)) {
-        return gc_station_wrap_message('La prueba de este ' . $label . ' no está lista.', 'error');
+    // Validación: tipos texto-libres necesitan respuesta_texto_correcta;
+    // tipos de selección necesitan opciones.
+    $es_texto_libre = in_array($tipo_preg, ['texto', 'anagrama', 'cifrado_cesar'], true);
+    if ($es_texto_libre) {
+        if ($resp_text === '') {
+            return gc_station_wrap_message('La prueba de este ' . $label . ' no está lista (falta la respuesta correcta).', 'error');
+        }
+    } else {
+        if (empty($opciones)) {
+            return gc_station_wrap_message('La prueba de este ' . $label . ' no está lista (faltan opciones).', 'error');
+        }
+    }
+    if (empty($enunciado)) {
+        // En multiple_imagen / cifrado / anagrama el enunciado puede ser implícito,
+        // pero si no se rellenó ninguno, dejamos que se rinda al usuario sin enunciado.
+        $enunciado = $tipo_preg === 'multiple_imagen'
+            ? '¿Cuál es la imagen correcta?'
+            : ($tipo_preg === 'cifrado_cesar' ? 'Descifra el mensaje' : ($tipo_preg === 'anagrama' ? 'Adivina la palabra' : ''));
     }
 
     $nonce = function_exists('wp_create_nonce') ? wp_create_nonce('wp_rest') : '';
@@ -900,35 +918,64 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
                 return implode(' ', $arr);
             };
         ?>
+        <?php
+            $intentos_max  = (int) get_post_meta($test_id, 'gc_intentos_max', true);
+            if ($intentos_max < 1) $intentos_max = 2;
+            $tiempo_max_s  = (int) get_post_meta($test_id, 'gc_tiempo_max_s', true);
+            if ($tiempo_max_s < 0) $tiempo_max_s = 0;
+        ?>
         <div id="gc-quiz-panel" style="display:none;padding:20px;border:1px solid #dcdcde;border-radius:14px;background:#fff;">
             <h2 style="margin-top:0;">Pregunta del <?php echo esc_html($label); ?></h2>
+
+            <!-- Barra de intentos + tiempo -->
+            <div id="gc-quiz-meta" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:0 0 14px;padding:10px 14px;border-radius:10px;background:#f1f5f9;border:1px solid #e2e8f0;">
+                <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#334155;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    <span><strong>Intentos:</strong> <span id="gc-intentos-restantes"><?php echo (int) $intentos_max; ?></span> / <?php echo (int) $intentos_max; ?></span>
+                </div>
+                <?php if ($tiempo_max_s > 0): ?>
+                <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#334155;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span><strong>Tiempo:</strong> <span id="gc-tiempo-restante" data-seconds="<?php echo (int) $tiempo_max_s; ?>"><?php echo str_pad((string) intdiv($tiempo_max_s, 60), 2, '0', STR_PAD_LEFT) . ':' . str_pad((string) ($tiempo_max_s % 60), 2, '0', STR_PAD_LEFT); ?></span></span>
+                </div>
+                <?php endif; ?>
+            </div>
+
             <p style="font-size:18px;line-height:1.5;"><strong><?php echo esc_html($enunciado); ?></strong></p>
 
-            <form id="gc-adult-station-form" data-mode="<?php echo esc_attr($p_tipo); ?>">
+            <form id="gc-adult-station-form" data-mode="<?php echo esc_attr($p_tipo); ?>" data-intentos-max="<?php echo (int) $intentos_max; ?>" data-tiempo-max="<?php echo (int) $tiempo_max_s; ?>">
 
                 <?php if ($p_tipo === 'multiple_imagen'): ?>
-                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px;">
+                    <div class="gc-img-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:14px;">
                         <?php foreach ($opciones as $index => $opcion):
                             $img = isset($opcion['imagen']) ? $opcion['imagen'] : '';
                             $cap = isset($opcion['texto']) ? $opcion['texto'] : '';
                             if (!$img && !$cap) continue;
                         ?>
-                        <label class="gc-img-option" style="display:block;cursor:pointer;border:3px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#f8fafc;transition:border-color 0.15s, transform 0.1s;">
+                        <label class="gc-img-option" style="display:block;cursor:pointer;border:3px solid #e2e8f0;border-radius:14px;overflow:hidden;background:#f8fafc;transition:border-color 0.15s, transform 0.1s, box-shadow 0.15s;">
                             <input type="radio" name="gc_station_answer" value="<?php echo esc_attr($index); ?>" style="display:none;">
                             <?php if ($img): ?>
-                                <div style="aspect-ratio:1/1;overflow:hidden;background:#fff;">
+                                <div style="aspect-ratio:4/3;overflow:hidden;background:#fff;">
                                     <img src="<?php echo esc_url($img); ?>" alt="<?php echo esc_attr($cap); ?>" style="width:100%;height:100%;object-fit:cover;display:block;">
                                 </div>
                             <?php endif; ?>
                             <?php if ($cap): ?>
-                                <div style="padding:8px 10px;font-size:13px;color:#334155;text-align:center;background:#fff;"><?php echo esc_html($cap); ?></div>
+                                <div style="padding:10px 12px;font-size:14px;font-weight:500;color:#334155;text-align:center;background:#fff;border-top:1px solid #f1f5f9;"><?php echo esc_html($cap); ?></div>
                             <?php endif; ?>
                         </label>
                         <?php endforeach; ?>
                     </div>
                     <style>
-                        .gc-img-option:hover { border-color:#93c5fd !important; transform:translateY(-2px); }
-                        .gc-img-option.is-selected { border-color:#2563eb !important; box-shadow:0 0 0 3px rgba(37,99,235,0.18); }
+                        .gc-img-option:hover { border-color:#93c5fd !important; transform:translateY(-2px); box-shadow:0 6px 18px rgba(37,99,235,0.12); }
+                        .gc-img-option.is-selected { border-color:#2563eb !important; box-shadow:0 0 0 4px rgba(37,99,235,0.22) !important; }
+                        /* En móviles muy pequeños, una sola columna para imágenes aún más grandes */
+                        @media (max-width: 380px) {
+                            .gc-img-grid { grid-template-columns: 1fr !important; }
+                        }
+                        /* Tablets y desktop: imágenes más grandes */
+                        @media (min-width: 700px) {
+                            .gc-img-grid { gap: 18px !important; }
+                        }
                     </style>
 
                 <?php elseif ($p_tipo === 'cifrado_cesar' && $p_resp_text !== ''): ?>
@@ -993,7 +1040,57 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
                 panel.style.display = 'block';
                 panel.scrollIntoView({behavior:'smooth', block:'center'});
                 startedAt = Date.now();
+                startCountdown();
             });
+        }
+
+        // === Contadores de intentos y tiempo ===
+        const formForMeta = wrap.querySelector('#gc-adult-station-form');
+        const intentosMax = formForMeta ? parseInt(formForMeta.dataset.intentosMax || '2', 10) : 2;
+        const tiempoMaxS  = formForMeta ? parseInt(formForMeta.dataset.tiempoMax  || '0', 10) : 0;
+        let   intentosRestantes = intentosMax;
+        const intentosLabel = wrap.querySelector('#gc-intentos-restantes');
+        const tiempoLabel   = wrap.querySelector('#gc-tiempo-restante');
+        let countdownTimer = null;
+
+        function pad2(n){ n = String(n); return n.length < 2 ? '0' + n : n; }
+        function fmtTime(s){ if (s < 0) s = 0; return pad2(Math.floor(s/60)) + ':' + pad2(s%60); }
+
+        function lockForm(reason) {
+            if (!formForMeta) return;
+            const submitBtn = formForMeta.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.55';
+                submitBtn.style.cursor  = 'not-allowed';
+            }
+            formForMeta.querySelectorAll('input, textarea').forEach(function(el){ el.disabled = true; });
+            const m = wrap.querySelector('#gc-adult-msg');
+            if (m && reason) {
+                m.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;font-weight:600;">' + reason + '</div>';
+            }
+        }
+
+        function startCountdown() {
+            if (tiempoMaxS <= 0 || !tiempoLabel) return;
+            let restante = tiempoMaxS;
+            tiempoLabel.textContent = fmtTime(restante);
+            countdownTimer = setInterval(function(){
+                restante -= 1;
+                if (restante <= 0) {
+                    tiempoLabel.textContent = '00:00';
+                    tiempoLabel.style.color = '#dc2626';
+                    clearInterval(countdownTimer);
+                    countdownTimer = null;
+                    lockForm('⌛ Se acabó el tiempo. Esta pregunta ya no se puede responder.');
+                    return;
+                }
+                tiempoLabel.textContent = fmtTime(restante);
+                if (restante <= 10) {
+                    tiempoLabel.style.color = '#dc2626';
+                    tiempoLabel.style.fontWeight = '700';
+                }
+            }, 1000);
         }
 
         const stationId = parseInt(wrap.dataset.stationId, 10);
@@ -1059,9 +1156,25 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
                 const data1 = await res1.json();
 
                 if (!data1 || !data1.ok) {
-                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">❌ Respuesta incorrecta. Puedes volver a intentarlo.</div>';
+                    intentosRestantes -= 1;
+                    if (intentosLabel) {
+                        intentosLabel.textContent = String(Math.max(0, intentosRestantes));
+                        if (intentosRestantes <= 1) {
+                            intentosLabel.style.color = '#dc2626';
+                            intentosLabel.style.fontWeight = '700';
+                        }
+                    }
+                    if (intentosRestantes <= 0) {
+                        if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+                        lockForm('❌ Respuesta incorrecta. Sin intentos disponibles.');
+                    } else {
+                        msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">❌ Respuesta incorrecta. Te quedan <strong>' + intentosRestantes + '</strong> intento' + (intentosRestantes === 1 ? '' : 's') + '.</div>';
+                    }
                     return;
                 }
+
+                // Acierto: parar contador
+                if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
 
                 const res2 = await fetch('/wp-json/gincana/v1/progress/complete', {
                     method: 'POST',
