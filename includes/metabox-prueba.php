@@ -452,13 +452,27 @@ add_action('save_post', function ($post_id) {
     if (is_array($raw_preguntas)) {
         foreach ($raw_preguntas as $qi => $p) {
             $enunciado = sanitize_textarea_field($p['enunciado'] ?? '');
-            if ($enunciado === '') continue;
 
             $p_tipo = sanitize_text_field($p['tipo'] ?? 'multiple');
             if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama'], true) ) {
                 $p_tipo = 'multiple';
             }
             $correcta_idx = isset($p['correcta']) ? (int)$p['correcta'] : -1;
+
+            // Comprobamos si la pregunta tiene contenido suficiente para guardarla.
+            // No exigimos enunciado: en multiple_imagen / cifrado / anagrama puede ser
+            // opcional mientras se configura. Pero al menos un campo con datos.
+            $resp_text_raw = trim((string) ($p['respuesta_texto_correcta'] ?? ''));
+            $tiene_opciones = false;
+            if (isset($p['opciones']) && is_array($p['opciones'])) {
+                foreach ($p['opciones'] as $opt) {
+                    if (!is_array($opt)) continue;
+                    if (!empty(trim((string) ($opt['texto'] ?? ''))) || !empty($opt['imagen'] ?? '')) {
+                        $tiene_opciones = true; break;
+                    }
+                }
+            }
+            if ($enunciado === '' && $resp_text_raw === '' && !$tiene_opciones) continue;
 
             $pregunta = [
                 'tipo'      => $p_tipo,
@@ -516,22 +530,10 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_preguntas', $preguntas);
 });
 
-/**
- * Limpieza automática: cuando se guarda manualmente una prueba que queda vacía
- * (sin enunciados, sin estación enlazada y no es pool), enviarla a la papelera
- * para que no aparezca en el listado principal.
- */
-add_action('save_post_prueba', function ($post_id, $post, $update) {
-    if ( defined('DOING_AUTOSAVE') && DOING_AUTOSAVE ) return;
-    // Solo cuando el usuario guarda explícitamente (no auto-draft ni revisiones)
-    if ( in_array($post->post_status, ['auto-draft', 'inherit', 'trash'], true) ) return;
-    if ( ! isset($_POST['gc_prueba_nonce']) ) return;
-    if ( ! function_exists('gc_prueba_esta_vacia') ) return;
-
-    if ( gc_prueba_esta_vacia($post_id) ) {
-        wp_trash_post($post_id);
-    }
-}, 99, 3);
+// Nota: el auto-papelera al guardar pruebas vacías se eliminó en v1.0.8
+// porque podía interferir cuando se acababa de crear una prueba con imágenes.
+// La limpieza de pruebas vacías se hace ahora SOLO desde el botón manual
+// '🧹 Limpiar pruebas vacías' en el listado admin de Pruebas.
 
 /**
  * Migración única: sincroniza estaciones que tengan una prueba apuntando
