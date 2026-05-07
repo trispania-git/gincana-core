@@ -838,7 +838,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
 
     // Validación: tipos texto-libres necesitan respuesta_texto_correcta;
     // tipos de selección necesitan opciones.
-    $es_texto_libre = in_array($tipo_preg, ['texto', 'anagrama', 'cifrado_cesar'], true);
+    $es_texto_libre = in_array($tipo_preg, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado'], true);
     if ($es_texto_libre) {
         if ($resp_text === '') {
             return gc_station_wrap_message('La prueba de este ' . $label . ' no está lista (falta la respuesta correcta).', 'error');
@@ -849,11 +849,10 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
         }
     }
     if (empty($enunciado)) {
-        // En multiple_imagen / cifrado / anagrama el enunciado puede ser implícito,
-        // pero si no se rellenó ninguno, dejamos que se rinda al usuario sin enunciado.
-        $enunciado = $tipo_preg === 'multiple_imagen'
-            ? '¿Cuál es la imagen correcta?'
-            : ($tipo_preg === 'cifrado_cesar' ? 'Descifra el mensaje' : ($tipo_preg === 'anagrama' ? 'Adivina la palabra' : ''));
+        $enunciado = $tipo_preg === 'multiple_imagen' ? '¿Cuál es la imagen correcta?'
+            : ($tipo_preg === 'cifrado_cesar' ? 'Descifra el mensaje'
+            : ($tipo_preg === 'anagrama' ? 'Adivina la palabra'
+            : ($tipo_preg === 'ahorcado' ? 'Adivina la palabra letra a letra' : '')));
     }
 
     $nonce = function_exists('wp_create_nonce') ? wp_create_nonce('wp_rest') : '';
@@ -1062,6 +1061,84 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
                     })();
                     </script>
 
+                <?php elseif ($p_tipo === 'ahorcado' && $p_resp_text !== ''):
+                    $palabra      = mb_strtoupper($p_resp_text);
+                    $pista_txt    = isset($pregunta['pista']) ? (string) $pregunta['pista'] : '';
+                    $categoria    = isset($pregunta['categoria']) ? (string) $pregunta['categoria'] : '';
+                    // Estado server-side de letras descubiertas e intentos fallidos para esta partida
+                    $reveal_key   = 'gc_ahorcado_revealed_' . $test_id . '_' . $station_id;
+                    $reveal_meta  = get_user_meta($user_id, $reveal_key, true);
+                    $revealed     = is_array($reveal_meta) ? array_map('strval', $reveal_meta) : [];
+                    $miss_key     = 'gc_ahorcado_miss_' . $test_id . '_' . $station_id;
+                    $miss_meta    = get_user_meta($user_id, $miss_key, true);
+                    $missed       = is_array($miss_meta) ? array_map('strval', $miss_meta) : [];
+
+                    // Calcular las letras únicas de la palabra (solo letras alfabéticas)
+                    $letras_palabra = [];
+                    $len = mb_strlen($palabra);
+                    for ($i = 0; $i < $len; $i++) {
+                        $ch = mb_substr($palabra, $i, 1);
+                        if (preg_match('/\p{L}/u', $ch)) {
+                            $letras_palabra[mb_strtoupper(remove_accents($ch))] = true;
+                        }
+                    }
+                    $letras_palabra = array_keys($letras_palabra);
+                ?>
+                    <div style="margin:14px 0 10px;text-align:center;">
+                        <?php if ($categoria): ?>
+                            <div style="display:inline-block;margin-bottom:10px;padding:4px 12px;border-radius:999px;background:#dbeafe;color:#1e40af;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1px;"><?php echo esc_html($categoria); ?></div>
+                        <?php endif; ?>
+                        <?php if ($pista_txt): ?>
+                            <div style="margin-bottom:14px;padding:10px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;color:#78350f;font-size:14px;">💡 <?php echo esc_html($pista_txt); ?></div>
+                        <?php endif; ?>
+
+                        <!-- Huecos de la palabra -->
+                        <div id="gc-ahorcado-palabra" style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:10px 0 16px;font-family:'Courier New',monospace;">
+                            <?php for ($i = 0; $i < $len; $i++):
+                                $ch = mb_substr($palabra, $i, 1);
+                                $is_letter = preg_match('/\p{L}/u', $ch);
+                                $ch_norm   = $is_letter ? mb_strtoupper(remove_accents($ch)) : '';
+                                $is_revealed = !$is_letter || in_array($ch_norm, $revealed, true);
+                            ?>
+                                <span class="gc-ahorcado-hueco" data-letter="<?php echo esc_attr($ch_norm); ?>" data-original="<?php echo esc_attr($ch); ?>" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:42px;font-size:24px;font-weight:700;color:#1e40af;border-bottom:<?php echo $is_letter ? '3px solid #1e40af' : 'none'; ?>;">
+                                    <?php echo $is_revealed ? esc_html($is_letter ? mb_strtoupper($ch) : $ch) : ''; ?>
+                                </span>
+                            <?php endfor; ?>
+                        </div>
+
+                        <!-- Letras erróneas -->
+                        <div style="margin:8px 0 14px;font-size:13px;color:#7f1d1d;min-height:20px;">
+                            <span style="font-weight:600;">Erróneas:</span>
+                            <span id="gc-ahorcado-erroneas" style="font-family:'Courier New',monospace;letter-spacing:3px;">
+                                <?php echo esc_html(implode(' ', $missed)); ?>
+                            </span>
+                        </div>
+
+                        <!-- Teclado A-Z -->
+                        <div id="gc-ahorcado-teclado" style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center;max-width:500px;margin:0 auto 18px;">
+                            <?php
+                            $letras_az = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','Ñ','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+                            foreach ($letras_az as $L):
+                                $usada = in_array($L, $revealed, true) || in_array($L, $missed, true);
+                                $en_palabra = in_array($L, $letras_palabra, true);
+                                $bg = '#fff'; $fg = '#1e293b'; $border = '#cbd5e1';
+                                if ($usada) {
+                                    if ($en_palabra) { $bg = '#16a34a'; $fg = '#fff'; $border = '#16a34a'; }
+                                    else             { $bg = '#dc2626'; $fg = '#fff'; $border = '#dc2626'; }
+                                }
+                            ?>
+                                <button type="button" class="gc-ahorcado-letra" data-letra="<?php echo esc_attr($L); ?>" <?php echo $usada ? 'disabled' : ''; ?> style="width:36px;height:40px;border:2px solid <?php echo $border; ?>;border-radius:8px;background:<?php echo $bg; ?>;color:<?php echo $fg; ?>;font-size:16px;font-weight:700;cursor:<?php echo $usada ? 'default' : 'pointer'; ?>;transition:transform 0.1s;<?php echo $usada ? 'opacity:0.85;' : ''; ?>"><?php echo esc_html($L); ?></button>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <!-- Botón resolver -->
+                        <details style="margin-top:14px;">
+                            <summary style="cursor:pointer;color:#2563eb;font-weight:600;">¿Quieres intentar resolver la palabra completa?</summary>
+                            <input type="text" id="gc-ahorcado-resolver" autocomplete="off" autocapitalize="characters" style="width:100%;max-width:320px;margin-top:10px;padding:12px 16px;border:2px solid #2563eb;border-radius:10px;font-size:18px;font-weight:600;letter-spacing:2px;text-transform:uppercase;text-align:center;" placeholder="Escribe la palabra…" />
+                        </details>
+                    </div>
+                    <input type="hidden" name="gc_station_answer" id="gc_station_answer_text" value="" />
+
                 <?php elseif ($p_tipo === 'cifrado_cesar' && $p_resp_text !== ''): ?>
                     <?php $cifrado = $cesar_encode($p_resp_text, $p_rotacion); ?>
                     <div style="margin:14px 0;padding:18px 20px;border-radius:12px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:2px solid #c4b5fd;text-align:center;">
@@ -1225,13 +1302,117 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
             });
         });
 
+        // === Lógica del tipo 'ahorcado' ===
+        if ((form.dataset.mode || '') === 'ahorcado') {
+            const teclado     = wrap.querySelector('#gc-ahorcado-teclado');
+            const palabraWrap = wrap.querySelector('#gc-ahorcado-palabra');
+            const erroneasEl  = wrap.querySelector('#gc-ahorcado-erroneas');
+            const resolverEl  = wrap.querySelector('#gc-ahorcado-resolver');
+            const hiddenAns   = wrap.querySelector('#gc_station_answer_text');
+
+            function revelarLetra(L) {
+                if (!palabraWrap) return;
+                palabraWrap.querySelectorAll('.gc-ahorcado-hueco').forEach(function(h){
+                    if ((h.dataset.letter || '') === L) {
+                        h.textContent = (h.dataset.original || '').toUpperCase();
+                    }
+                });
+            }
+            function pintarBoton(btn, en_palabra) {
+                btn.disabled = true;
+                btn.style.cursor = 'default';
+                btn.style.opacity = '0.85';
+                if (en_palabra) {
+                    btn.style.background = '#16a34a'; btn.style.color = '#fff'; btn.style.borderColor = '#16a34a';
+                } else {
+                    btn.style.background = '#dc2626'; btn.style.color = '#fff'; btn.style.borderColor = '#dc2626';
+                }
+            }
+
+            if (teclado) {
+                teclado.addEventListener('click', async function(e){
+                    const btn = e.target.closest('.gc-ahorcado-letra');
+                    if (!btn || btn.disabled) return;
+                    const letra = btn.dataset.letra;
+
+                    btn.disabled = true; // bloqueo óptico mientras llega la respuesta
+                    try {
+                        const r = await fetch('/wp-json/gincana/v1/quiz/ahorcado/letra', {
+                            method:'POST',
+                            headers:{'Content-Type':'application/json','X-WP-Nonce': nonce},
+                            credentials:'same-origin',
+                            body: JSON.stringify({ prueba_id: pruebaId, estacion_id: stationId, q_index: qIndex, letra: letra })
+                        });
+                        const data = await r.json();
+                        if (!data) throw new Error('sin respuesta');
+
+                        if (data.blocked) {
+                            lockForm('🚫 Has agotado los intentos disponibles.');
+                            setTimeout(function(){ location.reload(); }, 1200);
+                            return;
+                        }
+
+                        pintarBoton(btn, !!data.en_palabra);
+                        if (data.en_palabra) {
+                            revelarLetra(letra);
+                        } else if (erroneasEl && Array.isArray(data.missed)) {
+                            erroneasEl.textContent = data.missed.join(' ');
+                        }
+
+                        // Sincronizar contadores
+                        if (data.state) {
+                            if (typeof data.state.attempts_left === 'number' && intentosLabel) {
+                                intentosRestantes = data.state.attempts_left;
+                                intentosLabel.textContent = String(Math.max(0, intentosRestantes));
+                                if (intentosRestantes <= 1) {
+                                    intentosLabel.style.color = '#dc2626';
+                                    intentosLabel.style.fontWeight = '700';
+                                }
+                            }
+                        }
+
+                        // Si ha completado la palabra → enviar para validar y otorgar puntos
+                        if (data.palabra_completa) {
+                            if (hiddenAns) {
+                                // Reconstruir la palabra original a partir de los huecos descubiertos
+                                let palabraStr = '';
+                                palabraWrap.querySelectorAll('.gc-ahorcado-hueco').forEach(function(h){
+                                    palabraStr += (h.dataset.original || h.textContent || '');
+                                });
+                                hiddenAns.value = palabraStr.trim();
+                            }
+                            form.dispatchEvent(new Event('submit', {cancelable:true}));
+                        } else if (data.state && data.state.blocked) {
+                            // Sin más intentos
+                            lockForm('🚫 Has agotado los intentos disponibles.');
+                            setTimeout(function(){ location.reload(); }, 1200);
+                        }
+                    } catch (err) {
+                        btn.disabled = false;
+                        if (msg) msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">Error: ' + err.message + '</div>';
+                    }
+                });
+            }
+
+            // Resolver palabra completa (atajo)
+            if (resolverEl) {
+                resolverEl.addEventListener('keydown', function(e){
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (hiddenAns) hiddenAns.value = (resolverEl.value || '').trim();
+                        form.dispatchEvent(new Event('submit', {cancelable:true}));
+                    }
+                });
+            }
+        }
+
         form.addEventListener('submit', async function(e){
             e.preventDefault();
 
             const mode = form.dataset.mode || 'multiple';
             let payloadAnswer = null;
 
-            if (mode === 'texto' || mode === 'cifrado_cesar' || mode === 'anagrama') {
+            if (mode === 'texto' || mode === 'cifrado_cesar' || mode === 'anagrama' || mode === 'ahorcado') {
                 const txt = (form.querySelector('input[name="gc_station_answer"]') || {}).value || '';
                 if (!txt.trim()) {
                     msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">Escribe tu respuesta.</div>';

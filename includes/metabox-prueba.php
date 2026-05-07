@@ -119,11 +119,13 @@ function gc_render_prueba_metabox($post) {
                     <option value="texto" <?php selected($tipo, 'texto'); ?>>Respuesta de texto</option>
                     <option value="cifrado_cesar" <?php selected($tipo, 'cifrado_cesar'); ?>>Descifrar mensaje (cifrado César) 🔐</option>
                     <option value="anagrama" <?php selected($tipo, 'anagrama'); ?>>Anagrama (reordenar letras) 🔀</option>
+                    <option value="ahorcado" <?php selected($tipo, 'ahorcado'); ?>>Ahorcado (adivinar palabra letra a letra) 🎯</option>
                 </select>
                 <p class="description" style="margin-top:6px;">
                     <strong>Multiple imágenes:</strong> el jugador elige la imagen correcta entre 4 opciones.
                     <strong>Cifrado César:</strong> muestra un mensaje cifrado y el jugador escribe la palabra original.
                     <strong>Anagrama:</strong> muestra letras desordenadas y el jugador escribe la palabra original.
+                    <strong>Ahorcado:</strong> el jugador descubre la palabra letra a letra; cada letra fallada gasta un intento.
                 </p>
             </td>
         </tr>
@@ -170,6 +172,25 @@ function gc_render_prueba_metabox($post) {
                     <label><?php echo $p_tipo === 'anagrama' ? 'Palabra a adivinar (las letras se mostrarán desordenadas):' : 'Respuesta correcta (texto):'; ?></label><br>
                     <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" placeholder="<?php echo $p_tipo === 'anagrama' ? 'Ej: GYMKANA' : ''; ?>" />
                 </p>
+            <?php elseif ($p_tipo === 'ahorcado'):
+                $pista_txt = $p['pista'] ?? '';
+                $categoria = $p['categoria'] ?? '';
+            ?>
+                <p>
+                    <label>Palabra a adivinar:</label><br>
+                    <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" placeholder="Ej: GYMKANA" />
+                    <span style="color:#64748b;font-size:12px;">Solo se mostrarán las letras (los espacios y signos se respetan). Las tildes se ignoran al comparar.</span>
+                </p>
+                <p>
+                    <label>Categoría (opcional):</label><br>
+                    <input type="text" name="gc_preguntas[<?php echo $qi; ?>][categoria]" value="<?php echo esc_attr($categoria); ?>" style="width:100%;" placeholder="Ej: Animal · Ciudad · Deporte…" />
+                    <span style="color:#64748b;font-size:12px;">Se muestra arriba de los huecos como pista visual de la categoría.</span>
+                </p>
+                <p>
+                    <label>Pista de texto (opcional):</label><br>
+                    <input type="text" name="gc_preguntas[<?php echo $qi; ?>][pista]" value="<?php echo esc_attr($pista_txt); ?>" style="width:100%;" placeholder="Ej: Es lo que estás jugando ahora mismo." />
+                </p>
+                <p style="color:#64748b;font-size:12px;">El número de letras erróneas máximo se controla con <strong>"Intentos máximos"</strong> arriba.</p>
             <?php elseif ($p_tipo === 'cifrado_cesar'): ?>
                 <p>
                     <label>Mensaje original (lo que el jugador debe descifrar):</label><br>
@@ -318,6 +339,15 @@ function gc_render_prueba_metabox($post) {
                 var ph = tipoNow === 'anagrama' ? 'Ej: GYMKANA' : '';
                 html += '<p><label>' + labelTxt + '</label><br>'
                     + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="' + ph + '" /></p>';
+            } else if (tipoNow === 'ahorcado') {
+                html += '<p><label>Palabra a adivinar:</label><br>'
+                    + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="Ej: GYMKANA" />'
+                    + '<span style="color:#64748b;font-size:12px;">Solo letras se mostrarán. Las tildes se ignoran al comparar.</span></p>'
+                    + '<p><label>Categoría (opcional):</label><br>'
+                    + '<input type="text" name="gc_preguntas[' + idx + '][categoria]" style="width:100%;" placeholder="Ej: Animal · Ciudad · Deporte…" /></p>'
+                    + '<p><label>Pista de texto (opcional):</label><br>'
+                    + '<input type="text" name="gc_preguntas[' + idx + '][pista]" style="width:100%;" placeholder="Ej: Es lo que estás jugando ahora mismo." /></p>'
+                    + '<p style="color:#64748b;font-size:12px;">El número de letras erróneas máximo se controla con <strong>"Intentos máximos"</strong> arriba.</p>';
             } else if (tipoNow === 'cifrado_cesar') {
                 html += '<p><label>Mensaje original (lo que el jugador debe descifrar):</label><br>'
                     + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="Ej: GYMKANA" /></p>'
@@ -477,7 +507,7 @@ add_action('save_post', function ($post_id) {
             $enunciado = sanitize_textarea_field($p['enunciado'] ?? '');
 
             $p_tipo = sanitize_text_field($p['tipo'] ?? 'multiple');
-            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama'], true) ) {
+            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama','ahorcado'], true) ) {
                 $p_tipo = 'multiple';
             }
             $correcta_idx = isset($p['correcta']) ? (int)$p['correcta'] : -1;
@@ -502,7 +532,7 @@ add_action('save_post', function ($post_id) {
                 'enunciado' => $enunciado,
             ];
 
-            if (in_array($p_tipo, ['texto', 'anagrama', 'cifrado_cesar'], true)) {
+            if (in_array($p_tipo, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado'], true)) {
                 $pregunta['respuesta_texto_correcta'] = sanitize_text_field($p['respuesta_texto_correcta'] ?? '');
                 $pregunta['opciones'] = [];
                 if ($p_tipo === 'cifrado_cesar') {
@@ -510,6 +540,10 @@ add_action('save_post', function ($post_id) {
                     if ($rot < 1) $rot = 1;
                     if ($rot > 25) $rot = 25;
                     $pregunta['rotacion'] = $rot;
+                }
+                if ($p_tipo === 'ahorcado') {
+                    $pregunta['pista']     = sanitize_text_field($p['pista'] ?? '');
+                    $pregunta['categoria'] = sanitize_text_field($p['categoria'] ?? '');
                 }
             } elseif ($p_tipo === 'multiple_imagen') {
                 $opciones = [];

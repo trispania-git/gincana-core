@@ -147,11 +147,117 @@ add_action('rest_api_init', function(){
         'first_try' => ! $had_fail
       ]);
 
+      // Limpiar user_meta de estado de quiz/ahorcado de esta prueba+estación
+      if ($prueba_id) {
+        delete_user_meta($user_id, 'gc_quiz_state_' . $prueba_id . '_' . $estacion_id . '_started');
+        delete_user_meta($user_id, 'gc_ahorcado_revealed_' . $prueba_id . '_' . $estacion_id);
+        delete_user_meta($user_id, 'gc_ahorcado_miss_' . $prueba_id . '_' . $estacion_id);
+      }
+
       return new WP_REST_Response([
         'ok'             => true,
         'already_passed' => false,
         'points_awarded' => (int) $points_to_add,
         'first_try'      => ! $had_fail
+      ], 200);
+    }
+  ]);
+
+  // =========================================================
+  // POST /wp-json/gincana/v1/quiz/ahorcado/letra
+  // Procesa una letra pulsada en el tipo 'ahorcado'.
+  // Devuelve si está en la palabra, las letras reveladas/erróneas
+  // y el estado del intento (intentos restantes, blocked, etc.).
+  // =========================================================
+  register_rest_route('gincana/v1','/quiz/ahorcado/letra',[
+    'methods'  => 'POST',
+    'permission_callback' => function(){ return is_user_logged_in(); },
+    'callback' => function(WP_REST_Request $req){
+      $user_id     = get_current_user_id();
+      $prueba_id   = (int) $req->get_param('prueba_id');
+      $estacion_id = (int) $req->get_param('estacion_id');
+      $q_index     = (int) $req->get_param('q_index');
+      $letra       = strtoupper((string) $req->get_param('letra'));
+      $letra       = remove_accents($letra);
+
+      if (!$user_id || !$prueba_id || !$estacion_id || $letra === '') {
+        return new WP_REST_Response(['ok'=>false,'error'=>'missing_params'], 400);
+      }
+
+      // Estado: ¿ya bloqueado?
+      $state_pre = gc_quiz_user_state($user_id, $prueba_id, $estacion_id);
+      if ($state_pre['blocked']) {
+        return new WP_REST_Response(['ok'=>false,'blocked'=>true,'blocked_reason'=>$state_pre['blocked_reason'],'state'=>$state_pre], 200);
+      }
+
+      // Cargar la palabra
+      $pregs = get_post_meta($prueba_id, 'gc_preguntas', true);
+      if (!is_array($pregs) || !isset($pregs[$q_index])) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'invalid_q_index'], 400);
+      }
+      $pregunta = $pregs[$q_index];
+      $palabra  = mb_strtoupper((string) ($pregunta['respuesta_texto_correcta'] ?? ''));
+      $palabra_norm = remove_accents($palabra);
+      if ($palabra === '') return new WP_REST_Response(['ok'=>false,'error'=>'no_word'], 400);
+
+      $reveal_key = 'gc_ahorcado_revealed_' . $prueba_id . '_' . $estacion_id;
+      $miss_key   = 'gc_ahorcado_miss_'     . $prueba_id . '_' . $estacion_id;
+      $revealed = (array) get_user_meta($user_id, $reveal_key, true);
+      $missed   = (array) get_user_meta($user_id, $miss_key, true);
+
+      // ¿La letra ya se había usado?
+      if (in_array($letra, $revealed, true) || in_array($letra, $missed, true)) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'letter_already_used','state'=>$state_pre], 200);
+      }
+
+      // ¿Está la letra en la palabra (comparación sin tildes)?
+      $en_palabra = mb_strpos($palabra_norm, $letra) !== false;
+
+      $attempts_table = $GLOBALS['wpdb']->prefix . 'gincana_attempts';
+      $escenario_id   = (int) get_post_meta($estacion_id, 'gc_escenario_ref', true);
+
+      if ($en_palabra) {
+        $revealed[] = $letra;
+        update_user_meta($user_id, $reveal_key, array_values(array_unique($revealed)));
+      } else {
+        $missed[] = $letra;
+        update_user_meta($user_id, $miss_key, array_values(array_unique($missed)));
+        // Registrar fail en attempts (cuenta para max_attempts)
+        $GLOBALS['wpdb']->insert($attempts_table, [
+          'user_id'      => $user_id,
+          'prueba_id'    => $prueba_id,
+          'escenario_id' => $escenario_id,
+          'estacion_id'  => $estacion_id,
+          'result'       => 'fail',
+          'time_ms'      => 0,
+          'payload_json' => wp_json_encode(['letra'=>$letra,'modo'=>'ahorcado']),
+          'ip_hash'      => null,
+          'ua_hash'      => null,
+        ], ['%d','%d','%d','%d','%s','%d','%s','%s','%s']);
+      }
+
+      // ¿Palabra completa descubierta?
+      $all_letters = [];
+      $len = mb_strlen($palabra_norm);
+      for ($i = 0; $i < $len; $i++) {
+        $ch = mb_substr($palabra_norm, $i, 1);
+        if (preg_match('/\p{L}/u', $ch)) $all_letters[$ch] = true;
+      }
+      $palabra_completa = true;
+      foreach (array_keys($all_letters) as $L) {
+        if (!in_array($L, $revealed, true)) { $palabra_completa = false; break; }
+      }
+
+      $state_post = gc_quiz_user_state($user_id, $prueba_id, $estacion_id);
+
+      return new WP_REST_Response([
+        'ok'              => true,
+        'en_palabra'      => $en_palabra,
+        'letra'           => $letra,
+        'revealed'        => array_values(array_unique($revealed)),
+        'missed'          => array_values(array_unique($missed)),
+        'palabra_completa'=> $palabra_completa,
+        'state'           => $state_post,
       ], 200);
     }
   ]);
@@ -240,7 +346,7 @@ add_action('rest_api_init', function(){
         $ans  = array_key_exists($i, $answers_to_check) ? $answers_to_check[$i] : null;
 
         // Tipos de respuesta libre (string normalizado)
-        if ( in_array($tipo, ['texto', 'cifrado_cesar', 'anagrama'], true) ) {
+        if ( in_array($tipo, ['texto', 'cifrado_cesar', 'anagrama', 'ahorcado'], true) ) {
           $correcta = $norm($p['respuesta_texto_correcta'] ?? '');
           $user     = $norm($ans);
           if ($correcta === '' || $user === '' || $user !== $correcta) { $all_ok = false; break; }
