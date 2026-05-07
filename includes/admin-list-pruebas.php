@@ -14,34 +14,43 @@ if ( ! defined('ABSPATH') ) exit;
 // ====== 0) Acción: limpiar pruebas vacías (sin preguntas, sin estación, sin uso como pool) ======
 
 /**
- * Considera una prueba "vacía" si:
- *  - No tiene preguntas configuradas (gc_preguntas vacío o sin enunciados).
- *  - No está enlazada a ninguna estación (gc_estacion_ref vacío).
- *  - Ningún escenario la usa como pool (gc_pool_prueba_ref).
+ * Considera una prueba "vacía" si NO cumple ninguna de estas condiciones:
+ *  - Tiene al menos una pregunta con contenido (enunciado, respuesta de texto,
+ *    o alguna opción con texto/imagen).
+ *  - Está enlazada a una estación.
+ *  - Es usada como pool en algún escenario.
  */
 function gc_prueba_esta_vacia($prueba_id) {
     $prueba_id = (int) $prueba_id;
     if ($prueba_id <= 0) return false;
     if (get_post_type($prueba_id) !== 'prueba') return false;
 
-    // ¿Tiene enunciados?
+    // ¿Tiene alguna pregunta con contenido real?
     $preguntas = get_post_meta($prueba_id, 'gc_preguntas', true);
     if (is_array($preguntas)) {
         foreach ($preguntas as $p) {
-            if (is_array($p) && !empty(trim((string) ($p['enunciado'] ?? '')))) {
-                return false; // tiene al menos una pregunta con texto
+            if (!is_array($p)) continue;
+            // Enunciado
+            if (!empty(trim((string) ($p['enunciado'] ?? '')))) return false;
+            // Respuesta de texto (texto / anagrama / cifrado_cesar)
+            if (!empty(trim((string) ($p['respuesta_texto_correcta'] ?? '')))) return false;
+            // Opciones (multiple / multiple_imagen / vf): texto o imagen
+            $ops = $p['opciones'] ?? [];
+            if (is_array($ops)) {
+                foreach ($ops as $opt) {
+                    if (!is_array($opt)) continue;
+                    if (!empty(trim((string) ($opt['texto'] ?? '')))) return false;
+                    if (!empty($opt['imagen'] ?? '')) return false;
+                }
             }
         }
     }
 
-    // ¿Estación enlazada?
+    // ¿Estación enlazada (en cualquiera de los dos sentidos)?
     $est = (int) get_post_meta($prueba_id, 'gc_estacion_ref', true);
     if ($est > 0 && get_post_status($est)) {
-        // ¿Esa estación realmente apunta de vuelta a esta prueba?
-        $back = (int) get_post_meta($est, 'gc_prueba_ref', true);
-        if ($back === $prueba_id) return false;
+        return false;
     }
-    // O al revés (estación con gc_prueba_ref hacia esta prueba)
     $back_est = get_posts([
         'post_type'      => 'estacion',
         'post_status'    => 'any',
@@ -110,6 +119,36 @@ add_action('admin_notices', function () {
     } else {
         echo '<div class="notice notice-info is-dismissible"><p>No había pruebas vacías que limpiar.</p></div>';
     }
+});
+
+/**
+ * Acción de restauración: una prueba que esté en papelera por el auto-cleanup
+ * pero que en realidad tiene contenido (con la lógica actualizada de
+ * gc_prueba_esta_vacia) se puede restaurar de un click desde la papelera.
+ */
+add_action('admin_post_gc_restore_prueba', function () {
+    if (!current_user_can('edit_posts')) wp_die('No autorizado');
+    check_admin_referer('gc_restore_prueba');
+    $pid = isset($_REQUEST['post']) ? (int) $_REQUEST['post'] : 0;
+    if ($pid > 0 && get_post_type($pid) === 'prueba' && get_post_status($pid) === 'trash') {
+        wp_untrash_post($pid);
+    }
+    wp_safe_redirect( get_edit_post_link($pid, 'redirect') ?: admin_url('edit.php?post_type=prueba') );
+    exit;
+});
+
+/**
+ * Aviso en la pantalla de edición cuando intentas abrir una prueba que está
+ * en la papelera. Ofrece un botón para restaurarla.
+ */
+add_action('admin_notices', function () {
+    $screen = function_exists('get_current_screen') ? get_current_screen() : null;
+    if (!$screen || $screen->base !== 'post' || $screen->post_type !== 'prueba') return;
+    $post_id = isset($_GET['post']) ? (int) $_GET['post'] : 0;
+    if ($post_id <= 0) return;
+    if (get_post_status($post_id) !== 'trash') return;
+    $url = wp_nonce_url(admin_url('admin-post.php?action=gc_restore_prueba&post=' . $post_id), 'gc_restore_prueba');
+    echo '<div class="notice notice-warning"><p>Esta prueba está en la papelera. <a class="button button-primary" href="' . esc_url($url) . '" style="margin-left:8px;">Restaurar y editar</a></p></div>';
 });
 
 // Botón en la cabecera del listado (junto a "Añadir nueva") — vía POST con nonce fresco
