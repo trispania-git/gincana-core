@@ -802,11 +802,19 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
         if ($test_id > 0) {
             $preguntas = get_post_meta($test_id, 'gc_preguntas', true);
             if (is_array($preguntas) && !empty($preguntas)) {
-                // Filtrar solo preguntas válidas (con enunciado)
+                // Una pregunta es válida si tiene enunciado, respuesta de texto
+                // (texto/anagrama/cifrado), o al menos una opción con texto/imagen.
                 $valid = [];
                 foreach ($preguntas as $i => $p) {
-                    if (is_array($p) && !empty($p['enunciado'])) {
-                        $valid[$i] = $p;
+                    if (!is_array($p)) continue;
+                    if (!empty($p['enunciado'])) { $valid[$i] = $p; continue; }
+                    if (!empty($p['respuesta_texto_correcta'])) { $valid[$i] = $p; continue; }
+                    if (!empty($p['opciones']) && is_array($p['opciones'])) {
+                        foreach ($p['opciones'] as $opt) {
+                            if (is_array($opt) && (!empty($opt['texto']) || !empty($opt['imagen']))) {
+                                $valid[$i] = $p; break;
+                            }
+                        }
                     }
                 }
                 if (!empty($valid)) {
@@ -849,6 +857,30 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
     }
 
     $nonce = function_exists('wp_create_nonce') ? wp_create_nonce('wp_rest') : '';
+
+    // Estado server-side del intento del usuario (intentos previos, tiempo, etc.)
+    $quiz_state = function_exists('gc_quiz_user_state')
+        ? gc_quiz_user_state($user_id, $test_id, $station_id)
+        : ['started_at'=>0,'failed_attempts'=>0,'max_attempts'=>2,'attempts_left'=>2,'time_max_s'=>0,'time_left_s'=>-1,'blocked'=>false,'blocked_reason'=>'','passed'=>false];
+
+    // Si está bloqueado, mostramos pantalla de bloqueo y salimos
+    if ($quiz_state['blocked']) {
+        $escenario_url_b = get_permalink($escenario_id) ?: home_url('/');
+        $reason_msg = $quiz_state['blocked_reason'] === 'time'
+            ? '⌛ Se acabó el tiempo para resolver este desafío.'
+            : '❌ Has agotado los ' . (int) $quiz_state['max_attempts'] . ' intentos disponibles.';
+        ob_start();
+        ?>
+        <div style="padding:24px 20px;border-radius:14px;background:#fef2f2;border:2px solid #dc2626;text-align:center;">
+            <div style="font-size:48px;margin-bottom:8px;"><?php echo $quiz_state['blocked_reason'] === 'time' ? '⏰' : '🚫'; ?></div>
+            <h2 style="margin:0 0 8px;color:#991b1b;">Desafío no superado</h2>
+            <p style="margin:0 0 16px;font-size:15px;color:#7f1d1d;"><?php echo esc_html($reason_msg); ?></p>
+            <p style="margin:0 0 16px;font-size:14px;color:#7f1d1d;">Intentos usados: <strong><?php echo (int) $quiz_state['failed_attempts']; ?> / <?php echo (int) $quiz_state['max_attempts']; ?></strong></p>
+            <a href="<?php echo esc_url($escenario_url_b); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
 
     ob_start();
     ?>
@@ -919,10 +951,11 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
             };
         ?>
         <?php
-            $intentos_max  = (int) get_post_meta($test_id, 'gc_intentos_max', true);
-            if ($intentos_max < 1) $intentos_max = 2;
-            $tiempo_max_s  = (int) get_post_meta($test_id, 'gc_tiempo_max_s', true);
-            if ($tiempo_max_s < 0) $tiempo_max_s = 0;
+            $intentos_max     = (int) $quiz_state['max_attempts'];
+            $intentos_left    = (int) $quiz_state['attempts_left'];
+            $tiempo_max_s     = (int) $quiz_state['time_max_s'];
+            $tiempo_left_init = $quiz_state['time_left_s']; // -1 si no aplica
+            $started_at_srv   = (int) $quiz_state['started_at'];
         ?>
         <div id="gc-quiz-panel" style="display:none;padding:20px;border:1px solid #dcdcde;border-radius:14px;background:#fff;">
             <h2 style="margin-top:0;">Pregunta del <?php echo esc_html($label); ?></h2>
@@ -931,19 +964,28 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
             <div id="gc-quiz-meta" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:0 0 14px;padding:10px 14px;border-radius:10px;background:#f1f5f9;border:1px solid #e2e8f0;">
                 <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#334155;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                    <span><strong>Intentos:</strong> <span id="gc-intentos-restantes"><?php echo (int) $intentos_max; ?></span> / <?php echo (int) $intentos_max; ?></span>
+                    <span><strong>Intentos:</strong> <span id="gc-intentos-restantes"><?php echo (int) $intentos_left; ?></span> / <?php echo (int) $intentos_max; ?></span>
                 </div>
                 <?php if ($tiempo_max_s > 0): ?>
+                <?php
+                    $tl_seconds = $tiempo_left_init >= 0 ? (int) $tiempo_left_init : (int) $tiempo_max_s;
+                ?>
                 <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#334155;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <span><strong>Tiempo:</strong> <span id="gc-tiempo-restante" data-seconds="<?php echo (int) $tiempo_max_s; ?>"><?php echo str_pad((string) intdiv($tiempo_max_s, 60), 2, '0', STR_PAD_LEFT) . ':' . str_pad((string) ($tiempo_max_s % 60), 2, '0', STR_PAD_LEFT); ?></span></span>
+                    <span><strong>Tiempo:</strong> <span id="gc-tiempo-restante" data-seconds="<?php echo (int) $tl_seconds; ?>"><?php echo str_pad((string) intdiv($tl_seconds, 60), 2, '0', STR_PAD_LEFT) . ':' . str_pad((string) ($tl_seconds % 60), 2, '0', STR_PAD_LEFT); ?></span></span>
                 </div>
                 <?php endif; ?>
             </div>
 
             <p style="font-size:18px;line-height:1.5;"><strong><?php echo esc_html($enunciado); ?></strong></p>
 
-            <form id="gc-adult-station-form" data-mode="<?php echo esc_attr($p_tipo); ?>" data-intentos-max="<?php echo (int) $intentos_max; ?>" data-tiempo-max="<?php echo (int) $tiempo_max_s; ?>">
+            <form id="gc-adult-station-form"
+                  data-mode="<?php echo esc_attr($p_tipo); ?>"
+                  data-intentos-max="<?php echo (int) $intentos_max; ?>"
+                  data-intentos-left="<?php echo (int) $intentos_left; ?>"
+                  data-tiempo-max="<?php echo (int) $tiempo_max_s; ?>"
+                  data-tiempo-left="<?php echo (int) ($tiempo_left_init >= 0 ? $tiempo_left_init : $tiempo_max_s); ?>"
+                  data-started-at="<?php echo (int) $started_at_srv; ?>">
 
                 <?php if ($p_tipo === 'multiple_imagen'): ?>
                     <div class="gc-img-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:14px;">
@@ -1033,25 +1075,46 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
         const panel = wrap.querySelector('#gc-quiz-panel');
         const startBtn = wrap.querySelector('#gc-start-challenge');
 
-        // Revelar quiz al pulsar
+        // === Contadores de intentos y tiempo (server-side) ===
+        const formForMeta  = wrap.querySelector('#gc-adult-station-form');
+        const intentosMax  = formForMeta ? parseInt(formForMeta.dataset.intentosMax  || '2', 10) : 2;
+        let   intentosRestantes = formForMeta ? parseInt(formForMeta.dataset.intentosLeft || String(intentosMax), 10) : intentosMax;
+        const tiempoMaxS   = formForMeta ? parseInt(formForMeta.dataset.tiempoMax   || '0', 10) : 0;
+        let   tiempoRestante = formForMeta ? parseInt(formForMeta.dataset.tiempoLeft || '0', 10) : 0;
+        const startedAtSrv = formForMeta ? parseInt(formForMeta.dataset.startedAt || '0', 10) : 0;
+        const intentosLabel = wrap.querySelector('#gc-intentos-restantes');
+        const tiempoLabel   = wrap.querySelector('#gc-tiempo-restante');
+        let countdownTimer = null;
+
+        // Revelar quiz al pulsar — también notifica al server el inicio del intento
         if (startBtn && cta && panel) {
             startBtn.addEventListener('click', function(){
                 cta.style.display = 'none';
                 panel.style.display = 'block';
                 panel.scrollIntoView({behavior:'smooth', block:'center'});
                 startedAt = Date.now();
-                startCountdown();
+
+                // Si ya había un started_at en server, no volvemos a llamar /quiz/start
+                if (!startedAtSrv) {
+                    fetch('/wp-json/gincana/v1/quiz/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce },
+                        credentials: 'same-origin',
+                        body: JSON.stringify({ prueba_id: pruebaId, estacion_id: stationId })
+                    }).then(function(r){ return r.json(); }).then(function(data){
+                        if (data && data.state && data.state.time_left_s >= 0) {
+                            tiempoRestante = data.state.time_left_s;
+                        }
+                        startCountdown();
+                    }).catch(function(){
+                        // Aun si falla la llamada, arrancamos el countdown local
+                        startCountdown();
+                    });
+                } else {
+                    startCountdown();
+                }
             });
         }
-
-        // === Contadores de intentos y tiempo ===
-        const formForMeta = wrap.querySelector('#gc-adult-station-form');
-        const intentosMax = formForMeta ? parseInt(formForMeta.dataset.intentosMax || '2', 10) : 2;
-        const tiempoMaxS  = formForMeta ? parseInt(formForMeta.dataset.tiempoMax  || '0', 10) : 0;
-        let   intentosRestantes = intentosMax;
-        const intentosLabel = wrap.querySelector('#gc-intentos-restantes');
-        const tiempoLabel   = wrap.querySelector('#gc-tiempo-restante');
-        let countdownTimer = null;
 
         function pad2(n){ n = String(n); return n.length < 2 ? '0' + n : n; }
         function fmtTime(s){ if (s < 0) s = 0; return pad2(Math.floor(s/60)) + ':' + pad2(s%60); }
@@ -1073,11 +1136,17 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
 
         function startCountdown() {
             if (tiempoMaxS <= 0 || !tiempoLabel) return;
-            let restante = tiempoMaxS;
-            tiempoLabel.textContent = fmtTime(restante);
+            // Si ya pasó el tiempo, bloquear directamente
+            if (tiempoRestante <= 0) {
+                tiempoLabel.textContent = '00:00';
+                tiempoLabel.style.color = '#dc2626';
+                lockForm('⌛ Se acabó el tiempo. Esta pregunta ya no se puede responder.');
+                return;
+            }
+            tiempoLabel.textContent = fmtTime(tiempoRestante);
             countdownTimer = setInterval(function(){
-                restante -= 1;
-                if (restante <= 0) {
+                tiempoRestante -= 1;
+                if (tiempoRestante <= 0) {
                     tiempoLabel.textContent = '00:00';
                     tiempoLabel.style.color = '#dc2626';
                     clearInterval(countdownTimer);
@@ -1085,8 +1154,8 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
                     lockForm('⌛ Se acabó el tiempo. Esta pregunta ya no se puede responder.');
                     return;
                 }
-                tiempoLabel.textContent = fmtTime(restante);
-                if (restante <= 10) {
+                tiempoLabel.textContent = fmtTime(tiempoRestante);
+                if (tiempoRestante <= 10) {
                     tiempoLabel.style.color = '#dc2626';
                     tiempoLabel.style.fontWeight = '700';
                 }
@@ -1155,8 +1224,24 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
 
                 const data1 = await res1.json();
 
+                // Si el server devolvió 'blocked', recargamos para mostrar la pantalla de bloqueo
+                if (data1 && data1.blocked) {
+                    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+                    var reasonMsg = data1.blocked_reason === 'time'
+                        ? '⌛ Se acabó el tiempo. Esta pregunta ya no se puede responder.'
+                        : '🚫 Has agotado los intentos disponibles.';
+                    lockForm(reasonMsg);
+                    setTimeout(function(){ location.reload(); }, 1500);
+                    return;
+                }
+
                 if (!data1 || !data1.ok) {
-                    intentosRestantes -= 1;
+                    // Sincronizar contador de intentos con server (fuente única de verdad)
+                    if (data1 && data1.state && typeof data1.state.attempts_left === 'number') {
+                        intentosRestantes = data1.state.attempts_left;
+                    } else {
+                        intentosRestantes -= 1;
+                    }
                     if (intentosLabel) {
                         intentosLabel.textContent = String(Math.max(0, intentosRestantes));
                         if (intentosRestantes <= 1) {
@@ -1167,6 +1252,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
                     if (intentosRestantes <= 0) {
                         if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
                         lockForm('❌ Respuesta incorrecta. Sin intentos disponibles.');
+                        setTimeout(function(){ location.reload(); }, 1500);
                     } else {
                         msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">❌ Respuesta incorrecta. Te quedan <strong>' + intentosRestantes + '</strong> intento' + (intentosRestantes === 1 ? '' : 's') + '.</div>';
                     }

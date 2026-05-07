@@ -1,6 +1,76 @@
 <?php
 if ( ! defined('ABSPATH') ) exit;
 
+/**
+ * Devuelve el estado actual del intento del usuario en una prueba/estación:
+ *   - started_at (timestamp en segundos, 0 si aún no ha arrancado)
+ *   - failed_attempts (nº de intentos fallidos previos)
+ *   - max_attempts (configurado en la prueba)
+ *   - time_max_s (configurado en la prueba)
+ *   - time_left_s (segundos restantes; -1 si no aplica)
+ *   - blocked (bool: true si no puede seguir intentando por tiempo o intentos)
+ *   - blocked_reason ('time' | 'attempts' | '')
+ *   - passed (bool: ya superó la estación)
+ */
+function gc_quiz_user_state($user_id, $prueba_id, $estacion_id) {
+    global $wpdb;
+    $user_id     = (int) $user_id;
+    $prueba_id   = (int) $prueba_id;
+    $estacion_id = (int) $estacion_id;
+
+    $max_attempts = (int) get_post_meta($prueba_id, 'gc_intentos_max', true);
+    if ($max_attempts < 1) $max_attempts = 2;
+    $time_max_s   = (int) get_post_meta($prueba_id, 'gc_tiempo_max_s', true);
+    if ($time_max_s < 0) $time_max_s = 0;
+
+    $state_key = 'gc_quiz_state_' . $prueba_id . '_' . $estacion_id;
+    $started_at = (int) get_user_meta($user_id, $state_key . '_started', true);
+
+    $attempts_table = $wpdb->prefix . 'gincana_attempts';
+    $failed = (int) $wpdb->get_var( $wpdb->prepare(
+        "SELECT COUNT(*) FROM $attempts_table WHERE user_id=%d AND prueba_id=%d AND estacion_id=%d AND result='fail'",
+        $user_id, $prueba_id, $estacion_id
+    ));
+
+    $progress_table = $wpdb->prefix . 'gincana_user_progress';
+    $passed = false;
+    if ($estacion_id > 0) {
+        $row = $wpdb->get_var( $wpdb->prepare(
+            "SELECT status FROM $progress_table WHERE user_id=%d AND estacion_id=%d",
+            $user_id, $estacion_id
+        ));
+        $passed = ($row === 'passed');
+    }
+
+    $time_left = -1;
+    if ($time_max_s > 0 && $started_at > 0) {
+        $elapsed = time() - $started_at;
+        $time_left = max(0, $time_max_s - $elapsed);
+    } elseif ($time_max_s > 0) {
+        $time_left = $time_max_s;
+    }
+
+    $blocked = false;
+    $blocked_reason = '';
+    if (!$passed) {
+        if ($failed >= $max_attempts) { $blocked = true; $blocked_reason = 'attempts'; }
+        elseif ($time_max_s > 0 && $started_at > 0 && $time_left <= 0) { $blocked = true; $blocked_reason = 'time'; }
+    }
+
+    return [
+        'started_at'      => $started_at,
+        'failed_attempts' => $failed,
+        'max_attempts'    => $max_attempts,
+        'attempts_left'   => max(0, $max_attempts - $failed),
+        'time_max_s'      => $time_max_s,
+        'time_left_s'     => $time_left,
+        'blocked'         => $blocked,
+        'blocked_reason'  => $blocked_reason,
+        'passed'          => $passed,
+        'state_key'       => $state_key,
+    ];
+}
+
 add_action('rest_api_init', function(){
 
   // =========================================================
@@ -87,6 +157,31 @@ add_action('rest_api_init', function(){
   ]);
 
   // =========================================================
+  // POST /wp-json/gincana/v1/quiz/start
+  // Marca el inicio del intento del usuario en una prueba/estación
+  // (registra started_at en user_meta si no existía aún).
+  // =========================================================
+  register_rest_route('gincana/v1','/quiz/start',[
+    'methods'  => 'POST',
+    'permission_callback' => function(){ return is_user_logged_in(); },
+    'callback' => function(WP_REST_Request $req){
+      $user_id     = get_current_user_id();
+      $prueba_id   = (int) $req->get_param('prueba_id');
+      $estacion_id = (int) $req->get_param('estacion_id');
+      if (!$user_id || !$prueba_id || !$estacion_id) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'missing_params'], 400);
+      }
+      $state = gc_quiz_user_state($user_id, $prueba_id, $estacion_id);
+      if ($state['started_at'] === 0 && !$state['passed']) {
+        update_user_meta($user_id, $state['state_key'] . '_started', time());
+        // Recalcular para devolver el estado real
+        $state = gc_quiz_user_state($user_id, $prueba_id, $estacion_id);
+      }
+      return new WP_REST_Response(['ok'=>true, 'state'=>$state], 200);
+    }
+  ]);
+
+  // =========================================================
   // POST /wp-json/gincana/v1/quiz/submit
   // Valida respuestas del quiz contra gc_preguntas + registra intento
   // =========================================================
@@ -163,8 +258,20 @@ add_action('rest_api_init', function(){
       $estacion_id_from_prueba    = (int) get_post_meta($prueba_id, 'gc_estacion_ref', true);
       $escenario_id_from_estacion = $estacion_id_from_prueba ? (int) get_post_meta($estacion_id_from_prueba, 'gc_escenario_ref', true) : 0;
 
+      // Validar estado server-side: tiempo agotado o intentos agotados → fail forzado
+      $current_uid = (int) get_current_user_id();
+      $state_pre = gc_quiz_user_state($current_uid, $prueba_id, $estacion_id_from_prueba);
+      if ($state_pre['blocked']) {
+        return new WP_REST_Response([
+          'ok'             => false,
+          'blocked'        => true,
+          'blocked_reason' => $state_pre['blocked_reason'], // 'time' | 'attempts'
+          'state'          => $state_pre,
+        ], 200);
+      }
+
       $wpdb->insert($attempts_table, [
-        'user_id'      => (int) get_current_user_id(),
+        'user_id'      => $current_uid,
         'prueba_id'    => (int) $prueba_id,
         'escenario_id' => (int) $escenario_id_from_estacion,
         'estacion_id'  => (int) $estacion_id_from_prueba,
@@ -175,7 +282,12 @@ add_action('rest_api_init', function(){
         'ua_hash'      => null,
       ], ['%d','%d','%d','%d','%s','%d','%s','%s','%s']);
 
-      return new WP_REST_Response(['ok'=>$all_ok], 200);
+      // Estado tras este intento (para que el front actualice contadores)
+      $state_post = gc_quiz_user_state($current_uid, $prueba_id, $estacion_id_from_prueba);
+      return new WP_REST_Response([
+        'ok'    => $all_ok,
+        'state' => $state_post,
+      ], 200);
     }
   ]);
 
