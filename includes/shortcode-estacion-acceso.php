@@ -907,10 +907,9 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
             <p style="margin:0 0 16px;font-size:14px;color:#7f1d1d;">Intentos usados: <strong><?php echo (int) $quiz_state['failed_attempts']; ?> / <?php echo (int) $quiz_state['max_attempts']; ?></strong></p>
             <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
                 <a href="<?php echo esc_url($escenario_url_b); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>
-                <?php if ($is_admin): ?>
-                <a href="<?php echo esc_url($reset_url); ?>" style="display:inline-block;padding:12px 24px;border:2px solid #dc2626;border-radius:10px;background:#fff;color:#dc2626;text-decoration:none;font-weight:600;" title="Solo visible para administradores">🔄 Reiniciar (admin)</a>
-                <?php endif; ?>
+                <a href="<?php echo esc_url($reset_url); ?>" style="display:inline-block;padding:12px 24px;border:2px solid #dc2626;border-radius:10px;background:#fff;color:#dc2626;text-decoration:none;font-weight:600;">🔄 Reiniciar mi intento</a>
             </div>
+            <p style="margin:14px 0 0;font-size:12px;color:#94a3b8;">Si has acabado todos tus intentos puedes reiniciar para volver a probar este desafío.</p>
         </div>
         <?php
         return ob_get_clean();
@@ -918,6 +917,17 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
 
     ob_start();
     ?>
+    <!-- gc_quiz_render v<?php echo defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?'; ?>
+         tipo=<?php echo esc_html($tipo_preg); ?>
+         user=<?php echo (int) $user_id; ?>
+         prueba=<?php echo (int) $test_id; ?>
+         estacion=<?php echo (int) $station_id; ?>
+         started_at=<?php echo (int) $quiz_state['started_at']; ?>
+         failed=<?php echo (int) $quiz_state['failed_attempts']; ?>
+         max=<?php echo (int) $quiz_state['max_attempts']; ?>
+         time_max=<?php echo (int) $quiz_state['time_max_s']; ?>
+         time_left=<?php echo (int) $quiz_state['time_left_s']; ?>
+    -->
     <div class="gc-adult-station"
          data-station-id="<?php echo esc_attr($station_id); ?>"
          data-escenario-id="<?php echo esc_attr($escenario_id); ?>"
