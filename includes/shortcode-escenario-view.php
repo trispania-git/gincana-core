@@ -66,6 +66,7 @@ add_shortcode('gincana_escenario_contenido', function($atts){
       </div>
     <?php endif; ?>
 
+    <?php if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id); ?>
   </div>
   <?php
   return ob_get_clean();

@@ -338,7 +338,7 @@ function gc_render_footer_logos($escenario_id) {
 
     ob_start();
     ?>
-    <div class="gc-footer-logos" style="margin:24px auto 12px;padding:14px 12px 4px;max-width:760px;width:95%;display:flex;align-items:center;gap:16px;justify-content:<?php echo esc_attr($justify); ?>;flex-wrap:wrap;border-top:1px solid #e2e8f0;">
+    <div class="gc-footer-logos" style="margin:24px auto 16px;padding:14px 12px 10px;max-width:760px;width:95%;display:flex;align-items:center;gap:16px;justify-content:<?php echo esc_attr($justify); ?>;flex-wrap:wrap;border-top:1px solid #e2e8f0;">
         <?php foreach ($logos as $url): ?>
             <img src="<?php echo esc_url($url); ?>" alt="" style="max-width:90px;width:90px;height:auto;object-fit:contain;display:block;" />
         <?php endforeach; ?>
@@ -348,28 +348,44 @@ function gc_render_footer_logos($escenario_id) {
 }
 
 /**
- * Fallback: si la página actual es un escenario o estación pero NO se ha
- * renderizado el bloque de logos durante el ciclo (porque la plantilla de
- * Divi no usa los shortcodes principales), lo imprime al final del body.
+ * Devuelve el escenario_id de la página actual (para hooks fallback).
+ */
+function gc_pagina_actual_escenario_id() {
+    if (is_singular('escenario')) {
+        return (int) get_queried_object_id();
+    }
+    if (is_singular('estacion')) {
+        $est_id = (int) get_queried_object_id();
+        return $est_id ? (int) get_post_meta($est_id, 'gc_escenario_ref', true) : 0;
+    }
+    return 0;
+}
+
+/**
+ * Fallback 1: filter the_content. Si Divi usa the_content para renderizar
+ * el cuerpo del CPT, los logos se inyectan al final del contenido del post.
+ */
+add_filter('the_content', function ($content) {
+    if (is_admin() || !in_the_loop() || !is_main_query()) return $content;
+    if (!function_exists('gc_render_footer_logos')) return $content;
+    $escenario_id = gc_pagina_actual_escenario_id();
+    if ($escenario_id <= 0) return $content;
+    $html = gc_render_footer_logos($escenario_id);
+    if ($html === '') return $content; // ya se imprimió o no hay logos
+    return $content . $html;
+}, 999);
+
+/**
+ * Fallback 2: wp_footer. Si ni los shortcodes ni the_content disparan el
+ * render, lo metemos al final del body como último recurso.
  */
 add_action('wp_footer', function () {
     if (is_admin()) return;
     if (!function_exists('gc_render_footer_logos')) return;
-
-    $escenario_id = 0;
-    if (is_singular('escenario')) {
-        $escenario_id = (int) get_queried_object_id();
-    } elseif (is_singular('estacion')) {
-        $est_id = (int) get_queried_object_id();
-        if ($est_id) $escenario_id = (int) get_post_meta($est_id, 'gc_escenario_ref', true);
-    }
+    $escenario_id = gc_pagina_actual_escenario_id();
     if ($escenario_id <= 0) return;
-
     $html = gc_render_footer_logos($escenario_id);
     if ($html === '') return; // ya se imprimió o no hay logos
-
-    // Si llegamos aquí significa que ningún shortcode renderizó los logos
-    // durante el ciclo; los imprimimos al final del body.
     echo $html;
 });
 
