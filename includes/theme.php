@@ -388,21 +388,36 @@ function gc_pagina_actual_escenario_id() {
 }
 
 /**
- * Fallback: wp_footer. Si ningún shortcode del frontend renderizó los logos
- * (porque la plantilla de Divi del CPT no usa shortcodes de gincana), los
- * imprimimos al final del body. El guard estático evita duplicados.
+ * wp_footer: imprime el bloque de logos al cerrar el body. Es el único
+ * punto de render desde v1.0.26 para evitar que aparezcan en medio de la
+ * página por orden de shortcodes.
  *
- * Nota: NO usamos un filter sobre the_content porque éste se ejecuta antes
- * que los shortcodes laterales de la plantilla, lo que dejaba los logos
- * apareciendo en mitad de la página, antes de la lista de estaciones.
+ * Imprime también un comentario HTML diagnóstico SIEMPRE (mientras estemos
+ * en frontend) con la versión activa, el escenario_id detectado y cuántos
+ * logos hay configurados. Útil para depurar por qué no salen.
  */
 add_action('wp_footer', function () {
     if (is_admin()) return;
     if (!function_exists('gc_render_footer_logos')) return;
     $escenario_id = gc_pagina_actual_escenario_id();
-    if ($escenario_id <= 0) return;
+    $logo_count = 0;
+    if ($escenario_id > 0) {
+        for ($i = 1; $i <= 3; $i++) {
+            if (get_post_meta($escenario_id, 'gc_logo_' . $i, true)) $logo_count++;
+        }
+    }
+    echo "\n<!-- gc_footer_logos v" . (defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?')
+        . " escenario_id={$escenario_id}"
+        . " logos_configurados={$logo_count}"
+        . " is_singular_escenario=" . (is_singular('escenario') ? '1' : '0')
+        . " is_singular_estacion=" . (is_singular('estacion') ? '1' : '0')
+        . " gc_subpage=" . (get_query_var('gc_subpage') ?: '-')
+        . " gc_station=" . (isset($_GET['gc_station']) ? (int)$_GET['gc_station'] : '-')
+        . " -->\n";
+
+    if ($escenario_id <= 0 || $logo_count === 0) return;
     $html = gc_render_footer_logos($escenario_id);
-    if ($html === '') return; // ya se imprimió o no hay logos
+    if ($html === '') return; // ya se imprimió antes
     echo $html;
 });
 
