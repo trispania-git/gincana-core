@@ -132,6 +132,8 @@ function gc_shortcode_estacion_acceso() {
         }
     }
 
+    if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id);
+
     echo '</div>';
 
     // Itinerario de estaciones (círculos) fijo al pie
@@ -1661,6 +1663,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         }
         echo '<a href="' . esc_url($escenario_url) . '" style="display:inline-block;margin-top:8px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
         echo '</div>';
+        if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id);
         echo '</div>';
         return ob_get_clean();
     }
@@ -1702,6 +1705,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         }
     }
 
+    if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id);
     echo '</div>';
     return ob_get_clean();
 });

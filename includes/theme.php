@@ -309,6 +309,45 @@ function gc_render_color_field($name, $value, $label = '') {
 }
 
 /**
+ * Devuelve el HTML del bloque de logos de pie de página del escenario.
+ * - 1 logo  → centrado
+ * - 2 logos → uno a la izquierda, otro a la derecha
+ * - 3 logos → distribuidos (izquierda, centro, derecha)
+ * Ancho ~90px por logo. Solo renderiza si hay al menos uno configurado.
+ *
+ * Se llama una vez por shortcode; si la misma página tiene varios shortcodes
+ * del mismo escenario, solo se imprime uno (guard estático).
+ */
+function gc_render_footer_logos($escenario_id) {
+    static $rendered = [];
+    $escenario_id = (int) $escenario_id;
+    if ($escenario_id <= 0) return '';
+    if (isset($rendered[$escenario_id])) return '';
+
+    $logos = [];
+    for ($i = 1; $i <= 3; $i++) {
+        $url = get_post_meta($escenario_id, 'gc_logo_' . $i, true);
+        if ($url) $logos[] = $url;
+    }
+    if (empty($logos)) return '';
+    $rendered[$escenario_id] = true;
+
+    $count = count($logos);
+    // Justificación: 1 centro, 2 extremos, 3 space-between
+    $justify = $count === 1 ? 'center' : 'space-between';
+
+    ob_start();
+    ?>
+    <div class="gc-footer-logos" style="margin:40px auto 24px;padding:18px 12px 8px;max-width:760px;width:95%;display:flex;align-items:center;gap:16px;justify-content:<?php echo esc_attr($justify); ?>;flex-wrap:wrap;border-top:1px solid #e2e8f0;">
+        <?php foreach ($logos as $url): ?>
+            <img src="<?php echo esc_url($url); ?>" alt="" style="max-width:90px;width:90px;height:auto;object-fit:contain;display:block;" />
+        <?php endforeach; ?>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
+/**
  * JS global para sincronizar color picker ↔ input hex.
  * Se imprime una sola vez por carga; se enchufa a cualquier campo creado con
  * gc_render_color_field() y a cualquier color picker que tenga

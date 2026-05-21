@@ -904,6 +904,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       ?>
 
     </div>
+    <?php if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id); ?>
   </div>
 
   <?php

@@ -738,6 +738,32 @@ function gc_render_escenario_metabox($post) {
                 <?php gc_render_media_field('gc_tema_imagen_fondo', $tema_img, 'image', 'Seleccionar imagen'); ?>
             </div>
 
+            <!-- Logos del pie de página -->
+            <?php
+                $logo_1 = get_post_meta($post->ID, 'gc_logo_1', true);
+                $logo_2 = get_post_meta($post->ID, 'gc_logo_2', true);
+                $logo_3 = get_post_meta($post->ID, 'gc_logo_3', true);
+            ?>
+            <div style="margin-top:24px;padding:18px 20px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+                <h4 style="margin:0 0 6px;">Logos del pie de página</h4>
+                <p style="font-size:12px;color:#64748b;margin:0 0 14px;">Sube de 1 a 3 logos. Aparecerán en la parte inferior de todas las páginas del escenario (escenario, estaciones, ranking, instrucciones, puntuaciones). Tamaño recomendado: PNG con fondo transparente, ~180×180px (se mostrarán a ~90px de ancho).</p>
+                <p style="font-size:12px;color:#64748b;margin:0 0 14px;">Distribución automática: 1 logo → centrado · 2 logos → uno a cada lado · 3 logos → izquierda, centro y derecha.</p>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;">
+                    <div class="gc-wiz-field" style="margin:0;">
+                        <label>Logo 1</label>
+                        <?php gc_render_media_field('gc_logo_1', $logo_1, 'image', 'Seleccionar'); ?>
+                    </div>
+                    <div class="gc-wiz-field" style="margin:0;">
+                        <label>Logo 2 (opcional)</label>
+                        <?php gc_render_media_field('gc_logo_2', $logo_2, 'image', 'Seleccionar'); ?>
+                    </div>
+                    <div class="gc-wiz-field" style="margin:0;">
+                        <label>Logo 3 (opcional)</label>
+                        <?php gc_render_media_field('gc_logo_3', $logo_3, 'image', 'Seleccionar'); ?>
+                    </div>
+                </div>
+            </div>
+
             <div class="gc-wiz-nav">
                 <button type="button" class="gc-wiz-btn gc-wiz-btn-prev" data-prev="6">&larr; Anterior</button>
                 <div style="font-size:13px;color:#64748b;display:flex;align-items:center;gap:6px;">
@@ -1111,6 +1137,11 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_tema_preset', $tema_preset);
     update_post_meta($post_id, 'gc_tema_header_propio', isset($_POST['gc_tema_header_propio']) ? '1' : '0');
     update_post_meta($post_id, 'gc_tema_imagen_fondo', esc_url_raw($_POST['gc_tema_imagen_fondo'] ?? ''));
+
+    // Logos del pie de página
+    update_post_meta($post_id, 'gc_logo_1', esc_url_raw($_POST['gc_logo_1'] ?? ''));
+    update_post_meta($post_id, 'gc_logo_2', esc_url_raw($_POST['gc_logo_2'] ?? ''));
+    update_post_meta($post_id, 'gc_logo_3', esc_url_raw($_POST['gc_logo_3'] ?? ''));
 
     // Sanitizar colores hex (#xxxxxx)
     $sanitize_hex = function($v) {
