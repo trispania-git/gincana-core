@@ -164,7 +164,8 @@ function gc_render_tema_style($escenario_id) {
         return '';
     }
 
-    $scope = '.gc-tema-esc-' . $escenario_id;
+    $scope     = '.gc-tema-esc-' . $escenario_id;
+    $body_cls  = 'gc-tema-body-esc-' . $escenario_id;
     $bg_img_rule = '';
     if (!empty($t['imagen_fondo'])) {
         $bg_img_rule = "background-image: linear-gradient({$t['body_bg']}EE, {$t['body_bg']}EE), url('" . esc_url($t['imagen_fondo']) . "');"
@@ -174,10 +175,29 @@ function gc_render_tema_style($escenario_id) {
     ob_start();
     ?>
     <style id="gc-tema-esc-<?php echo (int) $escenario_id; ?>">
-        <?php echo $scope; ?> {
-            background-color: <?php echo esc_html($t['body_bg']); ?>;
-            color: <?php echo esc_html($t['body_color']); ?>;
+        /* Aplicar a TODA la página (body + html) cuando se añade la clase */
+        body.<?php echo $body_cls; ?>,
+        body.<?php echo $body_cls; ?> #page,
+        body.<?php echo $body_cls; ?> #page-container,
+        body.<?php echo $body_cls; ?> #main-content,
+        body.<?php echo $body_cls; ?> .et-l,
+        body.<?php echo $body_cls; ?> .et_pb_section {
+            background-color: <?php echo esc_html($t['body_bg']); ?> !important;
             <?php echo $bg_img_rule; ?>
+        }
+        body.<?php echo $body_cls; ?> {
+            color: <?php echo esc_html($t['body_color']); ?>;
+        }
+        body.<?php echo $body_cls; ?> p,
+        body.<?php echo $body_cls; ?> li,
+        body.<?php echo $body_cls; ?> span {
+            color: inherit;
+        }
+
+        /* Wrap principal del shortcode */
+        <?php echo $scope; ?> {
+            background-color: transparent;
+            color: <?php echo esc_html($t['body_color']); ?>;
         }
         <?php echo $scope; ?> .gc-escenario-content,
         <?php echo $scope; ?> .gc-station-content,
@@ -224,6 +244,12 @@ function gc_render_tema_style($escenario_id) {
             border-color: <?php echo esc_html($t['card_border']); ?> !important;
         }
     </style>
+    <script>
+        // Añadir la clase al body para que el fondo se extienda a toda la pantalla
+        (function(){
+            try { document.body.classList.add(<?php echo wp_json_encode($body_cls); ?>); } catch(e){}
+        })();
+    </script>
     <?php
     return ob_get_clean();
 }
