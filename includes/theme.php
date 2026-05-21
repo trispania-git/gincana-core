@@ -338,9 +338,9 @@ function gc_render_footer_logos($escenario_id) {
 
     ob_start();
     ?>
-    <div class="gc-footer-logos" style="margin:20px auto 0;padding:14px 12px;max-width:760px;width:95%;display:flex;align-items:center;gap:16px;justify-content:<?php echo esc_attr($justify); ?>;flex-wrap:wrap;border-top:1px solid #e2e8f0;">
+    <div class="gc-footer-logos" style="margin:20px auto 0;padding:14px 12px;max-width:760px;width:95%;display:flex;align-items:center;gap:18px;justify-content:<?php echo esc_attr($justify); ?>;flex-wrap:wrap;border-top:1px solid #e2e8f0;">
         <?php foreach ($logos as $url): ?>
-            <img src="<?php echo esc_url($url); ?>" alt="" style="max-width:90px;width:90px;height:auto;object-fit:contain;display:block;" />
+            <img src="<?php echo esc_url($url); ?>" alt="" style="max-width:120px;width:120px;height:auto;object-fit:contain;display:block;" />
         <?php endforeach; ?>
     </div>
     <?php
