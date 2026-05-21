@@ -244,6 +244,114 @@ if ( ! function_exists('gc_es_solo_pregunta') ) {
 }
 
 /**
+ * ¿El escenario permite jugar sin registro (modo invitado)?
+ */
+if ( ! function_exists('gc_permite_guest') ) {
+  function gc_permite_guest($escenario_id) {
+    return get_post_meta((int)$escenario_id, 'gc_permitir_guest', true) === '1';
+  }
+}
+
+/**
+ * ¿El usuario actual es un jugador invitado (gc_guest)?
+ */
+if ( ! function_exists('gc_user_es_guest') ) {
+  function gc_user_es_guest($user_id = 0) {
+    $u = $user_id ? get_user_by('id', (int)$user_id) : wp_get_current_user();
+    if (!$u || !$u->ID) return false;
+    return in_array('gc_guest', (array) $u->roles, true);
+  }
+}
+
+/**
+ * Renderiza el formulario inline de acceso del jugador.
+ * Si el escenario permite jugar como invitado, muestra:
+ *   - input "¿Cómo te llamas?"
+ *   - botón "Empezar" → llama a /guest/login y recarga la página
+ *   - separador "o" + botones tradicionales "Iniciar sesión / Registrarse"
+ * Si NO permite invitado, solo muestra los botones tradicionales (igual que antes).
+ */
+if ( ! function_exists('gc_render_login_o_guest') ) {
+  function gc_render_login_o_guest($escenario_id, $titulo_pre = '¿Quieres participar en la gimkana?', $subtitulo = 'Escribe tu nombre y empieza a jugar.') {
+    $permite_guest = function_exists('gc_permite_guest') && gc_permite_guest($escenario_id);
+    $current_url = (is_ssl() ? 'https' : 'http') . '://' . (isset($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : '') . (isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '');
+    $login_url    = wp_login_url($current_url);
+    $register_url = wp_registration_url();
+    $nonce        = wp_create_nonce('wp_rest');
+    ob_start();
+    ?>
+    <div class="gc-login-or-guest" style="padding:24px 20px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;text-align:center;margin-top:8px;">
+        <p style="margin:0 0 6px;font-size:17px;font-weight:700;color:#1e293b;"><?php echo esc_html($titulo_pre); ?></p>
+        <?php if ($permite_guest): ?>
+            <p style="margin:0 0 16px;font-size:14px;color:#64748b;"><?php echo esc_html($subtitulo); ?></p>
+            <form class="gc-guest-form" style="display:flex;flex-direction:column;gap:10px;max-width:340px;margin:0 auto;" data-escenario-id="<?php echo (int) $escenario_id; ?>">
+                <input type="text" name="nombre" placeholder="Tu nombre" autocomplete="given-name" required minlength="2" maxlength="40"
+                       style="padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:16px;text-align:center;" />
+                <button type="submit" style="padding:14px 24px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:16px;font-weight:700;cursor:pointer;">
+                    ¡Empezar! 🚀
+                </button>
+                <div class="gc-guest-msg" style="font-size:13px;color:#dc2626;min-height:18px;"></div>
+            </form>
+            <div style="display:flex;align-items:center;gap:10px;margin:18px 0 12px;max-width:340px;margin-left:auto;margin-right:auto;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:1px;">
+                <div style="flex:1;height:1px;background:#e2e8f0;"></div>
+                <span>o</span>
+                <div style="flex:1;height:1px;background:#e2e8f0;"></div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;font-size:13px;">
+                <a href="<?php echo esc_url($login_url); ?>" style="color:#2563eb;text-decoration:none;font-weight:600;">Iniciar sesión</a>
+                <span style="color:#cbd5e1;">·</span>
+                <a href="<?php echo esc_url($register_url); ?>" style="color:#2563eb;text-decoration:none;font-weight:600;">Registrarse</a>
+            </div>
+            <script>
+            (function(){
+                var forms = document.querySelectorAll('.gc-guest-form');
+                forms.forEach(function(form){
+                    if (form.dataset.gcBound) return;
+                    form.dataset.gcBound = '1';
+                    var nonce = <?php echo wp_json_encode($nonce); ?>;
+                    form.addEventListener('submit', function(e){
+                        e.preventDefault();
+                        var msg = form.querySelector('.gc-guest-msg');
+                        var btn = form.querySelector('button[type="submit"]');
+                        var nombre = (form.querySelector('input[name="nombre"]').value || '').trim();
+                        if (nombre.length < 2) { msg.textContent = 'Escribe un nombre de al menos 2 letras.'; return; }
+                        btn.disabled = true; btn.style.opacity = '0.7'; btn.textContent = 'Empezando…';
+                        msg.textContent = '';
+                        fetch('/wp-json/gincana/v1/guest/login', {
+                            method:'POST',
+                            headers:{'Content-Type':'application/json','X-WP-Nonce': nonce},
+                            credentials:'same-origin',
+                            body: JSON.stringify({ nombre: nombre, escenario_id: parseInt(form.dataset.escenarioId || '0', 10) })
+                        }).then(function(r){ return r.json(); }).then(function(data){
+                            if (data && data.ok) {
+                                // Recargar para que el resto del flujo se ejecute ya logueado
+                                location.reload();
+                            } else {
+                                msg.textContent = (data && data.error) ? ('No se pudo entrar: ' + data.error) : 'No se pudo entrar. Inténtalo de nuevo.';
+                                btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '¡Empezar! 🚀';
+                            }
+                        }).catch(function(err){
+                            msg.textContent = 'Error: ' + err.message;
+                            btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '¡Empezar! 🚀';
+                        });
+                    });
+                });
+            })();
+            </script>
+        <?php else: ?>
+            <p style="margin:0 0 16px;font-size:14px;color:#64748b;">Inicia sesión o regístrate para jugar y acumular puntos.</p>
+            <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+                <a href="<?php echo esc_url($login_url); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Iniciar sesión</a>
+                <a href="<?php echo esc_url($register_url); ?>" style="display:inline-block;padding:12px 24px;border:2px solid #2563eb;border-radius:10px;background:#fff;color:#2563eb;text-decoration:none;font-weight:600;">Registrarse</a>
+            </div>
+        <?php endif; ?>
+    </div>
+    <?php
+    return ob_get_clean();
+  }
+}
+
+/**
  * Sincroniza la relación prueba ↔ estación en ambos lados:
  * - prueba->gc_estacion_ref = estacion_id
  * - estacion->gc_prueba_ref  = prueba_id

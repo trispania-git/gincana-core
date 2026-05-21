@@ -157,22 +157,16 @@ function gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id)
 
     // Si no está logueado
     if (!$user_id) {
-        $current_url = (is_ssl() ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-        $login_url = wp_login_url($current_url);
-        $register_url = wp_registration_url();
         ob_start();
         ?>
         <div style="padding:24px 20px;border-radius:14px;background:#eff6ff;border:2px solid #2563eb;text-align:center;">
             <div style="margin-bottom:8px;"><?php echo gc_get_img_encontrada($escenario_id); ?></div>
             <h2 style="margin:0 0 8px;color:#1e40af;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
             <p style="margin:0 0 16px;font-size:15px;color:#334155;">
-                Has llegado a <strong><?php echo esc_html($title); ?></strong>. Inicia sesión para validarla.
+                Has llegado a <strong><?php echo esc_html($title); ?></strong>. Identifícate para validarla.
             </p>
-            <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-                <a href="<?php echo esc_url($login_url); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Iniciar sesión</a>
-                <a href="<?php echo esc_url($register_url); ?>" style="display:inline-block;padding:12px 24px;border:2px solid #2563eb;border-radius:10px;background:#fff;color:#2563eb;text-decoration:none;font-weight:600;">Registrarse</a>
-            </div>
         </div>
+        <?php echo gc_render_login_o_guest($escenario_id, 'Empieza a jugar', 'Escribe tu nombre para validar esta ' . esc_html($label) . '.'); ?>
         <?php
         return ob_get_clean();
     }
@@ -257,23 +251,16 @@ function gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id)
 function gc_render_infantil_station_qr_no_login($station_id, $title, $escenario_id) {
     $label = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
     $label_uc = mb_strtoupper(mb_substr($label, 0, 1)) . mb_substr($label, 1);
-    // Redirigir de vuelta aquí tras login (conservar params QR)
-    $current_url = (is_ssl() ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-    $login_url    = wp_login_url($current_url);
-    $register_url = wp_registration_url();
     ob_start();
     ?>
     <div style="padding:24px 20px;border-radius:14px;background:#ecfdf3;border:2px solid #16a34a;text-align:center;">
         <div style="margin-bottom:8px;"><?php echo gc_get_img_encontrada($escenario_id); ?></div>
         <h2 style="margin:0 0 8px;color:#146c2e;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
         <p style="margin:0 0 16px;font-size:15px;color:#334155;">
-            Has encontrado <strong><?php echo esc_html($title); ?></strong>, pero necesitas iniciar sesión para validarla y acumular puntos.
+            Has encontrado <strong><?php echo esc_html($title); ?></strong>. Identifícate para validarla y acumular puntos.
         </p>
-        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-            <a href="<?php echo esc_url($login_url); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Iniciar sesión</a>
-            <a href="<?php echo esc_url($register_url); ?>" style="display:inline-block;padding:12px 24px;border:2px solid #2563eb;border-radius:10px;background:#fff;color:#2563eb;text-decoration:none;font-weight:600;">Registrarse</a>
-        </div>
     </div>
+    <?php echo gc_render_login_o_guest($escenario_id, 'Empieza a jugar', 'Escribe tu nombre y suma tu primer punto.'); ?>
     <?php
     return ob_get_clean();
 }
@@ -599,22 +586,16 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
 
     // Si no está logueado
     if (!$user_id) {
-        $current_url = (is_ssl() ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-        $login_url = wp_login_url($current_url);
-        $register_url = wp_registration_url();
         ob_start();
         ?>
         <div style="padding:24px 20px;border-radius:14px;background:#eff6ff;border:2px solid #2563eb;text-align:center;">
             <div style="font-size:48px;margin-bottom:8px;">📍</div>
-            <h2 style="margin:0 0 8px;color:#1e40af;">¡Verifica tu ubicacion!</h2>
+            <h2 style="margin:0 0 8px;color:#1e40af;">¡Verifica tu ubicación!</h2>
             <p style="margin:0 0 16px;font-size:15px;color:#334155;">
-                Inicia sesion para verificar que estas en <strong><?php echo esc_html($title); ?></strong>.
+                Identifícate para verificar que estás en <strong><?php echo esc_html($title); ?></strong>.
             </p>
-            <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-                <a href="<?php echo esc_url($login_url); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Iniciar sesion</a>
-                <a href="<?php echo esc_url($register_url); ?>" style="display:inline-block;padding:12px 24px;border:2px solid #2563eb;border-radius:10px;background:#fff;color:#2563eb;text-decoration:none;font-weight:600;">Registrarse</a>
-            </div>
         </div>
+        <?php echo gc_render_login_o_guest($escenario_id, 'Empieza a jugar', 'Escribe tu nombre y empieza la aventura.'); ?>
         <?php
         return ob_get_clean();
     }
@@ -1697,16 +1678,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         if ($tipo_escenario === 'infantil') {
             echo gc_render_infantil_station_pista($station_id, $title, $escenario_id);
         }
-        $login_url    = wp_login_url(get_permalink($station_id));
-        $register_url = wp_registration_url();
-        echo '<div style="padding:20px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;text-align:center;margin-top:16px;">';
-        echo '<p style="margin:0 0 6px;font-size:16px;font-weight:600;">¿Quieres participar en la gimkana?</p>';
-        echo '<p style="margin:0 0 16px;font-size:14px;color:#64748b;">Inicia sesión o regístrate para jugar y acumular puntos.</p>';
-        echo '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">';
-        echo '<a href="' . esc_url($login_url) . '" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Iniciar sesión</a>';
-        echo '<a href="' . esc_url($register_url) . '" style="display:inline-block;padding:12px 24px;border:2px solid #2563eb;border-radius:10px;background:#fff;color:#2563eb;text-decoration:none;font-weight:600;">Registrarse</a>';
-        echo '</div>';
-        echo '</div>';
+        echo gc_render_login_o_guest($escenario_id, '¿Quieres participar en la gimkana?', 'Escribe tu nombre y empieza a jugar.');
     } else {
         // Logueado, acceso directo (sin QR)
         $tipo_qr = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';

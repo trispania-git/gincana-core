@@ -91,6 +91,74 @@ function gc_quiz_user_state($user_id, $prueba_id, $estacion_id) {
 add_action('rest_api_init', function(){
 
   // =========================================================
+  // POST /wp-json/gincana/v1/guest/login
+  // Crea un usuario 'guest' (rol gc_guest) con el nombre indicado y lo
+  // loguea por cookie. Solo se permite si el escenario tiene
+  // gc_permitir_guest = '1'. Devuelve el user_id creado.
+  // =========================================================
+  register_rest_route('gincana/v1','/guest/login',[
+    'methods'  => 'POST',
+    'permission_callback' => '__return_true', // no requiere estar logueado
+    'callback' => function(WP_REST_Request $req){
+      $nombre       = sanitize_text_field((string) $req->get_param('nombre'));
+      $escenario_id = (int) $req->get_param('escenario_id');
+
+      if ($nombre === '' || mb_strlen($nombre) < 2) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'nombre_invalido'], 400);
+      }
+      if ($escenario_id <= 0 || get_post_type($escenario_id) !== 'escenario') {
+        return new WP_REST_Response(['ok'=>false,'error'=>'escenario_invalido'], 400);
+      }
+      if ( ! function_exists('gc_permite_guest') || ! gc_permite_guest($escenario_id) ) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'guest_no_permitido'], 403);
+      }
+
+      // Generar login único: gcg_<slug>_<rand>
+      $slug = sanitize_title($nombre);
+      if ($slug === '') $slug = 'jugador';
+      $login = 'gcg_' . substr($slug, 0, 24) . '_' . substr(wp_generate_password(8, false), 0, 6);
+      $tries = 0;
+      while (username_exists($login) && $tries < 5) {
+        $login = 'gcg_' . substr($slug, 0, 24) . '_' . substr(wp_generate_password(8, false), 0, 6);
+        $tries++;
+      }
+
+      // Email autogenerado único
+      $domain = parse_url(home_url('/'), PHP_URL_HOST) ?: 'gincana.local';
+      $email  = $login . '@guest.' . $domain;
+
+      $user_id = wp_insert_user([
+        'user_login'    => $login,
+        'user_email'    => $email,
+        'user_pass'     => wp_generate_password(20, true, true),
+        'display_name'  => $nombre,
+        'first_name'    => $nombre,
+        'nickname'      => $nombre,
+        'role'          => 'gc_guest',
+      ]);
+      if ( is_wp_error($user_id) ) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'wp_insert_failed','detail'=>$user_id->get_error_message()], 500);
+      }
+
+      // Marcar como guest y guardar escenario de origen para limpieza posterior
+      update_user_meta($user_id, 'gc_guest', '1');
+      update_user_meta($user_id, 'gc_guest_origen_escenario', $escenario_id);
+      update_user_meta($user_id, 'gc_guest_creado', time());
+
+      // Loguear con cookie persistente
+      wp_clear_auth_cookie();
+      wp_set_current_user($user_id);
+      wp_set_auth_cookie($user_id, true);
+
+      return new WP_REST_Response([
+        'ok'           => true,
+        'user_id'      => (int) $user_id,
+        'display_name' => $nombre,
+      ], 200);
+    }
+  ]);
+
+  // =========================================================
   // POST /wp-json/gincana/v1/progress/complete
   // Marca estación como superada (idempotente) y suma puntos
   // =========================================================

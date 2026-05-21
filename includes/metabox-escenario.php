@@ -196,6 +196,22 @@ function gc_render_escenario_metabox($post) {
             </div>
             <input type="hidden" name="gc_tipo_escenario" id="gc_tipo_escenario" value="<?php echo esc_attr($tipo); ?>" />
 
+            <!-- Acceso: con registro o sin registro (invitado) -->
+            <?php
+                $permitir_guest = get_post_meta($post->ID, 'gc_permitir_guest', true) === '1';
+            ?>
+            <div style="margin-top:24px;padding-top:20px;border-top:1px solid #e2e8f0;">
+                <h4 style="margin:0 0 12px;font-size:15px;color:#334155;">Acceso de jugadores</h4>
+                <label class="gc-wiz-toggle">
+                    <input type="checkbox" name="gc_permitir_guest" value="1" id="gc_permitir_guest" <?php checked($permitir_guest, true); ?> />
+                    <span class="gc-switch"></span>
+                    <div>
+                        <div class="gc-toggle-label">Permitir jugar sin registro 🙋</div>
+                        <div class="gc-toggle-desc">Los jugadores podrán participar simplemente escribiendo su nombre, sin crear cuenta ni iniciar sesión. Aparecerán en el ranking con ese nombre.</div>
+                    </div>
+                </label>
+            </div>
+
             <div class="gc-wiz-nav">
                 <div></div>
                 <button type="button" class="gc-wiz-btn gc-wiz-btn-next" data-next="2">Siguiente &rarr;</button>
@@ -950,8 +966,10 @@ function gc_render_escenario_metabox($post) {
                     + '<button type="button" onclick="this.closest(\'#gc-wiz-resumen-panel\').style.display=\'none\'" style="border:0;background:0;font-size:20px;color:#94a3b8;cursor:pointer;">&times;</button>'
                     + '</div>';
 
+                var guestOn = ch('gc_permitir_guest');
                 html += section('1. Tipo de escenario', [
-                    ['Tipo', lb('tipo_escenario', tipoEsc)]
+                    ['Tipo', lb('tipo_escenario', tipoEsc)],
+                    ['Sin registro', guestOn ? si : no]
                 ]);
 
                 var pistas = ch('gc_pistas_activas');
@@ -1024,6 +1042,7 @@ add_action('save_post', function ($post_id) {
     }
 
     update_post_meta($post_id, 'gc_tipo_escenario', $tipo);
+    update_post_meta($post_id, 'gc_permitir_guest', isset($_POST['gc_permitir_guest']) ? '1' : '0');
     $tipo_qr = sanitize_text_field($_POST['gc_tipo_qr'] ?? 'enlace');
     if ( ! in_array($tipo_qr, ['enlace', 'validacion_boton', 'validacion_quiz', 'validacion_gps', 'solo_pregunta'], true) ) $tipo_qr = 'enlace';
     update_post_meta($post_id, 'gc_tipo_qr', $tipo_qr);
