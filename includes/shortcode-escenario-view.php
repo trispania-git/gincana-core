@@ -65,8 +65,6 @@ add_shortcode('gincana_escenario_contenido', function($atts){
         <?php if ($img3): ?><img src="<?php echo esc_url($img3); ?>" alt="" style="width:100%;height:auto;border-radius:10px;"><?php endif; ?>
       </div>
     <?php endif; ?>
-
-    <?php if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id); ?>
   </div>
   <?php
   return ob_get_clean();
@@ -905,7 +903,6 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       ?>
 
     </div>
-    <?php if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id); ?>
   </div>
 
   <?php

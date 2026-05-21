@@ -139,13 +139,9 @@ function gc_shortcode_estacion_acceso() {
     echo do_shortcode('[gincana_itinerario escenario="' . (int) $escenario_id . '" estacion="' . (int) $station_id . '"]');
     echo '</div>';
 
-    // Los logos van al final, encima del espaciador, para que NO queden tapados
-    // por la barra fija del itinerario (que ocupa ~56px en la parte inferior).
-    echo function_exists('gc_render_footer_logos') ? gc_render_footer_logos($escenario_id) : '';
-
-    // Espaciador suficiente para que el último contenido y los logos queden por
-    // encima de la barra fija del itinerario inferior.
-    echo '<div style="height:72px;"></div>';
+    // Espaciador para que el contenido no quede tapado por la barra fija inferior
+    // (los logos se imprimen vía wp_footer, no aquí).
+    echo '<div style="height:56px;"></div>';
 
     return ob_get_clean();
 }
@@ -1667,7 +1663,6 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         }
         echo '<a href="' . esc_url($escenario_url) . '" style="display:inline-block;margin-top:8px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
         echo '</div>';
-        if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id);
         echo '</div>';
         return ob_get_clean();
     }
@@ -1709,7 +1704,6 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         }
     }
 
-    if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id);
     echo '</div>';
     return ob_get_clean();
 });
