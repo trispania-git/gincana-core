@@ -338,7 +338,7 @@ function gc_render_footer_logos($escenario_id) {
 
     ob_start();
     ?>
-    <div class="gc-footer-logos" style="margin:24px auto 16px;padding:14px 12px 10px;max-width:760px;width:95%;display:flex;align-items:center;gap:16px;justify-content:<?php echo esc_attr($justify); ?>;flex-wrap:wrap;border-top:1px solid #e2e8f0;">
+    <div class="gc-footer-logos" style="margin:20px auto 0;padding:14px 12px;max-width:760px;width:95%;display:flex;align-items:center;gap:16px;justify-content:<?php echo esc_attr($justify); ?>;flex-wrap:wrap;border-top:1px solid #e2e8f0;">
         <?php foreach ($logos as $url): ?>
             <img src="<?php echo esc_url($url); ?>" alt="" style="max-width:90px;width:90px;height:auto;object-fit:contain;display:block;" />
         <?php endforeach; ?>
@@ -362,22 +362,13 @@ function gc_pagina_actual_escenario_id() {
 }
 
 /**
- * Fallback 1: filter the_content. Si Divi usa the_content para renderizar
- * el cuerpo del CPT, los logos se inyectan al final del contenido del post.
- */
-add_filter('the_content', function ($content) {
-    if (is_admin() || !in_the_loop() || !is_main_query()) return $content;
-    if (!function_exists('gc_render_footer_logos')) return $content;
-    $escenario_id = gc_pagina_actual_escenario_id();
-    if ($escenario_id <= 0) return $content;
-    $html = gc_render_footer_logos($escenario_id);
-    if ($html === '') return $content; // ya se imprimió o no hay logos
-    return $content . $html;
-}, 999);
-
-/**
- * Fallback 2: wp_footer. Si ni los shortcodes ni the_content disparan el
- * render, lo metemos al final del body como último recurso.
+ * Fallback: wp_footer. Si ningún shortcode del frontend renderizó los logos
+ * (porque la plantilla de Divi del CPT no usa shortcodes de gincana), los
+ * imprimimos al final del body. El guard estático evita duplicados.
+ *
+ * Nota: NO usamos un filter sobre the_content porque éste se ejecuta antes
+ * que los shortcodes laterales de la plantilla, lo que dejaba los logos
+ * apareciendo en mitad de la página, antes de la lista de estaciones.
  */
 add_action('wp_footer', function () {
     if (is_admin()) return;
