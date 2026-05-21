@@ -132,16 +132,20 @@ function gc_shortcode_estacion_acceso() {
         }
     }
 
-    if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id);
-
     echo '</div>';
 
     // Itinerario de estaciones (círculos) fijo al pie
     echo '<div style="position:fixed;bottom:0;left:0;right:0;z-index:999;background:#fff;border-top:1px solid #e2e8f0;padding:6px 8px;box-shadow:0 -2px 8px rgba(0,0,0,0.08);">';
     echo do_shortcode('[gincana_itinerario escenario="' . (int) $escenario_id . '" estacion="' . (int) $station_id . '"]');
     echo '</div>';
-    // Espaciador para que el contenido no quede tapado por el footer fijo
-    echo '<div style="height:56px;"></div>';
+
+    // Los logos van al final, encima del espaciador, para que NO queden tapados
+    // por la barra fija del itinerario (que ocupa ~56px en la parte inferior).
+    echo function_exists('gc_render_footer_logos') ? gc_render_footer_logos($escenario_id) : '';
+
+    // Espaciador suficiente para que el último contenido y los logos queden por
+    // encima de la barra fija del itinerario inferior.
+    echo '<div style="height:72px;"></div>';
 
     return ob_get_clean();
 }
