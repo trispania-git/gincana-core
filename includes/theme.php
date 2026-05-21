@@ -349,14 +349,40 @@ function gc_render_footer_logos($escenario_id) {
 
 /**
  * Devuelve el escenario_id de la página actual (para hooks fallback).
+ * Cubre todos los casos: singular escenario/estación, páginas virtuales
+ * (ranking/instrucciones/puntuaciones) y acceso por QR con ?gc_station=X.
  */
 function gc_pagina_actual_escenario_id() {
+    // 1. CPT singular escenario
     if (is_singular('escenario')) {
         return (int) get_queried_object_id();
     }
+    // 2. CPT singular estación → su escenario
     if (is_singular('estacion')) {
         $est_id = (int) get_queried_object_id();
         return $est_id ? (int) get_post_meta($est_id, 'gc_escenario_ref', true) : 0;
+    }
+    // 3. Página virtual (ranking/instrucciones/puntuaciones)
+    $subpage = get_query_var('gc_subpage');
+    if ($subpage) {
+        $slug = get_query_var('name');
+        if ($slug) {
+            $esc = get_page_by_path($slug, OBJECT, 'escenario');
+            if ($esc) return (int) $esc->ID;
+        }
+    }
+    // 4. Acceso de estación por QR: ?gc_station=X
+    if (!empty($_GET['gc_station'])) {
+        $est_id = (int) $_GET['gc_station'];
+        if ($est_id > 0 && get_post_type($est_id) === 'estacion') {
+            return (int) get_post_meta($est_id, 'gc_escenario_ref', true);
+        }
+    }
+    // 5. Como último recurso: queried object si es escenario o estación
+    $qo = get_queried_object();
+    if ($qo && isset($qo->post_type)) {
+        if ($qo->post_type === 'escenario') return (int) $qo->ID;
+        if ($qo->post_type === 'estacion')  return (int) get_post_meta($qo->ID, 'gc_escenario_ref', true);
     }
     return 0;
 }
