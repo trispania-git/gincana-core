@@ -1,0 +1,243 @@
+<?php
+if ( ! defined('ABSPATH') ) exit;
+
+/**
+ * Sistema de temas (apariencia) por escenario.
+ *
+ * Cada escenario puede tener un preset visual (Claro / Oscuro / Aventura /
+ * Náutico / Bosque / Pastel / Personalizado) que se aplica a todas las
+ * páginas relacionadas (escenario, estaciones, ranking, instrucciones,
+ * puntuaciones, header-nav).
+ */
+
+/**
+ * Devuelve los presets disponibles con sus colores por defecto.
+ */
+function gc_tema_presets() {
+    return [
+        'claro' => [
+            'label'        => '🌞 Claro',
+            'descripcion'  => 'Limpio y neutro, ideal para textos largos.',
+            'body_bg'      => '#ffffff',
+            'body_color'   => '#1e293b',
+            'accent'       => '#2563eb',
+            'accent_text'  => '#ffffff',
+            'card_bg'      => '#ffffff',
+            'card_border'  => '#e2e8f0',
+            'muted'        => '#64748b',
+            'header_bg'    => '#ffffff',
+            'header_color' => '#1e293b',
+            'header_border'=> '#e2e8f0',
+        ],
+        'oscuro' => [
+            'label'        => '🌙 Oscuro',
+            'descripcion'  => 'Modo oscuro elegante, fondo gris muy oscuro y texto claro.',
+            'body_bg'      => '#0f172a',
+            'body_color'   => '#e2e8f0',
+            'accent'       => '#60a5fa',
+            'accent_text'  => '#0f172a',
+            'card_bg'      => '#1e293b',
+            'card_border'  => '#334155',
+            'muted'        => '#94a3b8',
+            'header_bg'    => '#1e293b',
+            'header_color' => '#e2e8f0',
+            'header_border'=> '#334155',
+        ],
+        'aventura' => [
+            'label'        => '🔥 Aventura',
+            'descripcion'  => 'Tonos cálidos: crema, naranja y marrón. Para gymkanas con sabor a expedición.',
+            'body_bg'      => '#fffbeb',
+            'body_color'   => '#451a03',
+            'accent'       => '#d97706',
+            'accent_text'  => '#ffffff',
+            'card_bg'      => '#ffffff',
+            'card_border'  => '#fde68a',
+            'muted'        => '#92400e',
+            'header_bg'    => '#92400e',
+            'header_color' => '#fef3c7',
+            'header_border'=> '#78350f',
+        ],
+        'nautico' => [
+            'label'        => '🌊 Náutico',
+            'descripcion'  => 'Azules y blancos. Pensado para rutas marítimas, ríos o lagos.',
+            'body_bg'      => '#eff6ff',
+            'body_color'   => '#1e3a8a',
+            'accent'       => '#0284c7',
+            'accent_text'  => '#ffffff',
+            'card_bg'      => '#ffffff',
+            'card_border'  => '#bfdbfe',
+            'muted'        => '#1d4ed8',
+            'header_bg'    => '#1e40af',
+            'header_color' => '#dbeafe',
+            'header_border'=> '#1e3a8a',
+        ],
+        'bosque' => [
+            'label'        => '🌲 Bosque',
+            'descripcion'  => 'Verdes y tierra. Ideal para rutas naturales y senderos.',
+            'body_bg'      => '#f0fdf4',
+            'body_color'   => '#14532d',
+            'accent'       => '#15803d',
+            'accent_text'  => '#ffffff',
+            'card_bg'      => '#ffffff',
+            'card_border'  => '#bbf7d0',
+            'muted'        => '#166534',
+            'header_bg'    => '#166534',
+            'header_color' => '#dcfce7',
+            'header_border'=> '#14532d',
+        ],
+        'pastel' => [
+            'label'        => '🌸 Pastel',
+            'descripcion'  => 'Rosas y morados suaves. Para escenarios infantiles o festivos.',
+            'body_bg'      => '#fdf4ff',
+            'body_color'   => '#581c87',
+            'accent'       => '#a855f7',
+            'accent_text'  => '#ffffff',
+            'card_bg'      => '#ffffff',
+            'card_border'  => '#f5d0fe',
+            'muted'        => '#7e22ce',
+            'header_bg'    => '#a855f7',
+            'header_color' => '#fdf4ff',
+            'header_border'=> '#7e22ce',
+        ],
+    ];
+}
+
+/**
+ * Devuelve el tema efectivo de un escenario (combinando preset + overrides).
+ */
+function gc_get_tema($escenario_id) {
+    $escenario_id = (int) $escenario_id;
+    $presets = gc_tema_presets();
+
+    $preset_key = get_post_meta($escenario_id, 'gc_tema_preset', true);
+    if (!$preset_key || (!isset($presets[$preset_key]) && $preset_key !== 'personalizado')) {
+        $preset_key = 'claro';
+    }
+
+    if ($preset_key === 'personalizado') {
+        $base = $presets['claro'];
+    } else {
+        $base = $presets[$preset_key];
+    }
+
+    // Solo si es personalizado o se ha indicado expresamente, leer overrides.
+    $usar_header_propio = get_post_meta($escenario_id, 'gc_tema_header_propio', true) === '1';
+
+    if ($preset_key === 'personalizado') {
+        $keys_color = ['body_bg','body_color','accent','accent_text','card_bg','card_border','muted'];
+        foreach ($keys_color as $k) {
+            $v = get_post_meta($escenario_id, 'gc_tema_' . $k, true);
+            if ($v) $base[$k] = $v;
+        }
+    }
+
+    if ($usar_header_propio) {
+        $hk = ['header_bg','header_color','header_border'];
+        foreach ($hk as $k) {
+            $v = get_post_meta($escenario_id, 'gc_tema_' . $k, true);
+            if ($v) $base[$k] = $v;
+        }
+    }
+
+    $base['preset'] = $preset_key;
+    $base['imagen_fondo'] = (string) get_post_meta($escenario_id, 'gc_tema_imagen_fondo', true);
+    return $base;
+}
+
+/**
+ * Devuelve un bloque <style> con las reglas CSS del tema del escenario.
+ * Scope: se aplica solo dentro de `.gc-tema-esc-{id}`.
+ *
+ * Para evitar inyectar el mismo style dos veces si la misma página tiene
+ * varios shortcodes, llevamos un registro estático.
+ */
+function gc_render_tema_style($escenario_id) {
+    static $rendered = [];
+    $escenario_id = (int) $escenario_id;
+    if ($escenario_id <= 0) return '';
+    if (isset($rendered[$escenario_id])) return '';
+    $rendered[$escenario_id] = true;
+
+    $t = gc_get_tema($escenario_id);
+    if (!$t || ($t['preset'] === 'claro' && empty($t['imagen_fondo']) && get_post_meta($escenario_id, 'gc_tema_header_propio', true) !== '1')) {
+        // El preset 'claro' por defecto y sin imagen ni header propio → no inyectar nada.
+        return '';
+    }
+
+    $scope = '.gc-tema-esc-' . $escenario_id;
+    $bg_img_rule = '';
+    if (!empty($t['imagen_fondo'])) {
+        $bg_img_rule = "background-image: linear-gradient({$t['body_bg']}EE, {$t['body_bg']}EE), url('" . esc_url($t['imagen_fondo']) . "');"
+                     . 'background-size: cover; background-position: center center; background-attachment: fixed;';
+    }
+
+    ob_start();
+    ?>
+    <style id="gc-tema-esc-<?php echo (int) $escenario_id; ?>">
+        <?php echo $scope; ?> {
+            background-color: <?php echo esc_html($t['body_bg']); ?>;
+            color: <?php echo esc_html($t['body_color']); ?>;
+            <?php echo $bg_img_rule; ?>
+        }
+        <?php echo $scope; ?> .gc-escenario-content,
+        <?php echo $scope; ?> .gc-station-content,
+        <?php echo $scope; ?> .gc-station-access,
+        <?php echo $scope; ?> .gincana-ranking,
+        <?php echo $scope; ?> .gincana-instrucciones,
+        <?php echo $scope; ?> .gincana-puntuaciones {
+            color: <?php echo esc_html($t['body_color']); ?>;
+        }
+        <?php echo $scope; ?> h1,
+        <?php echo $scope; ?> h2,
+        <?php echo $scope; ?> h3,
+        <?php echo $scope; ?> h4 {
+            color: <?php echo esc_html($t['body_color']); ?>;
+        }
+        <?php echo $scope; ?> .gc-card {
+            background-color: <?php echo esc_html($t['card_bg']); ?> !important;
+            border-color: <?php echo esc_html($t['card_border']); ?> !important;
+            color: <?php echo esc_html($t['body_color']); ?> !important;
+        }
+        <?php echo $scope; ?> .gc-card-title {
+            color: <?php echo esc_html($t['body_color']); ?> !important;
+        }
+        <?php echo $scope; ?> .gincana-header-nav,
+        <?php echo $scope; ?> .gc-header-nav,
+        <?php echo $scope; ?> .gincana-header-wrap {
+            background-color: <?php echo esc_html($t['header_bg']); ?> !important;
+            color: <?php echo esc_html($t['header_color']); ?> !important;
+            border-color: <?php echo esc_html($t['header_border']); ?> !important;
+        }
+        <?php echo $scope; ?> .gincana-header-nav a,
+        <?php echo $scope; ?> .gincana-header-nav span,
+        <?php echo $scope; ?> .gc-header-nav a,
+        <?php echo $scope; ?> .gc-header-nav span {
+            color: <?php echo esc_html($t['header_color']); ?> !important;
+        }
+        /* Tabla del ranking */
+        <?php echo $scope; ?> .gincana-ranking-table {
+            color: <?php echo esc_html($t['body_color']); ?>;
+        }
+        <?php echo $scope; ?> .gincana-ranking-table th,
+        <?php echo $scope; ?> .gincana-ranking-table td {
+            color: <?php echo esc_html($t['body_color']); ?> !important;
+            border-color: <?php echo esc_html($t['card_border']); ?> !important;
+        }
+    </style>
+    <?php
+    return ob_get_clean();
+}
+
+/**
+ * Atajo: imprime el style del tema y abre un wrapper con la clase de scope.
+ * Llamar al INICIO de cada render de shortcode relacionado con un escenario.
+ * Hay que cerrar el wrapper con </div> después.
+ */
+function gc_open_tema_wrap($escenario_id, $extra_class = '') {
+    echo gc_render_tema_style($escenario_id);
+    $cls = 'gc-tema-esc-' . (int) $escenario_id . ($extra_class ? ' ' . $extra_class : '');
+    echo '<div class="' . esc_attr($cls) . '">';
+}
+function gc_close_tema_wrap() {
+    echo '</div>';
+}

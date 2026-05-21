@@ -168,6 +168,9 @@ function gc_render_escenario_metabox($post) {
             <div class="gc-wiz-step-tab" data-step="6">
                 <div class="gc-wiz-num">6</div><br>Info
             </div>
+            <div class="gc-wiz-step-tab" data-step="7">
+                <div class="gc-wiz-num">7</div><br>Apariencia
+            </div>
         </div>
 
         <!-- ========== PASO 1: TIPO ========== -->
@@ -629,6 +632,116 @@ function gc_render_escenario_metabox($post) {
 
             <div class="gc-wiz-nav">
                 <button type="button" class="gc-wiz-btn gc-wiz-btn-prev" data-prev="5">&larr; Anterior</button>
+                <button type="button" class="gc-wiz-btn gc-wiz-btn-next" data-next="7">Siguiente &rarr;</button>
+            </div>
+        </div>
+
+        <!-- ========== PASO 7: APARIENCIA ========== -->
+        <?php
+            $tema_preset    = get_post_meta($post->ID, 'gc_tema_preset', true) ?: 'claro';
+            $tema_header_p  = get_post_meta($post->ID, 'gc_tema_header_propio', true) === '1';
+            $tema_img       = get_post_meta($post->ID, 'gc_tema_imagen_fondo', true);
+            $presets_data   = function_exists('gc_tema_presets') ? gc_tema_presets() : [];
+            // Overrides personalizados (con fallback al preset 'claro' como base)
+            $base_claro     = $presets_data['claro'];
+            $cust_body_bg     = get_post_meta($post->ID, 'gc_tema_body_bg',     true) ?: $base_claro['body_bg'];
+            $cust_body_color  = get_post_meta($post->ID, 'gc_tema_body_color',  true) ?: $base_claro['body_color'];
+            $cust_accent      = get_post_meta($post->ID, 'gc_tema_accent',      true) ?: $base_claro['accent'];
+            $cust_card_bg     = get_post_meta($post->ID, 'gc_tema_card_bg',     true) ?: $base_claro['card_bg'];
+            $cust_card_border = get_post_meta($post->ID, 'gc_tema_card_border', true) ?: $base_claro['card_border'];
+            $cust_header_bg   = get_post_meta($post->ID, 'gc_tema_header_bg',   true) ?: $base_claro['header_bg'];
+            $cust_header_color= get_post_meta($post->ID, 'gc_tema_header_color',true) ?: $base_claro['header_color'];
+        ?>
+        <div class="gc-wiz-panel" data-step="7">
+            <h3>Apariencia del escenario</h3>
+            <p class="gc-wiz-subtitle">Elige el aspecto visual de las páginas del jugador (escenario, estaciones, ranking, instrucciones, puntuaciones).</p>
+
+            <!-- Cards de presets -->
+            <div class="gc-wiz-cards" style="grid-template-columns:repeat(auto-fill, minmax(180px, 1fr));">
+                <?php foreach ($presets_data as $key => $p):
+                    $selected = $tema_preset === $key ? 'selected' : '';
+                ?>
+                <div class="gc-wiz-card <?php echo $selected; ?>" data-value="<?php echo esc_attr($key); ?>" data-field="gc_tema_preset" style="position:relative;overflow:hidden;">
+                    <!-- Mini preview -->
+                    <div style="display:flex;height:60px;border-radius:8px;overflow:hidden;margin-bottom:10px;border:1px solid #e2e8f0;">
+                        <div style="flex:1;background:<?php echo esc_attr($p['body_bg']); ?>;display:flex;align-items:center;justify-content:center;color:<?php echo esc_attr($p['body_color']); ?>;font-size:11px;font-weight:600;">Aa</div>
+                        <div style="width:30%;background:<?php echo esc_attr($p['accent']); ?>;"></div>
+                        <div style="width:25%;background:<?php echo esc_attr($p['header_bg']); ?>;"></div>
+                    </div>
+                    <div class="gc-wiz-card-title" style="font-size:14px;"><?php echo esc_html($p['label']); ?></div>
+                    <div class="gc-wiz-card-desc" style="font-size:11px;"><?php echo esc_html($p['descripcion']); ?></div>
+                </div>
+                <?php endforeach; ?>
+                <div class="gc-wiz-card <?php echo $tema_preset === 'personalizado' ? 'selected' : ''; ?>" data-value="personalizado" data-field="gc_tema_preset" style="position:relative;overflow:hidden;">
+                    <div style="display:flex;height:60px;border-radius:8px;overflow:hidden;margin-bottom:10px;border:1px solid #e2e8f0;background:linear-gradient(135deg,#fbbf24,#f472b6,#8b5cf6,#06b6d4);">
+                        <div style="margin:auto;color:#fff;font-size:22px;">🎨</div>
+                    </div>
+                    <div class="gc-wiz-card-title" style="font-size:14px;">🎨 Personalizado</div>
+                    <div class="gc-wiz-card-desc" style="font-size:11px;">Elige tus propios colores.</div>
+                </div>
+            </div>
+            <input type="hidden" name="gc_tema_preset" id="gc_tema_preset" value="<?php echo esc_attr($tema_preset); ?>" />
+
+            <!-- Colores personalizados (solo visible si preset=personalizado) -->
+            <div id="gc-tema-custom" style="<?php echo $tema_preset !== 'personalizado' ? 'display:none;' : ''; ?>margin-top:20px;padding:18px 20px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;">
+                <h4 style="margin:0 0 14px;">Colores personalizados</h4>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
+                    <div class="gc-wiz-field" style="margin:0;">
+                        <label>Color de fondo</label>
+                        <input type="color" name="gc_tema_body_bg" value="<?php echo esc_attr($cust_body_bg); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
+                    </div>
+                    <div class="gc-wiz-field" style="margin:0;">
+                        <label>Color de texto</label>
+                        <input type="color" name="gc_tema_body_color" value="<?php echo esc_attr($cust_body_color); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
+                    </div>
+                    <div class="gc-wiz-field" style="margin:0;">
+                        <label>Color de acento (botones, enlaces)</label>
+                        <input type="color" name="gc_tema_accent" value="<?php echo esc_attr($cust_accent); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
+                    </div>
+                    <div class="gc-wiz-field" style="margin:0;">
+                        <label>Fondo de tarjetas</label>
+                        <input type="color" name="gc_tema_card_bg" value="<?php echo esc_attr($cust_card_bg); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
+                    </div>
+                    <div class="gc-wiz-field" style="margin:0;">
+                        <label>Borde de tarjetas</label>
+                        <input type="color" name="gc_tema_card_border" value="<?php echo esc_attr($cust_card_border); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Header independiente -->
+            <div style="margin-top:20px;">
+                <label class="gc-wiz-toggle">
+                    <input type="checkbox" name="gc_tema_header_propio" value="1" id="gc_tema_header_propio" <?php checked($tema_header_p, true); ?> />
+                    <span class="gc-switch"></span>
+                    <div>
+                        <div class="gc-toggle-label">Personalizar el color del header de navegación</div>
+                        <div class="gc-toggle-desc">Si lo activas, podrás elegir un color distinto para la barra de navegación superior.</div>
+                    </div>
+                </label>
+                <div id="gc-tema-header-colors" style="<?php echo $tema_header_p ? '' : 'display:none;'; ?>margin-top:14px;padding:14px 16px;border-radius:10px;background:#f1f5f9;border:1px solid #e2e8f0;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div class="gc-wiz-field" style="margin:0;">
+                            <label>Fondo del header</label>
+                            <input type="color" name="gc_tema_header_bg" value="<?php echo esc_attr($cust_header_bg); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
+                        </div>
+                        <div class="gc-wiz-field" style="margin:0;">
+                            <label>Texto del header</label>
+                            <input type="color" name="gc_tema_header_color" value="<?php echo esc_attr($cust_header_color); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Imagen de fondo -->
+            <div class="gc-wiz-field" style="margin-top:20px;">
+                <label>Imagen de fondo (opcional)</label>
+                <p style="font-size:12px;color:#64748b;margin:2px 0 8px;">Se mostrará detrás del contenido con un velo del color de fondo para mantener la legibilidad. Funciona con cualquier preset.</p>
+                <?php gc_render_media_field('gc_tema_imagen_fondo', $tema_img, 'image', 'Seleccionar imagen'); ?>
+            </div>
+
+            <div class="gc-wiz-nav">
+                <button type="button" class="gc-wiz-btn gc-wiz-btn-prev" data-prev="6">&larr; Anterior</button>
                 <div style="font-size:13px;color:#64748b;display:flex;align-items:center;gap:6px;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     Pulsa <strong style="margin:0 4px;">Publicar</strong> o <strong style="margin:0 4px;">Actualizar</strong> para guardar
@@ -644,7 +757,7 @@ function gc_render_escenario_metabox($post) {
         if (!wizard) return;
 
         var currentStep = 1;
-        var totalSteps = 6;
+        var totalSteps = 7;
 
         function goToStep(n) {
             if (n < 1 || n > totalSteps) return;
@@ -741,6 +854,27 @@ function gc_render_escenario_metabox($post) {
         document.getElementById('gc_requiere_prueba').addEventListener('change', function() {
             document.getElementById('gc-origen-preguntas-section').style.display = this.checked ? '' : 'none';
         });
+
+        // Step 7: tema (presets)
+        wizard.querySelectorAll('[data-field="gc_tema_preset"]').forEach(function(card){
+            card.addEventListener('click', function(){
+                wizard.querySelectorAll('[data-field="gc_tema_preset"]').forEach(function(c){ c.classList.remove('selected'); });
+                this.classList.add('selected');
+                var val = this.dataset.value;
+                document.getElementById('gc_tema_preset').value = val;
+                var custom = document.getElementById('gc-tema-custom');
+                if (custom) custom.style.display = val === 'personalizado' ? '' : 'none';
+            });
+        });
+
+        // Toggle header propio
+        var hp = document.getElementById('gc_tema_header_propio');
+        if (hp) {
+            hp.addEventListener('change', function(){
+                var box = document.getElementById('gc-tema-header-colors');
+                if (box) box.style.display = this.checked ? '' : 'none';
+            });
+        }
 
         // Step 3: accion final
         wizard.querySelectorAll('[data-field="gc_accion_final"]').forEach(function(card) {
@@ -968,6 +1102,27 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_img_busca_qr', esc_url_raw($_POST['gc_img_busca_qr'] ?? ''));
     update_post_meta($post_id, 'gc_img_pregunta', esc_url_raw($_POST['gc_img_pregunta'] ?? ''));
     update_post_meta($post_id, 'gc_img_acierto', esc_url_raw($_POST['gc_img_acierto'] ?? ''));
+
+    // === Apariencia (tema) ===
+    $valid_presets = ['claro','oscuro','aventura','nautico','bosque','pastel','personalizado'];
+    $tema_preset = sanitize_text_field($_POST['gc_tema_preset'] ?? 'claro');
+    if ( ! in_array($tema_preset, $valid_presets, true) ) $tema_preset = 'claro';
+    update_post_meta($post_id, 'gc_tema_preset', $tema_preset);
+    update_post_meta($post_id, 'gc_tema_header_propio', isset($_POST['gc_tema_header_propio']) ? '1' : '0');
+    update_post_meta($post_id, 'gc_tema_imagen_fondo', esc_url_raw($_POST['gc_tema_imagen_fondo'] ?? ''));
+
+    // Sanitizar colores hex (#xxxxxx)
+    $sanitize_hex = function($v) {
+        $v = trim((string) $v);
+        if (preg_match('/^#[0-9a-fA-F]{6}$/', $v)) return strtolower($v);
+        if (preg_match('/^#[0-9a-fA-F]{3}$/', $v)) return strtolower($v);
+        return '';
+    };
+    $color_fields = ['gc_tema_body_bg','gc_tema_body_color','gc_tema_accent','gc_tema_card_bg','gc_tema_card_border','gc_tema_header_bg','gc_tema_header_color'];
+    foreach ($color_fields as $cf) {
+        $val = $sanitize_hex($_POST[$cf] ?? '');
+        update_post_meta($post_id, $cf, $val);
+    }
 
 });
 

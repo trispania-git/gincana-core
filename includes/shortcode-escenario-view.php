@@ -41,7 +41,8 @@ add_shortcode('gincana_escenario_contenido', function($atts){
 
   ob_start();
   ?>
-  <div class="gc-escenario-content" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">
+  <?php if (function_exists('gc_render_tema_style')) echo gc_render_tema_style($escenario_id); ?>
+  <div class="gc-escenario-content gc-tema-esc-<?php echo (int) $escenario_id; ?>" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">
 
     <h2 style="margin:0 0 12px;font-size:22px;font-weight:700;line-height:1.3;"><?php echo esc_html($title); ?></h2>
 

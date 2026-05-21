@@ -506,7 +506,8 @@ add_action('init', function(){
     ob_start(); ?>
     <style>.gincana-ranking-page .entry-title, .gincana-ranking-page .page-title, .gincana-ranking-page .et_pb_post_title { display:none !important; }</style>
     <script>document.body.classList.add('gincana-ranking-page');</script>
-    <div class="gincana-ranking et_pb_module" style="width:95%;max-width:760px;margin:0 auto;">
+    <?php if (function_exists('gc_render_tema_style')) echo gc_render_tema_style($escenario_id); ?>
+    <div class="gincana-ranking gc-tema-esc-<?php echo (int) $escenario_id; ?> et_pb_module" style="width:95%;max-width:760px;margin:0 auto;">
 
       <!-- Cabecera -->
       <div style="text-align:center;margin-bottom:24px;">
@@ -1113,7 +1114,8 @@ add_action('init', function(){
     echo '<style>.gincana-info-page .entry-title, .gincana-info-page .page-title, .gincana-info-page .et_pb_post_title { display:none !important; }</style>';
     echo '<script>document.body.classList.add("gincana-info-page");</script>';
     ?>
-    <div class="gincana-instrucciones" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">
+    <?php if (function_exists('gc_render_tema_style')) echo gc_render_tema_style($escenario_id); ?>
+    <div class="gincana-instrucciones gc-tema-esc-<?php echo (int) $escenario_id; ?>" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">
       <div style="text-align:center;margin-bottom:24px;">
         <div style="font-size:14px;font-weight:600;color:#2563eb;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -1171,7 +1173,8 @@ add_action('init', function(){
     echo '<style>.gincana-info-page .entry-title, .gincana-info-page .page-title, .gincana-info-page .et_pb_post_title { display:none !important; }</style>';
     echo '<script>document.body.classList.add("gincana-info-page");</script>';
     ?>
-    <div class="gincana-puntuaciones" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">
+    <?php if (function_exists('gc_render_tema_style')) echo gc_render_tema_style($escenario_id); ?>
+    <div class="gincana-puntuaciones gc-tema-esc-<?php echo (int) $escenario_id; ?>" style="width:95%;max-width:760px;margin:0 auto;padding:16px 0;">
       <div style="text-align:center;margin-bottom:24px;">
         <div style="font-size:14px;font-weight:600;color:#2563eb;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
