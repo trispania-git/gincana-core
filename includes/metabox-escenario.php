@@ -685,27 +685,13 @@ function gc_render_escenario_metabox($post) {
             <!-- Colores personalizados (solo visible si preset=personalizado) -->
             <div id="gc-tema-custom" style="<?php echo $tema_preset !== 'personalizado' ? 'display:none;' : ''; ?>margin-top:20px;padding:18px 20px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;">
                 <h4 style="margin:0 0 14px;">Colores personalizados</h4>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
-                    <div class="gc-wiz-field" style="margin:0;">
-                        <label>Color de fondo</label>
-                        <input type="color" name="gc_tema_body_bg" value="<?php echo esc_attr($cust_body_bg); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
-                    </div>
-                    <div class="gc-wiz-field" style="margin:0;">
-                        <label>Color de texto</label>
-                        <input type="color" name="gc_tema_body_color" value="<?php echo esc_attr($cust_body_color); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
-                    </div>
-                    <div class="gc-wiz-field" style="margin:0;">
-                        <label>Color de acento (botones, enlaces)</label>
-                        <input type="color" name="gc_tema_accent" value="<?php echo esc_attr($cust_accent); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
-                    </div>
-                    <div class="gc-wiz-field" style="margin:0;">
-                        <label>Fondo de tarjetas</label>
-                        <input type="color" name="gc_tema_card_bg" value="<?php echo esc_attr($cust_card_bg); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
-                    </div>
-                    <div class="gc-wiz-field" style="margin:0;">
-                        <label>Borde de tarjetas</label>
-                        <input type="color" name="gc_tema_card_border" value="<?php echo esc_attr($cust_card_border); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
-                    </div>
+                <p style="margin:0 0 12px;font-size:12px;color:#64748b;">Puedes usar el selector visual o escribir un código HEX (ej: <code>#F0F8FF</code>).</p>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;">
+                    <?php gc_render_color_field('gc_tema_body_bg',     $cust_body_bg,     'Color de fondo'); ?>
+                    <?php gc_render_color_field('gc_tema_body_color',  $cust_body_color,  'Color de texto'); ?>
+                    <?php gc_render_color_field('gc_tema_accent',      $cust_accent,      'Color de acento (botones, enlaces)'); ?>
+                    <?php gc_render_color_field('gc_tema_card_bg',     $cust_card_bg,     'Fondo de tarjetas'); ?>
+                    <?php gc_render_color_field('gc_tema_card_border', $cust_card_border, 'Borde de tarjetas'); ?>
                 </div>
             </div>
 
@@ -720,18 +706,14 @@ function gc_render_escenario_metabox($post) {
                     </div>
                 </label>
                 <div id="gc-tema-header-colors" style="<?php echo $tema_header_p ? '' : 'display:none;'; ?>margin-top:14px;padding:14px 16px;border-radius:10px;background:#f1f5f9;border:1px solid #e2e8f0;">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                        <div class="gc-wiz-field" style="margin:0;">
-                            <label>Fondo del header</label>
-                            <input type="color" name="gc_tema_header_bg" value="<?php echo esc_attr($cust_header_bg); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
-                        </div>
-                        <div class="gc-wiz-field" style="margin:0;">
-                            <label>Texto del header</label>
-                            <input type="color" name="gc_tema_header_color" value="<?php echo esc_attr($cust_header_color); ?>" style="width:100%;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;" />
-                        </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
+                        <?php gc_render_color_field('gc_tema_header_bg',    $cust_header_bg,    'Fondo del header'); ?>
+                        <?php gc_render_color_field('gc_tema_header_color', $cust_header_color, 'Texto del header'); ?>
                     </div>
                 </div>
             </div>
+
+            <?php if (function_exists('gc_render_color_field_script')) gc_render_color_field_script(); ?>
 
             <!-- Imagen de fondo -->
             <div class="gc-wiz-field" style="margin-top:20px;">

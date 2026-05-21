@@ -241,3 +241,106 @@ function gc_open_tema_wrap($escenario_id, $extra_class = '') {
 function gc_close_tema_wrap() {
     echo '</div>';
 }
+
+/**
+ * Render de un campo de color con color-picker + input HEX sincronizado.
+ * El input HEX se puede escribir manualmente (ej: #F0F8FF).
+ *
+ * @param string $name  Nombre del campo (el value se envía con este name).
+ * @param string $value Valor actual del color (hex #xxxxxx).
+ * @param string $label Etiqueta opcional sobre el campo.
+ */
+function gc_render_color_field($name, $value, $label = '') {
+    $value = (string) $value;
+    if (!preg_match('/^#[0-9a-fA-F]{6}$/', $value)) {
+        $value = '#000000';
+    }
+    $uid = 'gccolor_' . md5($name);
+    ?>
+    <div class="gc-color-field">
+        <?php if ($label): ?>
+            <label style="display:block;margin-bottom:6px;font-weight:500;font-size:13px;color:#334155;"><?php echo esc_html($label); ?></label>
+        <?php endif; ?>
+        <div style="display:flex;gap:8px;align-items:center;">
+            <input type="color"
+                   id="<?php echo esc_attr($uid); ?>_picker"
+                   value="<?php echo esc_attr($value); ?>"
+                   data-gc-color-target="<?php echo esc_attr($uid); ?>_hex"
+                   style="width:54px;height:42px;border-radius:8px;border:1px solid #cbd5e1;cursor:pointer;padding:2px;background:#fff;" />
+            <input type="text"
+                   id="<?php echo esc_attr($uid); ?>_hex"
+                   name="<?php echo esc_attr($name); ?>"
+                   value="<?php echo esc_attr($value); ?>"
+                   data-gc-color-target="<?php echo esc_attr($uid); ?>_picker"
+                   placeholder="#000000"
+                   maxlength="7"
+                   spellcheck="false"
+                   autocomplete="off"
+                   style="flex:1;min-width:0;padding:10px 12px;border-radius:8px;border:1px solid #cbd5e1;font-family:monospace;font-size:14px;text-transform:uppercase;" />
+        </div>
+    </div>
+    <?php
+}
+
+/**
+ * JS global para sincronizar color picker ↔ input hex.
+ * Se imprime una sola vez por carga; se enchufa a cualquier campo creado con
+ * gc_render_color_field() y a cualquier color picker que tenga
+ * data-gc-color-target apuntando al input HEX (y viceversa).
+ */
+function gc_render_color_field_script() {
+    static $printed = false;
+    if ($printed) return;
+    $printed = true;
+    ?>
+    <script>
+    (function(){
+        function normHex(v) {
+            v = String(v || '').trim();
+            if (!v) return null;
+            if (v.charAt(0) !== '#') v = '#' + v;
+            // expand 3 → 6 (#abc → #aabbcc)
+            if (/^#[0-9a-fA-F]{3}$/.test(v)) {
+                v = '#' + v[1]+v[1] + v[2]+v[2] + v[3]+v[3];
+            }
+            if (!/^#[0-9a-fA-F]{6}$/.test(v)) return null;
+            return v.toUpperCase();
+        }
+        document.addEventListener('input', function(e){
+            var src = e.target;
+            if (!src || !src.dataset || !src.dataset.gcColorTarget) return;
+            var tgt = document.getElementById(src.dataset.gcColorTarget);
+            if (!tgt) return;
+            if (src.type === 'color') {
+                tgt.value = src.value.toUpperCase();
+            } else {
+                var h = normHex(src.value);
+                if (h) {
+                    tgt.value = h;
+                    src.value = h; // normaliza el propio input
+                    src.style.borderColor = '';
+                } else {
+                    src.style.borderColor = '#dc2626';
+                }
+            }
+        });
+        // Al perder foco, si el hex no es válido restaurar al del picker
+        document.addEventListener('blur', function(e){
+            var src = e.target;
+            if (!src || !src.dataset || !src.dataset.gcColorTarget) return;
+            if (src.type !== 'text') return;
+            var h = normHex(src.value);
+            if (!h) {
+                var picker = document.getElementById(src.dataset.gcColorTarget);
+                if (picker) {
+                    src.value = picker.value.toUpperCase();
+                    src.style.borderColor = '';
+                }
+            } else {
+                src.value = h;
+            }
+        }, true);
+    })();
+    </script>
+    <?php
+}
