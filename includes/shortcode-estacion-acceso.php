@@ -132,6 +132,11 @@ function gc_shortcode_estacion_acceso() {
         }
     }
 
+    // Logos del pie ANTES de cerrar el wrap y antes de la barra fija inferior:
+    // así quedan dentro del flujo scroll, encima del espaciador, no debajo de
+    // la barra fija del itinerario.
+    if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id);
+
     echo '</div>';
 
     // Itinerario de estaciones (círculos) fijo al pie
@@ -139,9 +144,9 @@ function gc_shortcode_estacion_acceso() {
     echo do_shortcode('[gincana_itinerario escenario="' . (int) $escenario_id . '" estacion="' . (int) $station_id . '"]');
     echo '</div>';
 
-    // Espaciador para que el contenido no quede tapado por la barra fija inferior
-    // (los logos se imprimen vía wp_footer, no aquí).
-    echo '<div style="height:56px;"></div>';
+    // Espaciador para que el último contenido (logos incluidos) no quede tapado
+    // por la barra fija inferior.
+    echo '<div style="height:60px;"></div>';
 
     return ob_get_clean();
 }
@@ -1704,6 +1709,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         }
     }
 
+    if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id);
     echo '</div>';
     return ob_get_clean();
 });

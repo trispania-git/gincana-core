@@ -670,6 +670,7 @@ add_action('init', function(){
           Volver al escenario
         </a>
       </div>
+      <?php if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id); ?>
     </div>
     <?php
     return ob_get_clean();
@@ -1134,6 +1135,7 @@ add_action('init', function(){
           Volver al escenario
         </a>
       </div>
+      <?php if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id); ?>
     </div>
     <?php
     return ob_get_clean();
@@ -1193,6 +1195,7 @@ add_action('init', function(){
           Volver al escenario
         </a>
       </div>
+      <?php if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id); ?>
     </div>
     <?php
     return ob_get_clean();
