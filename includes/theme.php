@@ -432,22 +432,40 @@ add_action('wp_footer', function () {
 
     if ($html !== '') {
         echo $html;
-        // Mover el bloque para que quede ANTES del footer de Divi (no después).
-        // Así el itinerario sticky/footer-nav del template sigue siendo lo
-        // último visualmente, y los logos cierran el contenido principal.
+        // Mover el bloque para que quede ANTES del footer de Divi.
         ?>
         <script>
         (function(){
-            var blk = document.querySelector('.gc-footer-logos');
-            if (!blk) return;
-            var diviFooter = document.querySelector('footer.et-l.et-l--footer, footer.et-l--footer, .et-l.et-l--footer');
-            if (diviFooter && diviFooter.parentNode) {
-                diviFooter.parentNode.insertBefore(blk, diviFooter);
-                return;
+            function gcMoveLogos() {
+                var blk = document.querySelector('.gc-footer-logos');
+                if (!blk) { console.log('[gc-logos] sin bloque'); return; }
+                var diviFooter = document.querySelector('footer.et-l.et-l--footer')
+                              || document.querySelector('footer.et-l--footer')
+                              || document.querySelector('.et-l.et-l--footer');
+                console.log('[gc-logos] divi footer?', !!diviFooter);
+                if (diviFooter && diviFooter.parentNode) {
+                    diviFooter.parentNode.insertBefore(blk, diviFooter);
+                    blk.setAttribute('data-gc-moved', 'before-divi-footer');
+                    console.log('[gc-logos] movido antes del footer Divi');
+                    return;
+                }
+                var main = document.querySelector('#main-content')
+                        || document.querySelector('#page-container')
+                        || document.querySelector('#page');
+                if (main) {
+                    main.appendChild(blk);
+                    blk.setAttribute('data-gc-moved', 'main-fallback');
+                    console.log('[gc-logos] fallback en #main-content/#page');
+                }
             }
-            // Fallback: meterlo al final de #main-content o #page
-            var main = document.querySelector('#main-content') || document.querySelector('#page-container') || document.querySelector('#page');
-            if (main) main.appendChild(blk);
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', gcMoveLogos);
+            } else {
+                gcMoveLogos();
+            }
+            // Reintento por si Divi añade el footer tarde
+            setTimeout(gcMoveLogos, 500);
+            setTimeout(gcMoveLogos, 1500);
         })();
         </script>
         <?php
