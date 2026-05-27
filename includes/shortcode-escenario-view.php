@@ -903,7 +903,12 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       ?>
 
     </div>
-    <?php if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id); ?>
+    <?php
+    // Los logos NO se renderizan aquí en la portada del escenario porque la
+    // plantilla de Divi añade un footer propio con el itinerario sticky.
+    // En su lugar, wp_footer los imprime al final del body, después del
+    // footer de Divi, que es donde el usuario los espera.
+    ?>
   </div>
 
   <?php
