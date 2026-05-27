@@ -430,7 +430,28 @@ add_action('wp_footer', function () {
         . " gc_station=" . (isset($_GET['gc_station']) ? (int)$_GET['gc_station'] : '-')
         . " -->\n";
 
-    if ($html !== '') echo $html;
+    if ($html !== '') {
+        echo $html;
+        // Mover el bloque para que quede ANTES del footer de Divi (no después).
+        // Así el itinerario sticky/footer-nav del template sigue siendo lo
+        // último visualmente, y los logos cierran el contenido principal.
+        ?>
+        <script>
+        (function(){
+            var blk = document.querySelector('.gc-footer-logos');
+            if (!blk) return;
+            var diviFooter = document.querySelector('footer.et-l.et-l--footer, footer.et-l--footer, .et-l.et-l--footer');
+            if (diviFooter && diviFooter.parentNode) {
+                diviFooter.parentNode.insertBefore(blk, diviFooter);
+                return;
+            }
+            // Fallback: meterlo al final de #main-content o #page
+            var main = document.querySelector('#main-content') || document.querySelector('#page-container') || document.querySelector('#page');
+            if (main) main.appendChild(blk);
+        })();
+        </script>
+        <?php
+    }
 });
 
 /**
