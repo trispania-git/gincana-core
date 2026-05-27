@@ -412,7 +412,16 @@ add_action('wp_footer', function () {
             if (get_post_meta($escenario_id, 'gc_logo_' . $i, true)) $logo_count++;
         }
     }
+
+    $html = '';
+    $accion = 'skip';
+    if ($escenario_id > 0 && $logo_count > 0) {
+        $html = gc_render_footer_logos($escenario_id);
+        $accion = $html === '' ? 'guard_block' : 'rendered';
+    }
+
     echo "\n<!-- gc_footer_logos v" . (defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?')
+        . " accion={$accion}"
         . " escenario_id={$escenario_id}"
         . " logos_configurados={$logo_count}"
         . " is_singular_escenario=" . (is_singular('escenario') ? '1' : '0')
@@ -421,10 +430,7 @@ add_action('wp_footer', function () {
         . " gc_station=" . (isset($_GET['gc_station']) ? (int)$_GET['gc_station'] : '-')
         . " -->\n";
 
-    if ($escenario_id <= 0 || $logo_count === 0) return;
-    $html = gc_render_footer_logos($escenario_id);
-    if ($html === '') return; // ya se imprimió antes
-    echo $html;
+    if ($html !== '') echo $html;
 });
 
 /**
