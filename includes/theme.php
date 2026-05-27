@@ -336,8 +336,14 @@ function gc_render_footer_logos($escenario_id) {
     // Justificación: 1 centro, 2 extremos, 3 space-between
     $justify = $count === 1 ? 'center' : 'space-between';
 
+    // Saber desde qué sitio se está llamando (helper para diagnóstico)
+    $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 4);
+    $caller_file = isset($trace[0]['file']) ? basename($trace[0]['file']) : '?';
+    $caller_line = isset($trace[0]['line']) ? (int) $trace[0]['line'] : 0;
+
     ob_start();
     ?>
+    <!-- gc_logos_render desde=<?php echo esc_html($caller_file . ':' . $caller_line); ?> escenario=<?php echo (int) $escenario_id; ?> n=<?php echo (int) $count; ?> -->
     <div class="gc-footer-logos" style="margin:20px auto 0;padding:14px 12px;max-width:760px;width:95%;display:flex;align-items:center;gap:18px;justify-content:<?php echo esc_attr($justify); ?>;flex-wrap:wrap;border-top:1px solid #e2e8f0;">
         <?php foreach ($logos as $url): ?>
             <img src="<?php echo esc_url($url); ?>" alt="" style="max-width:120px;width:120px;height:auto;object-fit:contain;display:block;" />
