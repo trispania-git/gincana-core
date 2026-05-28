@@ -436,6 +436,32 @@ add_action('wp_footer', function () {
         ?>
         <script>
         (function(){
+            function gcIsFixed(el) {
+                if (!el || !window.getComputedStyle) return false;
+                var s = window.getComputedStyle(el);
+                return s.position === 'fixed';
+            }
+            function gcAjustarMarginPorFooterFijo(blk, diviFooter) {
+                if (!blk || !diviFooter) return;
+                // Buscar el ancestro real con position:fixed (Divi a veces lo
+                // aplica al footer o a una section interior)
+                var target = diviFooter;
+                var node = diviFooter;
+                for (var i = 0; i < 5 && node; i++, node = node.parentElement) {
+                    if (gcIsFixed(node)) { target = node; break; }
+                }
+                // Y buscar también dentro del footer por si la sección fixed es hija
+                if (!gcIsFixed(target)) {
+                    var inner = diviFooter.querySelector('.et_pb_section--fixed')
+                             || diviFooter.querySelector('[class*="--fixed"]');
+                    if (gcIsFixed(inner)) target = inner;
+                }
+                if (gcIsFixed(target)) {
+                    var h = target.offsetHeight || 70;
+                    blk.style.marginBottom = (h + 16) + 'px';
+                    blk.setAttribute('data-gc-fixed-footer', h);
+                }
+            }
             function gcMoveLogos() {
                 var blk = document.querySelector('.gc-footer-logos');
                 if (!blk) { console.log('[gc-logos] sin bloque'); return; }
@@ -446,6 +472,7 @@ add_action('wp_footer', function () {
                 if (diviFooter && diviFooter.parentNode) {
                     diviFooter.parentNode.insertBefore(blk, diviFooter);
                     blk.setAttribute('data-gc-moved', 'before-divi-footer');
+                    gcAjustarMarginPorFooterFijo(blk, diviFooter);
                     console.log('[gc-logos] movido antes del footer Divi');
                     return;
                 }
@@ -466,6 +493,14 @@ add_action('wp_footer', function () {
             // Reintento por si Divi añade el footer tarde
             setTimeout(gcMoveLogos, 500);
             setTimeout(gcMoveLogos, 1500);
+            // Re-ajustar margin si la ventana cambia de tamaño
+            window.addEventListener('resize', function(){
+                var blk = document.querySelector('.gc-footer-logos');
+                var diviFooter = document.querySelector('footer.et-l.et-l--footer')
+                              || document.querySelector('footer.et-l--footer')
+                              || document.querySelector('.et-l.et-l--footer');
+                if (blk && diviFooter) gcAjustarMarginPorFooterFijo(blk, diviFooter);
+            });
         })();
         </script>
         <?php
