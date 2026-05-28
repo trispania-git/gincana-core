@@ -48,7 +48,7 @@ add_shortcode('gincana_escenario_contenido', function($atts){
 
     <?php if ($descripcion): ?>
       <div style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;padding:16px;border-radius:12px;<?php echo $bg_inline; ?>">
-        <?php echo wp_kses_post($descripcion); ?>
+        <?php echo wp_kses_post(wpautop($descripcion)); ?>
       </div>
     <?php endif; ?>
 

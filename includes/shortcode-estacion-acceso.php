@@ -86,7 +86,7 @@ function gc_shortcode_estacion_acceso() {
 
     if ($descripcion) {
         echo '<div class="gc-station-desc" style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;padding:16px;border-radius:12px;' . $bg_inline . '">';
-        echo wp_kses_post($descripcion);
+        echo wp_kses_post(wpautop($descripcion));
         echo '</div>';
     }
 
@@ -1635,7 +1635,7 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         echo gc_render_action_icons($audio, $maps_url, $direccion);
         if ($descripcion) {
             echo '<div class="gc-station-desc" style="margin:0 0 20px;font-size:15px;line-height:1.7;color:#334155;padding:16px;border-radius:12px;' . $bg_inline . '">';
-            echo wp_kses_post($descripcion);
+            echo wp_kses_post(wpautop($descripcion));
             echo '</div>';
         }
         echo '<!-- gincana_estacion_contenido v' . (defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?') . ' img1=' . ($img1 ? 'set' : 'empty') . ' img2=' . ($img2 ? 'set' : 'empty') . ' img3=' . ($img3 ? 'set' : 'empty') . ' -->';
