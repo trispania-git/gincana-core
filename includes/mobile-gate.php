@@ -24,6 +24,46 @@ add_action('admin_notices', function () {
         . '</div>';
 });
 
+// Banner sticky en el FRONTEND mientras el modo test está activo, para que
+// cualquier visitante sepa que la web está en modo prueba.
+add_action('wp_body_open', 'gc_render_test_mode_banner');
+// Fallback por si el tema no llama wp_body_open
+add_action('wp_footer', 'gc_render_test_mode_banner_footer_fallback', 1);
+
+function gc_render_test_mode_banner() {
+    if (get_option('gc_desktop_test_mode', '0') !== '1') return;
+    if (is_admin()) return;
+    static $printed = false;
+    if ($printed) return;
+    $printed = true;
+    ?>
+    <div id="gc-test-mode-banner" style="position:sticky;top:0;left:0;right:0;z-index:100000;background:linear-gradient(90deg,#fbbf24,#f59e0b);color:#78350f;text-align:center;padding:8px 40px 8px 14px;font-size:13px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+        🧪 MODO PRUEBA ACTIVADO — esta web está temporalmente abierta a escritorio
+        <button type="button" onclick="this.parentNode.style.display='none';" aria-label="Cerrar" style="position:absolute;top:50%;right:10px;transform:translateY(-50%);background:rgba(0,0,0,0.15);border:0;color:#78350f;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;">×</button>
+    </div>
+    <?php
+}
+
+function gc_render_test_mode_banner_footer_fallback() {
+    if (get_option('gc_desktop_test_mode', '0') !== '1') return;
+    if (is_admin()) return;
+    // Si wp_body_open ya pintó el banner, no duplicar
+    ?>
+    <script>
+    (function(){
+        if (document.getElementById('gc-test-mode-banner')) return;
+        var b = document.createElement('div');
+        b.id = 'gc-test-mode-banner';
+        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:100000;background:linear-gradient(90deg,#fbbf24,#f59e0b);color:#78350f;text-align:center;padding:8px 40px 8px 14px;font-size:13px;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;box-shadow:0 2px 6px rgba(0,0,0,0.15);';
+        b.innerHTML = '🧪 MODO PRUEBA ACTIVADO — esta web está temporalmente abierta a escritorio'
+            + '<button type="button" aria-label="Cerrar" style="position:absolute;top:50%;right:10px;transform:translateY(-50%);background:rgba(0,0,0,0.15);border:0;color:#78350f;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:14px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;">×</button>';
+        b.querySelector('button').onclick = function(){ b.style.display = 'none'; };
+        document.body.insertBefore(b, document.body.firstChild);
+    })();
+    </script>
+    <?php
+}
+
 // === 1. Interceptar la URL secreta de bypass (antes de template_redirect) ===
 add_action('init', function () {
     if (get_option('gc_mobile_only', '0') !== '1') return;
