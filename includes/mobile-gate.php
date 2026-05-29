@@ -5,10 +5,24 @@ if ( ! defined('ABSPATH') ) exit;
  * Mobile Gate: bloquea acceso desde escritorio en el frontend.
  *
  * - Solo actúa si la opción gc_mobile_only está activada.
+ * - Se puede anular completamente con gc_desktop_test_mode (modo testeo).
  * - No afecta: admin, REST API, AJAX, login, cron, CLI, feeds.
  * - URL secreta configurable para bypass (setea cookie de 30 días).
  * - Detección: User-Agent (PHP).
  */
+
+// Aviso visible en todas las pantallas admin cuando el modo test está activo,
+// para que no se olvide de desactivarlo antes de salir a producción.
+add_action('admin_notices', function () {
+    if (get_option('gc_desktop_test_mode', '0') !== '1') return;
+    if (!current_user_can('manage_options')) return;
+    $settings_url = admin_url('admin.php?page=gincana-settings');
+    echo '<div class="notice notice-warning" style="border-left-color:#dc2626;background:#fef2f2;">'
+        . '<p style="font-weight:600;">🧪 <strong>Gincana Core:</strong> el modo «Escritorio para test» está ACTIVO. '
+        . 'La restricción «solo móvil» queda anulada para todos los visitantes. '
+        . '<a href="' . esc_url($settings_url) . '">Desactívalo</a> antes de pasar a producción.</p>'
+        . '</div>';
+});
 
 // === 1. Interceptar la URL secreta de bypass (antes de template_redirect) ===
 add_action('init', function () {
@@ -36,6 +50,9 @@ add_action('template_redirect', function () {
 
     // Solo si está activado
     if (get_option('gc_mobile_only', '0') !== '1') return;
+
+    // Modo test escritorio: anula la restricción para todos los visitantes
+    if (get_option('gc_desktop_test_mode', '0') === '1') return;
 
     // No bloquear admin, REST, AJAX, cron, CLI
     if (is_admin()) return;

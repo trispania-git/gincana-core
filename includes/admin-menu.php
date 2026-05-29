@@ -90,6 +90,7 @@ function gincana_core_settings_cb(){
   // Guardar ajustes
   if (isset($_POST['gc_settings_nonce']) && wp_verify_nonce($_POST['gc_settings_nonce'], 'gc_save_settings')) {
     update_option('gc_mobile_only', isset($_POST['gc_mobile_only']) ? '1' : '0');
+    update_option('gc_desktop_test_mode', isset($_POST['gc_desktop_test_mode']) ? '1' : '0');
     update_option('gc_mobile_only_message', wp_kses_post($_POST['gc_mobile_only_message'] ?? ''));
     update_option('gc_mobile_only_image', esc_url_raw($_POST['gc_mobile_only_image'] ?? ''));
     $slug = sanitize_title($_POST['gc_mobile_bypass_slug'] ?? 'accesogymk');
@@ -97,10 +98,11 @@ function gincana_core_settings_cb(){
     echo '<div class="notice notice-success"><p>Ajustes guardados.</p></div>';
   }
 
-  $mobile_only  = get_option('gc_mobile_only', '0');
-  $mobile_msg   = get_option('gc_mobile_only_message', '');
-  $mobile_img   = get_option('gc_mobile_only_image', '');
-  $bypass_slug  = get_option('gc_mobile_bypass_slug', 'accesogymk');
+  $mobile_only       = get_option('gc_mobile_only', '0');
+  $desktop_test_mode = get_option('gc_desktop_test_mode', '0');
+  $mobile_msg        = get_option('gc_mobile_only_message', '');
+  $mobile_img        = get_option('gc_mobile_only_image', '');
+  $bypass_slug       = get_option('gc_mobile_bypass_slug', 'accesogymk');
   ?>
   <div class="wrap">
     <h1>Ajustes de Gincana Core</h1>
@@ -117,6 +119,18 @@ function gincana_core_settings_cb(){
               <span>Mostrar aviso a usuarios de escritorio en el frontend</span>
             </label>
             <p class="description">Si se activa, los visitantes desde ordenador verán un mensaje indicando que la web es solo para móvil. El panel de administración (backend) no se ve afectado.</p>
+          </td>
+        </tr>
+        <tr>
+          <th>🧪 Habilitar escritorio para test</th>
+          <td>
+            <label style="display:inline-flex;gap:8px;align-items:center;">
+              <input type="checkbox" name="gc_desktop_test_mode" value="1" <?php checked($desktop_test_mode, '1'); ?> />
+              <span>Permitir acceso desde escritorio a cualquier usuario (modo testeo)</span>
+            </label>
+            <p class="description" style="color:#92400e;">
+              <strong>⚠️ Solo para pruebas.</strong> Cuando está activo, anula temporalmente la restricción "solo móvil" para todos los visitantes (sin necesidad de URL secreta ni cookie). Útil para probar el comportamiento del jugador desde escritorio con usuarios no admin. Acuérdate de <strong>desactivarlo en producción</strong>.
+            </p>
           </td>
         </tr>
         <tr>
