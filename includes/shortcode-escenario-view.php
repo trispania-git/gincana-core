@@ -187,11 +187,12 @@ add_shortcode('gincana_estaciones_lista', function($atts){
 
   // En orden secreto: cada usuario tiene un orden personal aleatorio.
   // Sustituimos est_ids y active_ids por ese orden custom.
+  // Ya no exigimos user_id > 0; el helper guarda en cookie si es guest.
   $user_random_order = [];
-  if ($es_orden_secreto && $user_id && function_exists('gc_get_user_random_order')) {
+  if ($es_orden_secreto && function_exists('gc_get_user_random_order')) {
     $user_random_order = gc_get_user_random_order($user_id, $escenario_id, $active_ids);
     $active_ids = $user_random_order;
-    $est_ids    = $user_random_order; // las cards también se pintan en este orden
+    $est_ids    = $user_random_order;
   }
 
   // Calcular siguiente desbloqueada
@@ -351,6 +352,12 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     }
   </style>
 
+  <!-- gc_escenario_view v<?php echo defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?'; ?>
+       libre=<?php echo $es_orden_libre ? '1' : '0'; ?>
+       secreto=<?php echo $es_orden_secreto ? '1' : '0'; ?>
+       user=<?php echo (int) $user_id; ?>
+       <?php if ($es_orden_secreto): ?>orden=<?php echo implode(',', array_map('intval', $user_random_order)); ?><?php endif; ?>
+  -->
   <div id="<?php echo esc_attr($uid); ?>" style="width:95%;max-width:760px;margin:0 auto;">
 
     <?php

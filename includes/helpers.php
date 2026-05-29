@@ -290,32 +290,56 @@ if ( ! function_exists('gc_orden_aleatorio') ) {
 
 /**
  * Devuelve el orden personal de las estaciones para un usuario+escenario.
- * Si no existe, genera un shuffle aleatorio y lo guarda en user_meta.
- * Solo aplica cuando el escenario está en modo 'orden secreto'.
  *
- * @return int[] Array de IDs de estaciones en el orden custom del usuario.
+ * Persistencia:
+ *  - Si el usuario está logueado: user_meta gc_random_order_<esc_id>.
+ *  - Si NO está logueado (guest sin login): cookie gc_rndord_<esc_id>
+ *    de 1 año.
+ *
+ * Si no existía, se genera con shuffle y se guarda. Si la lista de
+ * estaciones cambia (se añaden/quitan), se actualiza preservando el orden
+ * de las que ya estaban.
  */
 if ( ! function_exists('gc_get_user_random_order') ) {
   function gc_get_user_random_order($user_id, $escenario_id, $est_ids) {
     $user_id      = (int) $user_id;
     $escenario_id = (int) $escenario_id;
     $est_ids      = array_values(array_map('intval', (array) $est_ids));
-    if (!$user_id || !$escenario_id || empty($est_ids)) return $est_ids;
+    if (empty($est_ids)) return $est_ids;
 
-    $key   = 'gc_random_order_' . $escenario_id;
-    $saved = get_user_meta($user_id, $key, true);
+    $meta_key   = 'gc_random_order_' . $escenario_id;
+    $cookie_key = 'gc_rndord_' . $escenario_id;
+
+    // Reset por URL: ?gc_reset_random_order=1 borra y regenera
+    if (isset($_GET['gc_reset_random_order']) && $_GET['gc_reset_random_order'] === '1') {
+      if ($user_id > 0) {
+        delete_user_meta($user_id, $meta_key);
+      }
+      if (isset($_COOKIE[$cookie_key])) {
+        setcookie($cookie_key, '', time() - 3600, defined('COOKIEPATH') ? COOKIEPATH : '/', defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '', is_ssl(), false);
+        unset($_COOKIE[$cookie_key]);
+      }
+    }
+
+    // Cargar orden previo (meta si logueado, cookie si no)
+    $saved = null;
+    if ($user_id > 0) {
+      $stored = get_user_meta($user_id, $meta_key, true);
+      if (is_array($stored)) $saved = $stored;
+    } elseif (isset($_COOKIE[$cookie_key])) {
+      $decoded = json_decode(stripslashes($_COOKIE[$cookie_key]), true);
+      if (is_array($decoded)) $saved = $decoded;
+    }
 
     if (is_array($saved) && !empty($saved)) {
-      // Si hay estaciones nuevas añadidas tras el sorteo, agregarlas al final
-      $saved = array_values(array_map('intval', $saved));
-      $faltan = array_diff($est_ids, $saved);
-      $sobran = array_diff($saved, $est_ids);
+      $saved  = array_values(array_map('intval', $saved));
+      $faltan = array_values(array_diff($est_ids, $saved));
+      $sobran = array_values(array_diff($saved, $est_ids));
       if (!empty($faltan) || !empty($sobran)) {
         $saved = array_values(array_diff($saved, $sobran));
-        $faltan = array_values($faltan);
         if (!empty($faltan)) shuffle($faltan);
         $saved = array_merge($saved, $faltan);
-        update_user_meta($user_id, $key, $saved);
+        gc_persist_user_random_order($user_id, $meta_key, $cookie_key, $saved);
       }
       return $saved;
     }
@@ -323,8 +347,29 @@ if ( ! function_exists('gc_get_user_random_order') ) {
     // Generar nuevo orden aleatorio y persistir
     $order = $est_ids;
     if (count($order) > 1) shuffle($order);
-    update_user_meta($user_id, $key, $order);
+    gc_persist_user_random_order($user_id, $meta_key, $cookie_key, $order);
     return $order;
+  }
+}
+
+if ( ! function_exists('gc_persist_user_random_order') ) {
+  function gc_persist_user_random_order($user_id, $meta_key, $cookie_key, $order) {
+    if ($user_id > 0) {
+      update_user_meta($user_id, $meta_key, $order);
+      return;
+    }
+    $json = wp_json_encode($order);
+    if ( ! headers_sent() ) {
+      setcookie(
+        $cookie_key, $json,
+        time() + YEAR_IN_SECONDS,
+        defined('COOKIEPATH') ? COOKIEPATH : '/',
+        defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '',
+        is_ssl(), false
+      );
+    }
+    // Disponible en la misma request
+    $_COOKIE[$cookie_key] = $json;
   }
 }
 
