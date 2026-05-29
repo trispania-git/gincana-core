@@ -253,6 +253,17 @@ if ( ! function_exists('gc_permite_guest') ) {
 }
 
 /**
+ * ¿El escenario se juega en orden libre (random / cualquier orden)?
+ * Si es true: todas las estaciones no completadas están disponibles
+ * desde el inicio, sin secuencia obligatoria.
+ */
+if ( ! function_exists('gc_orden_aleatorio') ) {
+  function gc_orden_aleatorio($escenario_id) {
+    return get_post_meta((int)$escenario_id, 'gc_orden_aleatorio', true) === '1';
+  }
+}
+
+/**
  * ¿El usuario actual es un jugador invitado (gc_guest)?
  */
 if ( ! function_exists('gc_user_es_guest') ) {

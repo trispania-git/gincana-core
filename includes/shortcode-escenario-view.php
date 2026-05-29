@@ -181,10 +181,19 @@ add_shortcode('gincana_estaciones_lista', function($atts){
   $active_ids = array_values(array_filter($est_ids, function($id) use ($disabled_ids) {
     return empty($disabled_ids[$id]);
   }));
-  foreach ($active_ids as $i => $eid) {
-    if (!empty($progress[$eid]) && $progress[$eid] === 'passed') continue;
-    $prev_ok = ($i === 0) || (!empty($progress[$active_ids[$i-1]]) && $progress[$active_ids[$i-1]] === 'passed');
-    if ($prev_ok) { $next_unlocked = $eid; break; }
+  $es_orden_libre = function_exists('gc_orden_aleatorio') && gc_orden_aleatorio($escenario_id);
+  if ($es_orden_libre) {
+    // Orden libre: la primera no completada es la "actual" para destacarla,
+    // pero todas las no completadas estarán disponibles (ver render más abajo).
+    foreach ($active_ids as $eid) {
+      if (empty($progress[$eid]) || $progress[$eid] !== 'passed') { $next_unlocked = $eid; break; }
+    }
+  } else {
+    foreach ($active_ids as $i => $eid) {
+      if (!empty($progress[$eid]) && $progress[$eid] === 'passed') continue;
+      $prev_ok = ($i === 0) || (!empty($progress[$active_ids[$i-1]]) && $progress[$active_ids[$i-1]] === 'passed');
+      if ($prev_ok) { $next_unlocked = $eid; break; }
+    }
   }
 
   // Contar completadas y total (excluyendo deshabilitadas)
@@ -417,7 +426,9 @@ add_shortcode('gincana_estaciones_lista', function($atts){
         $is_disabled = !empty($disabled_ids[$eid]);
         $is_passed   = !$is_disabled && !empty($progress[$eid]) && $progress[$eid] === 'passed';
         $is_current  = !$is_disabled && ($eid === $next_unlocked);
-        $is_locked   = !$is_disabled && !$is_passed && !$is_current;
+        // En modo orden libre, todas las no completadas están disponibles (no hay bloqueadas)
+        $is_available = !$is_disabled && !$is_passed && $es_orden_libre;
+        $is_locked    = !$is_disabled && !$is_passed && !$is_current && !$is_available;
 
         $extra_style = '';
         // Estado visual
@@ -440,7 +451,15 @@ add_shortcode('gincana_estaciones_lista', function($atts){
           $icon_bg     = '#2563eb';
           $icon_fg     = '#ffffff';
           $icon_text   = (string)$order;
-          $status_text = 'Siguiente ' . $label_estacion;
+          $status_text = $es_orden_libre ? 'Disponible' : ('Siguiente ' . $label_estacion);
+          $status_cls  = 'current';
+          $card_cls    = 'is-current';
+        } elseif ($is_available) {
+          // Orden libre: estación disponible (no es la "actual" destacada pero accesible)
+          $icon_bg     = '#f59e0b';
+          $icon_fg     = '#ffffff';
+          $icon_text   = (string)$order;
+          $status_text = 'Disponible';
           $status_cls  = 'current';
           $card_cls    = 'is-current';
         } else {
@@ -452,7 +471,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
           $card_cls    = 'is-locked';
         }
 
-        $tag = (!$is_disabled && ($is_passed || $is_current)) ? 'a' : 'div';
+        $tag = (!$is_disabled && ($is_passed || $is_current || $is_available)) ? 'a' : 'div';
         $href = ($tag === 'a') ? ' href="' . esc_url($url) . '"' : '';
       ?>
 

@@ -291,6 +291,16 @@ function gc_render_escenario_metabox($post) {
                 </div>
             </label>
 
+            <?php $orden_aleatorio = get_post_meta($post->ID, 'gc_orden_aleatorio', true) === '1'; ?>
+            <label class="gc-wiz-toggle">
+                <input type="checkbox" name="gc_orden_aleatorio" value="1" id="gc_orden_aleatorio" <?php checked($orden_aleatorio, true); ?> />
+                <span class="gc-switch"></span>
+                <div>
+                    <div class="gc-toggle-label">Orden libre / aleatorio 🎲</div>
+                    <div class="gc-toggle-desc">El jugador puede hacer las estaciones en el orden que quiera. Todas estarán disponibles desde el inicio en lugar de desbloquearse una a una.</div>
+                </div>
+            </label>
+
             <!-- Radio GPS (visible para validacion_gps) -->
             <div id="gc-geo-section" style="margin-top:16px;padding:14px 16px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;<?php echo $tipo_qr !== 'validacion_gps' ? 'display:none;' : ''; ?>">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
@@ -999,11 +1009,13 @@ function gc_render_escenario_metabox($post) {
                 ]);
 
                 var pistas = ch('gc_pistas_activas');
+                var ordenAleat = ch('gc_orden_aleatorio');
                 var mecRows = [
                     ['Tipo de QR', lb('tipo_qr', tipoQr)],
                     ['Prueba/quiz', prueba ? si : no],
                     ['Gamificacion', puntos ? si : no],
-                    ['Pistas', pistas ? si : no]
+                    ['Pistas', pistas ? si : no],
+                    ['Orden libre', ordenAleat ? si : no]
                 ];
                 if (prueba) {
                     mecRows.push(['Origen preguntas', lb('origen_preguntas', origen)]);
@@ -1078,6 +1090,7 @@ add_action('save_post', function ($post_id) {
     if ($tipo_qr === 'solo_pregunta') $req_prueba = '1';
     update_post_meta($post_id, 'gc_requiere_prueba', $req_prueba);
     update_post_meta($post_id, 'gc_pistas_activas', isset($_POST['gc_pistas_activas']) ? '1' : '0');
+    update_post_meta($post_id, 'gc_orden_aleatorio', isset($_POST['gc_orden_aleatorio']) ? '1' : '0');
     $geo_radio = isset($_POST['gc_geo_radio']) ? max(0, (int) $_POST['gc_geo_radio']) : 0;
     update_post_meta($post_id, 'gc_geo_radio', $geo_radio);
 

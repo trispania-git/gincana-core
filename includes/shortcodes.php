@@ -770,12 +770,21 @@ add_action('init', function(){
     $active_ids = array_values(array_filter($est_ids, function($id) use ($disabled_ids) {
       return empty($disabled_ids[$id]);
     }));
+    $es_orden_libre = function_exists('gc_orden_aleatorio') && gc_orden_aleatorio($escenario_id);
     $next_unlocked_id = 0;
-    foreach ($active_ids as $i => $eid) {
-      $is_passed = !empty($progress[$eid]['passed']);
-      if ($is_passed) continue;
-      $prev_ok = ($i === 0) ? true : !empty($progress[$active_ids[$i-1]]['passed']);
-      if ($prev_ok) { $next_unlocked_id = $eid; break; }
+    if ($es_orden_libre) {
+      // Orden libre: la primera no completada se marca como "desbloqueada"
+      // pero todas las no completadas son accesibles (ver render).
+      foreach ($active_ids as $eid) {
+        if (empty($progress[$eid]['passed'])) { $next_unlocked_id = $eid; break; }
+      }
+    } else {
+      foreach ($active_ids as $i => $eid) {
+        $is_passed = !empty($progress[$eid]['passed']);
+        if ($is_passed) continue;
+        $prev_ok = ($i === 0) ? true : !empty($progress[$active_ids[$i-1]]['passed']);
+        if ($prev_ok) { $next_unlocked_id = $eid; break; }
+      }
     }
     if (!$current_est_id && $next_unlocked_id) $current_est_id = $next_unlocked_id;
 
@@ -846,16 +855,19 @@ add_action('init', function(){
             $is_current   = !$is_disabled && ($eid === $current_est_id);
             $is_passed    = !$is_disabled && !empty($progress[$eid]['passed']);
             $is_unlocked  = !$is_disabled && (!$is_passed && $eid === $next_unlocked_id);
+            // En orden libre, cualquier no completada (que no sea la actual ni la próxima)
+            // también está disponible visualmente como naranja/clicable.
+            $is_available = !$is_disabled && !$is_passed && !$is_current && !$is_unlocked && $es_orden_libre;
 
             if ($is_disabled) {
               $bg = '#fecaca'; $fg = '#991b1b';
             } else {
-              $bg   = $is_current ? '#2563eb' : ($is_passed ? '#16a34a' : ($is_unlocked ? '#f59e0b' : '#e2e8f0'));
-              $fg   = $is_current || $is_passed || $is_unlocked ? '#ffffff' : '#334155';
+              $bg   = $is_current ? '#2563eb' : ($is_passed ? '#16a34a' : (($is_unlocked || $is_available) ? '#f59e0b' : '#e2e8f0'));
+              $fg   = $is_current || $is_passed || $is_unlocked || $is_available ? '#ffffff' : '#334155';
             }
             $ring = $is_current ? '0 0 0 3px rgba(37,99,235,0.25)' : 'none';
             $title_attr = $title . ' (Orden ' . (int)$order . ')'
-                          . ($is_disabled ? ' — Deshabilitada' : ($is_passed ? ' — Completada' : ($is_unlocked ? ' — Desbloqueada' : ' — Pendiente')));
+                          . ($is_disabled ? ' — Deshabilitada' : ($is_passed ? ' — Completada' : (($is_unlocked || $is_available) ? ' — Disponible' : ' — Pendiente')));
             $current_cls = $is_current ? ' is-current' : '';
             $extra_style = $is_disabled ? 'opacity:0.75;text-decoration:line-through;border:1.5px dashed #dc2626;' : '';
 
@@ -865,7 +877,9 @@ add_action('init', function(){
                   '.$inner.'
                 </div>';
 
-            if ($url && !$is_disabled) {
+            // Clicable si: tiene URL, no está deshabilitada, y (completada OR disponible OR libreorden permite).
+            $can_click = $url && !$is_disabled && ($is_passed || $is_current || $is_unlocked || $is_available);
+            if ($can_click) {
               echo '<a href="'.esc_url($url).'" class="gqi-item" style="text-decoration:none" title="'.esc_attr($title).'">'.$circle_html.'</a>';
             } else {
               echo '<div class="gqi-item" title="'.esc_attr($title_attr).'">'.$circle_html.'</div>';
@@ -978,13 +992,18 @@ add_action('init', function(){
     // Siguiente desbloqueada
     $passed_count = 0;
     $next_unlocked_id = 0;
+    $es_orden_libre_prog = function_exists('gc_orden_aleatorio') && gc_orden_aleatorio($escenario_id);
     foreach ($estaciones as $idx => $eid) {
       $is_passed = (isset($progress[$eid]['status']) && $progress[$eid]['status'] === 'passed');
       if ($is_passed) {
         $passed_count++; continue;
       }
-      $prev_ok = ($idx === 0) ? true : (isset($progress[$estaciones[$idx-1]]['status']) && $progress[$estaciones[$idx-1]]['status'] === 'passed');
-      if ($prev_ok && !$next_unlocked_id) $next_unlocked_id = $eid;
+      if ($es_orden_libre_prog) {
+        if (!$next_unlocked_id) $next_unlocked_id = $eid;
+      } else {
+        $prev_ok = ($idx === 0) ? true : (isset($progress[$estaciones[$idx-1]]['status']) && $progress[$estaciones[$idx-1]]['status'] === 'passed');
+        if ($prev_ok && !$next_unlocked_id) $next_unlocked_id = $eid;
+      }
     }
 
     // Total puntos
