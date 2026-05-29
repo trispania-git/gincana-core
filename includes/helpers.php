@@ -253,13 +253,78 @@ if ( ! function_exists('gc_permite_guest') ) {
 }
 
 /**
- * ¿El escenario se juega en orden libre (random / cualquier orden)?
- * Si es true: todas las estaciones no completadas están disponibles
- * desde el inicio, sin secuencia obligatoria.
+ * ¿El escenario se juega en ORDEN LIBRE? El jugador elige en qué orden
+ * hacer las estaciones, todas están visibles desde el inicio.
+ * El "orden" configurado para cada estación se sigue mostrando como número.
+ */
+if ( ! function_exists('gc_orden_libre') ) {
+  function gc_orden_libre($escenario_id) {
+    if (get_post_meta((int)$escenario_id, 'gc_orden_libre', true) === '1') return true;
+    // Compatibilidad con la opción anterior (v1.0.37)
+    return get_post_meta((int)$escenario_id, 'gc_orden_aleatorio', true) === '1';
+  }
+}
+
+/**
+ * ¿El escenario se juega en ORDEN ALEATORIO SECRETO? Cada jugador recibe
+ * su propio orden (sortado al iniciar). Va secuencial pero solo se ve el
+ * nombre de la estación actual (las siguientes salen como '¿?').
+ * Mutuamente excluyente con 'orden libre' (si ambas están, prevalece esta).
+ */
+if ( ! function_exists('gc_orden_secreto') ) {
+  function gc_orden_secreto($escenario_id) {
+    return get_post_meta((int)$escenario_id, 'gc_orden_secreto', true) === '1';
+  }
+}
+
+/**
+ * Compatibilidad: alias al helper antiguo (v1.0.37). Se mantiene para que
+ * el código que ya leía 'orden aleatorio' siga compilando, pero conceptualmente
+ * equivale ahora a 'orden libre'.
  */
 if ( ! function_exists('gc_orden_aleatorio') ) {
   function gc_orden_aleatorio($escenario_id) {
-    return get_post_meta((int)$escenario_id, 'gc_orden_aleatorio', true) === '1';
+    return gc_orden_libre($escenario_id);
+  }
+}
+
+/**
+ * Devuelve el orden personal de las estaciones para un usuario+escenario.
+ * Si no existe, genera un shuffle aleatorio y lo guarda en user_meta.
+ * Solo aplica cuando el escenario está en modo 'orden secreto'.
+ *
+ * @return int[] Array de IDs de estaciones en el orden custom del usuario.
+ */
+if ( ! function_exists('gc_get_user_random_order') ) {
+  function gc_get_user_random_order($user_id, $escenario_id, $est_ids) {
+    $user_id      = (int) $user_id;
+    $escenario_id = (int) $escenario_id;
+    $est_ids      = array_values(array_map('intval', (array) $est_ids));
+    if (!$user_id || !$escenario_id || empty($est_ids)) return $est_ids;
+
+    $key   = 'gc_random_order_' . $escenario_id;
+    $saved = get_user_meta($user_id, $key, true);
+
+    if (is_array($saved) && !empty($saved)) {
+      // Si hay estaciones nuevas añadidas tras el sorteo, agregarlas al final
+      $saved = array_values(array_map('intval', $saved));
+      $faltan = array_diff($est_ids, $saved);
+      $sobran = array_diff($saved, $est_ids);
+      if (!empty($faltan) || !empty($sobran)) {
+        $saved = array_values(array_diff($saved, $sobran));
+        $faltan = array_values($faltan);
+        if (!empty($faltan)) shuffle($faltan);
+        $saved = array_merge($saved, $faltan);
+        update_user_meta($user_id, $key, $saved);
+      }
+      return $saved;
+    }
+
+    // Generar nuevo orden aleatorio y persistir
+    $order = $est_ids;
+    if (count($order) > 1) shuffle($order);
+    update_user_meta($user_id, $key, $order);
+    return $order;
   }
 }
 

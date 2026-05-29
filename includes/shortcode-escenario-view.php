@@ -175,13 +175,27 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     }
   }
 
-  // Calcular siguiente desbloqueada (ignorando deshabilitadas)
-  $next_unlocked = 0;
-  // Construir secuencia "activa" (sin deshabilitadas) para calcular dependencias
+  // Modos de orden
+  $es_orden_libre   = function_exists('gc_orden_libre') && gc_orden_libre($escenario_id);
+  $es_orden_secreto = function_exists('gc_orden_secreto') && gc_orden_secreto($escenario_id);
+  if ($es_orden_secreto) $es_orden_libre = false; // mutuamente excluyentes
+
+  // Construir secuencia "activa" (sin deshabilitadas)
   $active_ids = array_values(array_filter($est_ids, function($id) use ($disabled_ids) {
     return empty($disabled_ids[$id]);
   }));
-  $es_orden_libre = function_exists('gc_orden_aleatorio') && gc_orden_aleatorio($escenario_id);
+
+  // En orden secreto: cada usuario tiene un orden personal aleatorio.
+  // Sustituimos est_ids y active_ids por ese orden custom.
+  $user_random_order = [];
+  if ($es_orden_secreto && $user_id && function_exists('gc_get_user_random_order')) {
+    $user_random_order = gc_get_user_random_order($user_id, $escenario_id, $active_ids);
+    $active_ids = $user_random_order;
+    $est_ids    = $user_random_order; // las cards también se pintan en este orden
+  }
+
+  // Calcular siguiente desbloqueada
+  $next_unlocked = 0;
   if ($es_orden_libre) {
     // Orden libre: la primera no completada es la "actual" para destacarla,
     // pero todas las no completadas estarán disponibles (ver render más abajo).
@@ -189,6 +203,8 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       if (empty($progress[$eid]) || $progress[$eid] !== 'passed') { $next_unlocked = $eid; break; }
     }
   } else {
+    // Secuencial (clásico o secreto): la "siguiente" se desbloquea solo si la
+    // anterior está passed.
     foreach ($active_ids as $i => $eid) {
       if (!empty($progress[$eid]) && $progress[$eid] === 'passed') continue;
       $prev_ok = ($i === 0) || (!empty($progress[$active_ids[$i-1]]) && $progress[$active_ids[$i-1]] === 'passed');
@@ -419,8 +435,10 @@ add_shortcode('gincana_estaciones_lista', function($atts){
 
     <div class="gc-cards">
       <?php foreach ($est_ids as $i => $eid):
-        $order  = (int) get_post_meta($eid, 'gc_orden', true) ?: ($i + 1);
-        $title  = get_the_title($eid) ?: ('Estacion ' . $order);
+        // En orden secreto el "número" mostrado es la posición en el orden custom
+        // del usuario (no el gc_orden global), para no dar pistas.
+        $order  = $es_orden_secreto ? ($i + 1) : ((int) get_post_meta($eid, 'gc_orden', true) ?: ($i + 1));
+        $title_real = get_the_title($eid) ?: ('Estacion ' . $order);
         $url    = get_permalink($eid);
 
         $is_disabled = !empty($disabled_ids[$eid]);
@@ -429,6 +447,10 @@ add_shortcode('gincana_estaciones_lista', function($atts){
         // En modo orden libre, todas las no completadas están disponibles (no hay bloqueadas)
         $is_available = !$is_disabled && !$is_passed && $es_orden_libre;
         $is_locked    = !$is_disabled && !$is_passed && !$is_current && !$is_available;
+
+        // En modo secreto, las estaciones no actuales/no completadas ocultan su nombre
+        $oculta_nombre = $es_orden_secreto && !$is_passed && !$is_current && !$is_disabled;
+        $title = $oculta_nombre ? '¿?' : $title_real;
 
         $extra_style = '';
         // Estado visual
@@ -465,8 +487,8 @@ add_shortcode('gincana_estaciones_lista', function($atts){
         } else {
           $icon_bg     = '#cbd5e1';
           $icon_fg     = '#64748b';
-          $icon_text   = (string)$order;
-          $status_text = 'Bloqueada';
+          $icon_text   = $es_orden_secreto ? '?' : (string)$order;
+          $status_text = $es_orden_secreto ? 'Por descubrir' : 'Bloqueada';
           $status_cls  = 'locked';
           $card_cls    = 'is-locked';
         }

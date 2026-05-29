@@ -770,11 +770,19 @@ add_action('init', function(){
     $active_ids = array_values(array_filter($est_ids, function($id) use ($disabled_ids) {
       return empty($disabled_ids[$id]);
     }));
-    $es_orden_libre = function_exists('gc_orden_aleatorio') && gc_orden_aleatorio($escenario_id);
+    $es_orden_libre   = function_exists('gc_orden_libre')   && gc_orden_libre($escenario_id);
+    $es_orden_secreto = function_exists('gc_orden_secreto') && gc_orden_secreto($escenario_id);
+    if ($es_orden_secreto) $es_orden_libre = false;
+
+    // En orden secreto, reordenar est_ids según el orden personal del usuario
+    if ($es_orden_secreto && $user_id && function_exists('gc_get_user_random_order')) {
+      $custom = gc_get_user_random_order($user_id, $escenario_id, $active_ids);
+      $active_ids = $custom;
+      $est_ids    = $custom;
+    }
+
     $next_unlocked_id = 0;
     if ($es_orden_libre) {
-      // Orden libre: la primera no completada se marca como "desbloqueada"
-      // pero todas las no completadas son accesibles (ver render).
       foreach ($active_ids as $eid) {
         if (empty($progress[$eid]['passed'])) { $next_unlocked_id = $eid; break; }
       }
@@ -847,8 +855,9 @@ add_action('init', function(){
       <div style="display:flex;align-items:center;gap:6px;">
         <div class="gqi-track" role="list" aria-label="Itinerario de estaciones" style="flex:1;min-width:0;">
           <?php foreach ($est_ids as $i => $eid):
-            $order = (int) get_post_meta($eid, 'gc_orden', true) ?: ($i+1);
-            $title = get_the_title($eid) ?: ('Estación '.$order);
+            // En orden secreto el número visible es la posición en el orden custom
+            $order = $es_orden_secreto ? ($i+1) : ((int) get_post_meta($eid, 'gc_orden', true) ?: ($i+1));
+            $title_real = get_the_title($eid) ?: ('Estación '.$order);
             $url   = get_permalink($eid);
 
             $is_disabled  = !empty($disabled_ids[$eid]);
@@ -858,6 +867,10 @@ add_action('init', function(){
             // En orden libre, cualquier no completada (que no sea la actual ni la próxima)
             // también está disponible visualmente como naranja/clicable.
             $is_available = !$is_disabled && !$is_passed && !$is_current && !$is_unlocked && $es_orden_libre;
+
+            // En modo secreto, ocultar nombre si no es passed/current/unlocked
+            $oculta = $es_orden_secreto && !$is_passed && !$is_current && !$is_unlocked && !$is_disabled;
+            $title  = $oculta ? '¿?' : $title_real;
 
             if ($is_disabled) {
               $bg = '#fecaca'; $fg = '#991b1b';
@@ -871,7 +884,7 @@ add_action('init', function(){
             $current_cls = $is_current ? ' is-current' : '';
             $extra_style = $is_disabled ? 'opacity:0.75;text-decoration:line-through;border:1.5px dashed #dc2626;' : '';
 
-            $inner = $is_disabled ? '&times;' : (int)$order;
+            $inner = $is_disabled ? '&times;' : ($oculta ? '?' : (int)$order);
             $circle_html = '<div class="gqi-step'.$current_cls.'" role="listitem" aria-label="'.esc_attr($title_attr).'"
                 style="background:'.$bg.';color:'.$fg.';box-shadow:'.$ring.';'.$extra_style.'">
                   '.$inner.'

@@ -291,15 +291,46 @@ function gc_render_escenario_metabox($post) {
                 </div>
             </label>
 
-            <?php $orden_aleatorio = get_post_meta($post->ID, 'gc_orden_aleatorio', true) === '1'; ?>
+            <?php
+                $orden_libre    = get_post_meta($post->ID, 'gc_orden_libre', true) === '1';
+                // Compat: si aún quedaba gc_orden_aleatorio del esquema antiguo, equivale a libre
+                if (!$orden_libre) {
+                    $orden_libre = get_post_meta($post->ID, 'gc_orden_aleatorio', true) === '1';
+                }
+                $orden_secreto  = get_post_meta($post->ID, 'gc_orden_secreto', true) === '1';
+            ?>
             <label class="gc-wiz-toggle">
-                <input type="checkbox" name="gc_orden_aleatorio" value="1" id="gc_orden_aleatorio" <?php checked($orden_aleatorio, true); ?> />
+                <input type="checkbox" name="gc_orden_libre" value="1" id="gc_orden_libre" <?php checked($orden_libre, true); ?> />
                 <span class="gc-switch"></span>
                 <div>
-                    <div class="gc-toggle-label">Orden libre / aleatorio 🎲</div>
-                    <div class="gc-toggle-desc">El jugador puede hacer las estaciones en el orden que quiera. Todas estarán disponibles desde el inicio en lugar de desbloquearse una a una.</div>
+                    <div class="gc-toggle-label">Orden libre 🎲</div>
+                    <div class="gc-toggle-desc">El jugador elige el orden. Todas las estaciones están visibles desde el inicio y se pueden completar en cualquier orden. El número de cada estación es fijo (la 1 sigue siendo la 1).</div>
                 </div>
             </label>
+
+            <label class="gc-wiz-toggle">
+                <input type="checkbox" name="gc_orden_secreto" value="1" id="gc_orden_secreto" <?php checked($orden_secreto, true); ?> />
+                <span class="gc-switch"></span>
+                <div>
+                    <div class="gc-toggle-label">Orden aleatorio (secreto) 🎰</div>
+                    <div class="gc-toggle-desc">Cada jugador recibe su propio orden personalizado al iniciar. Va secuencial: solo se ve el nombre de la estación actual. Las siguientes aparecen como "¿?" hasta que se desbloquean.</div>
+                </div>
+            </label>
+
+            <script>
+            (function(){
+                // Mutuamente excluyentes
+                var libre = document.getElementById('gc_orden_libre');
+                var secret = document.getElementById('gc_orden_secreto');
+                if (!libre || !secret) return;
+                libre.addEventListener('change', function(){
+                    if (libre.checked) secret.checked = false;
+                });
+                secret.addEventListener('change', function(){
+                    if (secret.checked) libre.checked = false;
+                });
+            })();
+            </script>
 
             <!-- Radio GPS (visible para validacion_gps) -->
             <div id="gc-geo-section" style="margin-top:16px;padding:14px 16px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;<?php echo $tipo_qr !== 'validacion_gps' ? 'display:none;' : ''; ?>">
@@ -1009,13 +1040,15 @@ function gc_render_escenario_metabox($post) {
                 ]);
 
                 var pistas = ch('gc_pistas_activas');
-                var ordenAleat = ch('gc_orden_aleatorio');
+                var ordenLibre   = ch('gc_orden_libre');
+                var ordenSecreto = ch('gc_orden_secreto');
+                var ordenTxt = ordenSecreto ? 'Aleatorio (secreto)' : (ordenLibre ? 'Libre' : 'Secuencial');
                 var mecRows = [
                     ['Tipo de QR', lb('tipo_qr', tipoQr)],
                     ['Prueba/quiz', prueba ? si : no],
                     ['Gamificacion', puntos ? si : no],
                     ['Pistas', pistas ? si : no],
-                    ['Orden libre', ordenAleat ? si : no]
+                    ['Orden', ordenTxt]
                 ];
                 if (prueba) {
                     mecRows.push(['Origen preguntas', lb('origen_preguntas', origen)]);
@@ -1090,7 +1123,17 @@ add_action('save_post', function ($post_id) {
     if ($tipo_qr === 'solo_pregunta') $req_prueba = '1';
     update_post_meta($post_id, 'gc_requiere_prueba', $req_prueba);
     update_post_meta($post_id, 'gc_pistas_activas', isset($_POST['gc_pistas_activas']) ? '1' : '0');
-    update_post_meta($post_id, 'gc_orden_aleatorio', isset($_POST['gc_orden_aleatorio']) ? '1' : '0');
+    // Orden libre vs orden aleatorio secreto: mutuamente excluyentes
+    $is_libre   = isset($_POST['gc_orden_libre']) ? '1' : '0';
+    $is_secreto = isset($_POST['gc_orden_secreto']) ? '1' : '0';
+    if ($is_libre === '1' && $is_secreto === '1') {
+        // Defensa por si llegan los dos: gana 'secreto'
+        $is_libre = '0';
+    }
+    update_post_meta($post_id, 'gc_orden_libre', $is_libre);
+    update_post_meta($post_id, 'gc_orden_secreto', $is_secreto);
+    // Limpiar el meta antiguo (v1.0.37) si existía
+    delete_post_meta($post_id, 'gc_orden_aleatorio');
     $geo_radio = isset($_POST['gc_geo_radio']) ? max(0, (int) $_POST['gc_geo_radio']) : 0;
     update_post_meta($post_id, 'gc_geo_radio', $geo_radio);
 
