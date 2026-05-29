@@ -210,7 +210,7 @@ if ( ! function_exists('gc_get_tipo_qr') ) {
   function gc_get_tipo_qr($escenario_id) {
     $val = get_post_meta((int)$escenario_id, 'gc_tipo_qr', true);
     if ($val === 'validacion') $val = 'validacion_boton'; // migración automática
-    return in_array($val, ['enlace', 'validacion_boton', 'validacion_quiz', 'validacion_gps', 'solo_pregunta'], true) ? $val : 'enlace';
+    return in_array($val, ['enlace', 'validacion_boton', 'validacion_boton_quiz', 'validacion_quiz', 'validacion_gps', 'solo_pregunta'], true) ? $val : 'enlace';
   }
 }
 
@@ -626,6 +626,9 @@ if ( ! function_exists('gc_default_instrucciones') ) {
         break;
       case 'validacion_boton':
         $valida_txt = "Escanea el código QR y confirma tu llegada pulsando el botón de validación.";
+        break;
+      case 'validacion_boton_quiz':
+        $valida_txt = "Escanea el código QR para confirmar tu llegada y, a continuación, responde correctamente a la pregunta para validar el {$label}.";
         break;
       case 'validacion_quiz':
         $valida_txt = "Escanea el código QR y responde correctamente a la pregunta para validar el {$label}.";

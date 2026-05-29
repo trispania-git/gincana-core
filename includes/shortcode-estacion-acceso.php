@@ -112,6 +112,15 @@ function gc_shortcode_estacion_acceso() {
         if ($tipo_qr === 'validacion_quiz' || $tipo_qr === 'solo_pregunta') {
             // Valida mediante pregunta (con QR o sin él)
             echo gc_render_adulto_station($station_id, $title, $escenario_id);
+        } elseif ($tipo_qr === 'validacion_boton_quiz') {
+            // QR confirma presencia + pregunta. Reutilizamos gc_render_adulto_station
+            // con un CTA inicial 'Has llegado a X' antes de la pregunta.
+            echo gc_render_adulto_station($station_id, $title, $escenario_id, [
+                'titulo'              => '¡Has llegado a ' . $title . '!',
+                'subtitulo'           => 'Ahora demuestra tus conocimientos sobre este lugar para validar el ' . $label . '.',
+                'boton'               => 'Continuar al desafío 🎯',
+                'usar_img_encontrada' => true,
+            ]);
         } elseif ($tipo_qr === 'validacion_gps') {
             // GPS verificado (token URL = ya pasó la verificación): quiz si hay prueba, si no botón
             if (gc_requiere_prueba($escenario_id)) {
@@ -751,7 +760,7 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
     return ob_get_clean();
 }
 
-function gc_render_adulto_station($station_id, $title, $escenario_id) {
+function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opts = null) {
     $label   = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
     $user_id = get_current_user_id();
 
@@ -924,9 +933,25 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
          data-q-index="<?php echo esc_attr($q_index); ?>">
 
         <!-- CTA desafío (visible por defecto) -->
-        <?php $img_pregunta = get_post_meta($escenario_id, 'gc_img_pregunta', true); ?>
+        <?php
+            $img_pregunta = get_post_meta($escenario_id, 'gc_img_pregunta', true);
+            // CTA personalizable. Por defecto: '¿Preparado para el desafío?'.
+            // Si es QR+Quiz, el dispatcher pasa textos tipo '¡Has llegado!' + 'Continuar al desafío'.
+            $cta_titulo = is_array($intro_opts) && !empty($intro_opts['titulo'])
+                ? $intro_opts['titulo']
+                : '¿Preparado para el desafío?';
+            $cta_subtitulo = is_array($intro_opts) && !empty($intro_opts['subtitulo'])
+                ? $intro_opts['subtitulo']
+                : 'Pon a prueba tus conocimientos sobre este lugar. ¡Solo tienes una oportunidad!';
+            $cta_boton = is_array($intro_opts) && !empty($intro_opts['boton'])
+                ? $intro_opts['boton']
+                : '¡Acepto el desafío!';
+            $usar_img_encontrada = is_array($intro_opts) && !empty($intro_opts['usar_img_encontrada']);
+        ?>
         <div id="gc-challenge-cta" style="padding:24px 20px;border:2px solid #2563eb;border-radius:14px;background:linear-gradient(135deg,#eff6ff,#dbeafe);text-align:center;">
-            <?php if ($img_pregunta): ?>
+            <?php if ($usar_img_encontrada): ?>
+            <div style="margin-bottom:12px;"><?php echo function_exists('gc_get_img_encontrada') ? gc_get_img_encontrada($escenario_id) : ''; ?></div>
+            <?php elseif ($img_pregunta): ?>
             <div style="margin-bottom:12px;">
                 <img src="<?php echo esc_url($img_pregunta); ?>" alt="" style="max-width:100%;height:auto;border-radius:12px;" />
             </div>
@@ -935,11 +960,11 @@ function gc_render_adulto_station($station_id, $title, $escenario_id) {
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
             <?php endif; ?>
-            <h3 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1e293b;">¿Preparado para el desafío?</h3>
-            <p style="margin:0 0 18px;font-size:15px;color:#475569;line-height:1.5;">Pon a prueba tus conocimientos sobre este lugar. ¡Solo tienes una oportunidad!</p>
+            <h3 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1e293b;"><?php echo esc_html($cta_titulo); ?></h3>
+            <p style="margin:0 0 18px;font-size:15px;color:#475569;line-height:1.5;"><?php echo esc_html($cta_subtitulo); ?></p>
             <button type="button" id="gc-start-challenge"
                     style="padding:14px 32px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:background 0.2s,transform 0.2s;">
-                ¡Acepto el desafío!
+                <?php echo esc_html($cta_boton); ?>
             </button>
         </div>
 
@@ -1696,8 +1721,8 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         } elseif ($tipo_qr === 'solo_pregunta') {
             // Sin QR: el quiz es la validación. Mostrar pregunta directamente.
             echo gc_render_adulto_station($station_id, $title, $escenario_id);
-        } elseif ($tipo_qr === 'validacion_boton' || $tipo_qr === 'validacion_quiz' || $tipo_qr === 'validacion') {
-            // QR obligatorio (botón o quiz): solo mostrar pista para buscar el QR
+        } elseif ($tipo_qr === 'validacion_boton' || $tipo_qr === 'validacion_boton_quiz' || $tipo_qr === 'validacion_quiz' || $tipo_qr === 'validacion') {
+            // QR obligatorio: pista para buscar el QR físico
             echo gc_render_infantil_station_pista($station_id, $title, $escenario_id);
         } else {
             // QR como enlace: mostrar quiz/completar directamente

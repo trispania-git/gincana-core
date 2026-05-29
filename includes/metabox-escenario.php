@@ -244,7 +244,14 @@ function gc_render_escenario_metabox($post) {
                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     </div>
                     <div class="gc-wiz-card-title">QR = Validacion (quiz)</div>
-                    <div class="gc-wiz-card-desc">El QR lleva a una pregunta que valida la estacion</div>
+                    <div class="gc-wiz-card-desc">El QR lleva directamente a una pregunta que valida la estacion</div>
+                </div>
+                <div class="gc-wiz-card <?php echo $tipo_qr === 'validacion_boton_quiz' ? 'selected' : ''; ?>" data-value="validacion_boton_quiz" data-field="gc_tipo_qr">
+                    <div class="gc-wiz-card-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0ea5e9" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/><circle cx="20" cy="6" r="2.5" fill="#0ea5e9"/></svg>
+                    </div>
+                    <div class="gc-wiz-card-title">QR + Quiz</div>
+                    <div class="gc-wiz-card-desc">El QR muestra '¡Has llegado!' y un botón que lleva a la pregunta. Combina presencia + reto.</div>
                 </div>
                 <div class="gc-wiz-card <?php echo $tipo_qr === 'validacion_gps' ? 'selected' : ''; ?>" data-value="validacion_gps" data-field="gc_tipo_qr">
                     <div class="gc-wiz-card-icon">
@@ -894,7 +901,7 @@ function gc_render_escenario_metabox($post) {
                 document.getElementById('gc_tipo_qr').value = val;
                 // validacion_quiz requiere prueba obligatoriamente
                 document.getElementById('gc-geo-section').style.display = val === 'validacion_gps' ? '' : 'none';
-                if (val === 'validacion_quiz' || val === 'solo_pregunta') {
+                if (val === 'validacion_quiz' || val === 'validacion_boton_quiz' || val === 'solo_pregunta') {
                     document.getElementById('gc_requiere_prueba').checked = true;
                     document.getElementById('gc-origen-preguntas-section').style.display = '';
                 } else if (val === 'validacion_boton') {
@@ -985,7 +992,7 @@ function gc_render_escenario_metabox($post) {
                 }
                 var labels = {
                     tipo_escenario: { adulto: 'Adulto', infantil: 'Infantil' },
-                    tipo_qr: { enlace: 'Enlace directo', validacion_boton: 'Validacion (boton)', validacion_quiz: 'Validacion (quiz)', validacion_gps: 'Validacion GPS', solo_pregunta: 'Sin QR · Solo pregunta', validacion: 'Validacion (legacy)' },
+                    tipo_qr: { enlace: 'Enlace directo', validacion_boton: 'Validacion (boton)', validacion_boton_quiz: 'QR + Quiz', validacion_quiz: 'Validacion (quiz)', validacion_gps: 'Validacion GPS', solo_pregunta: 'Sin QR · Solo pregunta', validacion: 'Validacion (legacy)' },
                     origen_preguntas: { por_estacion: 'Por estacion', pool: 'Pool aleatorio' },
                     accion_final: { ninguna: 'Solo enhorabuena', subir_foto: 'Subir foto' }
                 };
@@ -1115,12 +1122,12 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_tipo_escenario', $tipo);
     update_post_meta($post_id, 'gc_permitir_guest', isset($_POST['gc_permitir_guest']) ? '1' : '0');
     $tipo_qr = sanitize_text_field($_POST['gc_tipo_qr'] ?? 'enlace');
-    if ( ! in_array($tipo_qr, ['enlace', 'validacion_boton', 'validacion_quiz', 'validacion_gps', 'solo_pregunta'], true) ) $tipo_qr = 'enlace';
+    if ( ! in_array($tipo_qr, ['enlace', 'validacion_boton', 'validacion_boton_quiz', 'validacion_quiz', 'validacion_gps', 'solo_pregunta'], true) ) $tipo_qr = 'enlace';
     update_post_meta($post_id, 'gc_tipo_qr', $tipo_qr);
     update_post_meta($post_id, 'gc_mostrar_puntos', isset($_POST['gc_mostrar_puntos']) ? '1' : '0');
     // 'solo_pregunta' requiere prueba obligatoriamente
     $req_prueba = isset($_POST['gc_requiere_prueba']) ? '1' : '0';
-    if ($tipo_qr === 'solo_pregunta') $req_prueba = '1';
+    if ($tipo_qr === 'solo_pregunta' || $tipo_qr === 'validacion_boton_quiz') $req_prueba = '1';
     update_post_meta($post_id, 'gc_requiere_prueba', $req_prueba);
     update_post_meta($post_id, 'gc_pistas_activas', isset($_POST['gc_pistas_activas']) ? '1' : '0');
     // Orden libre vs orden aleatorio secreto: mutuamente excluyentes
