@@ -24,8 +24,11 @@ function gc_render_prueba_metabox($post) {
     wp_nonce_field('gc_save_prueba_meta', 'gc_prueba_nonce');
 
     $tipo         = get_post_meta($post->ID, 'gc_tipo', true) ?: 'multiple';
-    $tiempo_max_s = get_post_meta($post->ID, 'gc_tiempo_max_s', true) ?: 30;
-    $intentos_max = get_post_meta($post->ID, 'gc_intentos_max', true) ?: 2;
+    // Opcionales: vacíos = sin límite. NO aplicar default 30/2.
+    $tiempo_raw   = get_post_meta($post->ID, 'gc_tiempo_max_s', true);
+    $tiempo_max_s = ($tiempo_raw === '' || $tiempo_raw === null) ? '' : (int) $tiempo_raw;
+    $intentos_raw = get_post_meta($post->ID, 'gc_intentos_max', true);
+    $intentos_max = ($intentos_raw === '' || $intentos_raw === null) ? '' : (int) $intentos_raw;
     $preguntas    = get_post_meta($post->ID, 'gc_preguntas', true);
     $estacion_ref = get_post_meta($post->ID, 'gc_estacion_ref', true);
 
@@ -132,15 +135,17 @@ function gc_render_prueba_metabox($post) {
             </td>
         </tr>
         <tr>
-            <th><label for="gc_tiempo_max_s">Tiempo maximo (seg)</label></th>
+            <th><label for="gc_tiempo_max_s">Tiempo máximo (seg)</label></th>
             <td>
-                <input type="number" name="gc_tiempo_max_s" id="gc_tiempo_max_s" value="<?php echo (int)$tiempo_max_s; ?>" min="5" max="300" style="width:100px;" />
+                <input type="number" name="gc_tiempo_max_s" id="gc_tiempo_max_s" value="<?php echo esc_attr($tiempo_max_s); ?>" min="0" max="3600" placeholder="Sin límite" style="width:130px;" />
+                <p class="description">Déjalo vacío o en 0 para que no haya cronómetro.</p>
             </td>
         </tr>
         <tr>
-            <th><label for="gc_intentos_max">Intentos maximos</label></th>
+            <th><label for="gc_intentos_max">Intentos máximos</label></th>
             <td>
-                <input type="number" name="gc_intentos_max" id="gc_intentos_max" value="<?php echo (int)$intentos_max; ?>" min="1" max="10" style="width:100px;" />
+                <input type="number" name="gc_intentos_max" id="gc_intentos_max" value="<?php echo esc_attr($intentos_max); ?>" min="0" max="50" placeholder="Sin límite" style="width:130px;" />
+                <p class="description">Déjalo vacío o en 0 para que el jugador pueda intentarlo tantas veces como quiera.</p>
             </td>
         </tr>
     </table>
@@ -175,21 +180,30 @@ function gc_render_prueba_metabox($post) {
                     <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" placeholder="<?php echo $p_tipo === 'anagrama' ? 'Ej: GYMKANA' : ''; ?>" />
                 </p>
             <?php elseif ($p_tipo === 'sopa_letras'):
-                $sopa_tamano = isset($p['tamano_grid']) ? (int) $p['tamano_grid'] : 10;
+                $sopa_cols = isset($p['cols']) ? (int) $p['cols'] : 10;
+                $sopa_rows = isset($p['rows']) ? (int) $p['rows'] : 7;
+                $sopa_key  = $sopa_cols . 'x' . $sopa_rows;
+                // Presets rectangulares pensados para móvil (más anchos que altos)
+                $presets = [
+                    '8x6'   => 'Pequeño (8 × 6)',
+                    '10x7'  => 'Medio (10 × 7)',
+                    '12x8'  => 'Grande (12 × 8)',
+                    '14x10' => 'Extra (14 × 10)',
+                ];
             ?>
                 <p>
                     <label>Palabra a encontrar:</label><br>
                     <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" placeholder="Ej: GYMKANA" />
-                    <span style="color:#64748b;font-size:12px;">Se mostrará en MAYÚSCULAS, sin acentos. Mínimo 3 letras, máximo igual al tamaño del grid.</span>
+                    <span style="color:#64748b;font-size:12px;">Se mostrará en MAYÚSCULAS, sin acentos. Mínimo 3 letras. Su longitud debe caber en el grid.</span>
                 </p>
                 <p>
-                    <label>Tamaño del grid:</label><br>
-                    <select name="gc_preguntas[<?php echo $qi; ?>][tamano_grid]">
-                        <?php foreach ([8, 10, 12, 15] as $t): ?>
-                            <option value="<?php echo $t; ?>" <?php selected($sopa_tamano, $t); ?>><?php echo $t; ?> × <?php echo $t; ?></option>
+                    <label>Tamaño del grid (ancho × alto):</label><br>
+                    <select name="gc_preguntas[<?php echo $qi; ?>][grid_preset]">
+                        <?php foreach ($presets as $key => $label): ?>
+                            <option value="<?php echo esc_attr($key); ?>" <?php selected($sopa_key, $key); ?>><?php echo esc_html($label); ?></option>
                         <?php endforeach; ?>
                     </select>
-                    <span style="color:#64748b;font-size:12px;">10×10 funciona bien para móviles. Palabras largas necesitan grid mayor.</span>
+                    <span style="color:#64748b;font-size:12px;">Las celdas se ajustan al ancho del móvil. Cuanto más ancho, más cómoda la lectura.</span>
                 </p>
                 <p style="color:#64748b;font-size:12px;">El grid se genera al primer acceso de cada jugador y se mantiene fijo aunque recargue la página.</p>
             <?php elseif ($p_tipo === 'ahorcado'):
@@ -363,12 +377,12 @@ function gc_render_prueba_metabox($post) {
                 html += '<p><label>Palabra a encontrar:</label><br>'
                     + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="Ej: GYMKANA" />'
                     + '<span style="color:#64748b;font-size:12px;">MAYÚSCULAS, sin acentos. Mín. 3 letras.</span></p>'
-                    + '<p><label>Tamaño del grid:</label><br>'
-                    + '<select name="gc_preguntas[' + idx + '][tamano_grid]">'
-                    +   '<option value="8">8 × 8</option>'
-                    +   '<option value="10" selected>10 × 10</option>'
-                    +   '<option value="12">12 × 12</option>'
-                    +   '<option value="15">15 × 15</option>'
+                    + '<p><label>Tamaño del grid (ancho × alto):</label><br>'
+                    + '<select name="gc_preguntas[' + idx + '][grid_preset]">'
+                    +   '<option value="8x6">Pequeño (8 × 6)</option>'
+                    +   '<option value="10x7" selected>Medio (10 × 7)</option>'
+                    +   '<option value="12x8">Grande (12 × 8)</option>'
+                    +   '<option value="14x10">Extra (14 × 10)</option>'
                     + '</select></p>';
             } else if (tipoNow === 'ahorcado') {
                 html += '<p><label>Palabra a adivinar:</label><br>'
@@ -508,8 +522,19 @@ add_action('save_post', function ($post_id) {
     if ( ! current_user_can('edit_post', $post_id) ) return;
 
     update_post_meta($post_id, 'gc_tipo', sanitize_text_field($_POST['gc_tipo'] ?? 'multiple'));
-    update_post_meta($post_id, 'gc_tiempo_max_s', max(5, (int)($_POST['gc_tiempo_max_s'] ?? 30)));
-    update_post_meta($post_id, 'gc_intentos_max', max(1, (int)($_POST['gc_intentos_max'] ?? 2)));
+    // Tiempo e intentos máximos: opcionales (vacío o 0 = sin límite, no se guarda nada)
+    $tiempo_post = isset($_POST['gc_tiempo_max_s']) ? trim((string) $_POST['gc_tiempo_max_s']) : '';
+    if ($tiempo_post === '' || (int) $tiempo_post <= 0) {
+        delete_post_meta($post_id, 'gc_tiempo_max_s');
+    } else {
+        update_post_meta($post_id, 'gc_tiempo_max_s', min(3600, max(1, (int) $tiempo_post)));
+    }
+    $intentos_post = isset($_POST['gc_intentos_max']) ? trim((string) $_POST['gc_intentos_max']) : '';
+    if ($intentos_post === '' || (int) $intentos_post <= 0) {
+        delete_post_meta($post_id, 'gc_intentos_max');
+    } else {
+        update_post_meta($post_id, 'gc_intentos_max', min(50, max(1, (int) $intentos_post)));
+    }
 
     // Solo permitimos modificar gc_estacion_ref si la prueba NO es pool
     $is_pool_now = get_posts([
@@ -577,9 +602,21 @@ add_action('save_post', function ($post_id) {
                     $pregunta['categoria'] = sanitize_text_field($p['categoria'] ?? '');
                 }
                 if ($p_tipo === 'sopa_letras') {
-                    $tam = isset($p['tamano_grid']) ? (int) $p['tamano_grid'] : 10;
-                    if (!in_array($tam, [8, 10, 12, 15], true)) $tam = 10;
-                    $pregunta['tamano_grid'] = $tam;
+                    $preset_validos = ['8x6'=>[8,6], '10x7'=>[10,7], '12x8'=>[12,8], '14x10'=>[14,10]];
+                    $preset = isset($p['grid_preset']) ? (string) $p['grid_preset'] : '10x7';
+                    if (!isset($preset_validos[$preset])) {
+                        // Compat con esquema antiguo (tamano_grid cuadrado)
+                        if (isset($p['tamano_grid'])) {
+                            $t = (int) $p['tamano_grid'];
+                            $preset_validos['legacy'] = [$t, $t];
+                            $preset = 'legacy';
+                        } else {
+                            $preset = '10x7';
+                        }
+                    }
+                    list($cols, $rows) = $preset_validos[$preset];
+                    $pregunta['cols'] = $cols;
+                    $pregunta['rows'] = $rows;
                 }
             } elseif ($p_tipo === 'multiple_imagen') {
                 $opciones = [];

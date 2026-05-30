@@ -18,9 +18,12 @@ function gc_quiz_user_state($user_id, $prueba_id, $estacion_id) {
     $prueba_id   = (int) $prueba_id;
     $estacion_id = (int) $estacion_id;
 
-    $max_attempts = (int) get_post_meta($prueba_id, 'gc_intentos_max', true);
-    if ($max_attempts < 1) $max_attempts = 2;
-    $time_max_s   = (int) get_post_meta($prueba_id, 'gc_tiempo_max_s', true);
+    // Tiempo e intentos máximos son OPCIONALES. 0 = sin límite.
+    $max_attempts_raw = get_post_meta($prueba_id, 'gc_intentos_max', true);
+    $max_attempts = ($max_attempts_raw === '' || $max_attempts_raw === null) ? 0 : (int) $max_attempts_raw;
+    if ($max_attempts < 0) $max_attempts = 0;
+    $time_max_s_raw = get_post_meta($prueba_id, 'gc_tiempo_max_s', true);
+    $time_max_s = ($time_max_s_raw === '' || $time_max_s_raw === null) ? 0 : (int) $time_max_s_raw;
     if ($time_max_s < 0) $time_max_s = 0;
 
     $state_key = 'gc_quiz_state_' . $prueba_id . '_' . $estacion_id;
@@ -70,17 +73,20 @@ function gc_quiz_user_state($user_id, $prueba_id, $estacion_id) {
     $blocked = false;
     $blocked_reason = '';
     if (!$passed) {
-        if ($failed >= $max_attempts) { $blocked = true; $blocked_reason = 'attempts'; }
+        if ($max_attempts > 0 && $failed >= $max_attempts) { $blocked = true; $blocked_reason = 'attempts'; }
         elseif ($time_max_s > 0 && $started_at > 0 && $time_left <= 0) { $blocked = true; $blocked_reason = 'time'; }
     }
+
+    // attempts_left: -1 si no hay límite, número >=0 si lo hay
+    $attempts_left = ($max_attempts <= 0) ? -1 : max(0, $max_attempts - $failed);
 
     return [
         'started_at'      => $started_at,
         'failed_attempts' => $failed,
-        'max_attempts'    => $max_attempts,
-        'attempts_left'   => max(0, $max_attempts - $failed),
-        'time_max_s'      => $time_max_s,
-        'time_left_s'     => $time_left,
+        'max_attempts'    => $max_attempts, // 0 = sin límite
+        'attempts_left'   => $attempts_left,
+        'time_max_s'      => $time_max_s,   // 0 = sin límite
+        'time_left_s'     => $time_left,    // -1 si no aplica
         'blocked'         => $blocked,
         'blocked_reason'  => $blocked_reason,
         'passed'          => $passed,
@@ -445,8 +451,9 @@ add_action('rest_api_init', function(){
           $uid_sopa = (int) get_current_user_id();
           $eid_sopa = (int) get_post_meta($prueba_id, 'gc_estacion_ref', true);
           if (function_exists('gc_sopa_get_or_create')) {
-            $tam = isset($p['tamano_grid']) ? (int) $p['tamano_grid'] : 10;
-            $sopa_state = gc_sopa_get_or_create($uid_sopa, $prueba_id, $eid_sopa, $p['respuesta_texto_correcta'] ?? '', $tam);
+            $cols = isset($p['cols']) ? (int) $p['cols'] : (isset($p['tamano_grid']) ? (int) $p['tamano_grid'] : 10);
+            $rows = isset($p['rows']) ? (int) $p['rows'] : (isset($p['tamano_grid']) ? (int) $p['tamano_grid'] : 7);
+            $sopa_state = gc_sopa_get_or_create($uid_sopa, $prueba_id, $eid_sopa, $p['respuesta_texto_correcta'] ?? '', $cols, $rows);
             if (!$sopa_state || empty($sopa_state['word_path'])) { $all_ok = false; break; }
             if (!gc_sopa_es_correcta($seleccion, $sopa_state['word_path'])) { $all_ok = false; break; }
           } else {

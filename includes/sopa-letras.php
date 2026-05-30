@@ -43,16 +43,19 @@ function gc_sopa_direcciones() {
 }
 
 /**
- * Genera un grid NxN con la palabra colocada en una dirección aleatoria
- * y el resto de celdas rellenas con letras aleatorias.
+ * Genera un grid cols×rows con la palabra colocada en una dirección
+ * aleatoria y el resto de celdas rellenas con letras aleatorias.
  *
- * @return array|null ['grid'=>..., 'word_path'=>..., 'palabra'=>..., 'tamano'=>N]
+ * @return array|null ['grid'=>[rows×cols], 'word_path'=>[[r,c],...], 'palabra'=>..., 'cols'=>N, 'rows'=>M]
  */
-function gc_sopa_genera_grid($palabra, $tamano = 10) {
+function gc_sopa_genera_grid($palabra, $cols = 10, $rows = 8) {
     $palabra = gc_sopa_normaliza_palabra($palabra);
     $len = mb_strlen($palabra);
-    $tamano = max(6, min(20, (int) $tamano));
-    if ($len < 3 || $len > $tamano) return null;
+    $cols = max(5, min(20, (int) $cols));
+    $rows = max(5, min(20, (int) $rows));
+    if ($len < 3) return null;
+    // La palabra debe caber al menos en una dimensión
+    if ($len > max($cols, $rows)) return null;
 
     $direcciones = gc_sopa_direcciones();
     shuffle($direcciones);
@@ -61,9 +64,9 @@ function gc_sopa_genera_grid($palabra, $tamano = 10) {
         list($dr, $dc) = $d;
         // Coordenadas válidas para que la palabra quepa
         $r_min = $dr < 0 ? ($len - 1) : 0;
-        $r_max = $dr > 0 ? ($tamano - $len) : ($tamano - 1);
+        $r_max = $dr > 0 ? ($rows - $len) : ($rows - 1);
         $c_min = $dc < 0 ? ($len - 1) : 0;
-        $c_max = $dc > 0 ? ($tamano - $len) : ($tamano - 1);
+        $c_max = $dc > 0 ? ($cols - $len) : ($cols - 1);
         if ($r_min > $r_max || $c_min > $c_max) continue;
 
         // Probar varias posiciones aleatorias
@@ -78,8 +81,8 @@ function gc_sopa_genera_grid($palabra, $tamano = 10) {
                 $path[] = [$r0 + $dr * $i, $c0 + $dc * $i];
             }
 
-            // Crear grid y colocar palabra
-            $grid = array_fill(0, $tamano, array_fill(0, $tamano, ''));
+            // Crear grid (rows filas × cols columnas) y colocar palabra
+            $grid = array_fill(0, $rows, array_fill(0, $cols, ''));
             $ok = true;
             for ($i = 0; $i < $len; $i++) {
                 $r = $path[$i][0]; $c = $path[$i][1];
@@ -90,8 +93,8 @@ function gc_sopa_genera_grid($palabra, $tamano = 10) {
 
             // Rellenar resto con letras aleatorias
             $letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-            for ($r = 0; $r < $tamano; $r++) {
-                for ($c = 0; $c < $tamano; $c++) {
+            for ($r = 0; $r < $rows; $r++) {
+                for ($c = 0; $c < $cols; $c++) {
                     if ($grid[$r][$c] === '') {
                         $grid[$r][$c] = $letras[random_int(0, 25)];
                     }
@@ -100,7 +103,8 @@ function gc_sopa_genera_grid($palabra, $tamano = 10) {
 
             return [
                 'palabra'   => $palabra,
-                'tamano'    => $tamano,
+                'cols'      => $cols,
+                'rows'      => $rows,
                 'grid'      => $grid,
                 'word_path' => $path,
             ];
@@ -113,7 +117,7 @@ function gc_sopa_genera_grid($palabra, $tamano = 10) {
  * Devuelve la sopa de letras del usuario para una prueba+estación;
  * la genera y persiste si no existía.
  */
-function gc_sopa_get_or_create($user_id, $prueba_id, $estacion_id, $palabra, $tamano = 10) {
+function gc_sopa_get_or_create($user_id, $prueba_id, $estacion_id, $palabra, $cols = 10, $rows = 8) {
     $user_id     = (int) $user_id;
     $prueba_id   = (int) $prueba_id;
     $estacion_id = (int) $estacion_id;
@@ -132,14 +136,17 @@ function gc_sopa_get_or_create($user_id, $prueba_id, $estacion_id, $palabra, $ta
 
     $palabra_norm = gc_sopa_normaliza_palabra($palabra);
 
-    // Si la palabra guardada no coincide con la configurada actual, regenerar
-    if ($data && isset($data['palabra']) && $data['palabra'] !== $palabra_norm) {
-        $data = null;
+    // Regenerar si: cambió la palabra o cambiaron cols/rows
+    $cols = (int) $cols; $rows = (int) $rows;
+    if ($data) {
+        $palabra_ok = isset($data['palabra']) && $data['palabra'] === $palabra_norm;
+        $dim_ok = isset($data['cols'], $data['rows']) && (int) $data['cols'] === $cols && (int) $data['rows'] === $rows;
+        if (!$palabra_ok || !$dim_ok) $data = null;
     }
 
     if ($data) return $data;
 
-    $data = gc_sopa_genera_grid($palabra_norm, $tamano);
+    $data = gc_sopa_genera_grid($palabra_norm, $cols, $rows);
     if (!$data) return null;
 
     if ($user_id > 0) {

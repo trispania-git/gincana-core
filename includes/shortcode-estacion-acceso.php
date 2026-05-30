@@ -1018,14 +1018,16 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
         <div id="gc-quiz-panel" style="display:none;padding:20px;border:1px solid #dcdcde;border-radius:14px;background:#fff;">
             <h2 style="margin-top:0;">Pregunta del <?php echo esc_html($label); ?></h2>
 
-            <!-- Barra de intentos + tiempo -->
+            <!-- Barra de intentos + tiempo (solo si hay límite configurado) -->
+            <?php if ($intentos_max > 0 || $tiempo_max_s > 0): ?>
             <div id="gc-quiz-meta" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:0 0 14px;padding:10px 14px;border-radius:10px;background:#f1f5f9;border:1px solid #e2e8f0;">
+                <?php if ($intentos_max > 0): ?>
                 <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#334155;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                     <span><strong>Intentos:</strong> <span id="gc-intentos-restantes"><?php echo (int) $intentos_left; ?></span> / <?php echo (int) $intentos_max; ?></span>
                 </div>
-                <?php if ($tiempo_max_s > 0): ?>
-                <?php
+                <?php endif; ?>
+                <?php if ($tiempo_max_s > 0):
                     $tl_seconds = $tiempo_left_init >= 0 ? (int) $tiempo_left_init : (int) $tiempo_max_s;
                 ?>
                 <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#334155;">
@@ -1034,6 +1036,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                 </div>
                 <?php endif; ?>
             </div>
+            <?php endif; ?>
 
             <p style="font-size:18px;line-height:1.5;"><strong><?php echo esc_html($enunciado); ?></strong></p>
 
@@ -1199,15 +1202,15 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     <input type="hidden" name="gc_station_answer" id="gc_station_answer_text" value="" />
 
                 <?php elseif ($p_tipo === 'sopa_letras' && $p_resp_text !== ''):
-                    $sopa_tamano = isset($pregunta['tamano_grid']) ? (int) $pregunta['tamano_grid'] : 10;
-                    if (!in_array($sopa_tamano, [8,10,12,15], true)) $sopa_tamano = 10;
+                    $sopa_cols = isset($pregunta['cols']) ? (int) $pregunta['cols'] : (isset($pregunta['tamano_grid']) ? (int) $pregunta['tamano_grid'] : 10);
+                    $sopa_rows = isset($pregunta['rows']) ? (int) $pregunta['rows'] : (isset($pregunta['tamano_grid']) ? (int) $pregunta['tamano_grid'] : 7);
                     $sopa = function_exists('gc_sopa_get_or_create')
-                        ? gc_sopa_get_or_create($user_id, $test_id, $station_id, $p_resp_text, $sopa_tamano)
+                        ? gc_sopa_get_or_create($user_id, $test_id, $station_id, $p_resp_text, $sopa_cols, $sopa_rows)
                         : null;
                 ?>
                 <?php if (!$sopa): ?>
                     <div style="padding:14px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;">
-                        No se ha podido generar la sopa de letras. Comprueba que la palabra tiene entre 3 letras y el tamaño del grid configurado.
+                        No se ha podido generar la sopa de letras. Comprueba que la palabra tiene al menos 3 letras y cabe en el grid configurado.
                     </div>
                 <?php else: ?>
                     <div style="margin:14px 0 10px;text-align:center;">
@@ -1220,33 +1223,44 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                         </div>
                     </div>
                     <?php
-                        $gtam = (int) $sopa['tamano'];
+                        $cols = (int) $sopa['cols'];
+                        $rows = (int) $sopa['rows'];
                         $grid = $sopa['grid'];
                     ?>
-                    <div class="gc-sopa-wrap" data-tamano="<?php echo $gtam; ?>" style="margin:0 auto 18px;max-width:100%;overflow:auto;">
-                        <table class="gc-sopa-grid" style="margin:0 auto;border-collapse:collapse;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;">
-                            <?php for ($r = 0; $r < $gtam; $r++): ?>
-                            <tr>
-                                <?php for ($c = 0; $c < $gtam; $c++): ?>
-                                    <td class="gc-sopa-cell" data-r="<?php echo $r; ?>" data-c="<?php echo $c; ?>"
-                                        style="border:1px solid #cbd5e1;width:32px;height:32px;text-align:center;vertical-align:middle;font-family:'Courier New',monospace;font-weight:700;font-size:16px;color:#1e293b;background:#fff;cursor:pointer;transition:background 0.08s, color 0.08s;">
-                                        <?php echo esc_html($grid[$r][$c]); ?>
-                                    </td>
+                    <div class="gc-sopa-wrap" data-cols="<?php echo $cols; ?>" data-rows="<?php echo $rows; ?>"
+                         style="margin:0 auto 18px;width:100%;max-width:560px;padding:0 6px;box-sizing:border-box;">
+                        <div class="gc-sopa-grid" role="grid" aria-label="Sopa de letras"
+                             style="display:grid;grid-template-columns:repeat(<?php echo $cols; ?>, 1fr);gap:3px;width:100%;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none;">
+                            <?php for ($r = 0; $r < $rows; $r++): ?>
+                                <?php for ($c = 0; $c < $cols; $c++): ?>
+                                    <div class="gc-sopa-cell" data-r="<?php echo $r; ?>" data-c="<?php echo $c; ?>" role="gridcell"><?php echo esc_html($grid[$r][$c]); ?></div>
                                 <?php endfor; ?>
-                            </tr>
                             <?php endfor; ?>
-                        </table>
+                        </div>
                     </div>
                     <div id="gc-sopa-feedback" style="text-align:center;min-height:24px;font-size:13px;color:#64748b;margin-bottom:8px;"></div>
                     <input type="hidden" name="gc_station_answer" id="gc_station_answer_text" value="" />
 
                     <style>
-                        .gc-sopa-cell.is-hover { background:#dbeafe !important; color:#1e40af !important; }
-                        .gc-sopa-cell.is-selected { background:#2563eb !important; color:#fff !important; }
-                        .gc-sopa-cell.is-correct { background:#16a34a !important; color:#fff !important; }
-                        @media (max-width: 380px) {
-                            .gc-sopa-grid td { width: 26px !important; height: 26px !important; font-size: 13px !important; }
+                        .gc-sopa-cell {
+                            aspect-ratio: 1 / 1;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            background: #fff;
+                            border: 1px solid #cbd5e1;
+                            border-radius: 4px;
+                            font-family: 'Courier New', monospace;
+                            font-weight: 700;
+                            color: #1e293b;
+                            cursor: pointer;
+                            transition: background 0.08s, color 0.08s, transform 0.08s;
+                            font-size: clamp(11px, 4.2vw, 18px);
+                            line-height: 1;
                         }
+                        .gc-sopa-cell.is-hover { background:#dbeafe !important; color:#1e40af !important; }
+                        .gc-sopa-cell.is-selected { background:#2563eb !important; color:#fff !important; border-color:#1d4ed8 !important; }
+                        .gc-sopa-cell.is-correct { background:#16a34a !important; color:#fff !important; border-color:#15803d !important; }
                     </style>
                     <script>
                     (function(){
@@ -1701,8 +1715,13 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                 }
 
                 if (!data1 || !data1.ok) {
+                    // Sin límite de intentos: solo mensaje y a seguir intentando
+                    if (intentosMax <= 0) {
+                        msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">❌ Respuesta incorrecta. Vuelve a intentarlo.</div>';
+                        return;
+                    }
                     // Sincronizar contador de intentos con server (fuente única de verdad)
-                    if (data1 && data1.state && typeof data1.state.attempts_left === 'number') {
+                    if (data1 && data1.state && typeof data1.state.attempts_left === 'number' && data1.state.attempts_left >= 0) {
                         intentosRestantes = data1.state.attempts_left;
                     } else {
                         intentosRestantes -= 1;
