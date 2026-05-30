@@ -225,18 +225,24 @@ add_action('rest_api_init', function(){
         ));
       }
 
-      $points_to_add = function_exists('gincana_points_calculate')
+      // Si el escenario tiene la gamificación desactivada, no calcular ni añadir
+      // puntos. Solo se registra la estación como passed (sin entradas en el
+      // log de puntos y sin valor que devolver al frontend).
+      $gamificacion = function_exists('gc_show_points') ? gc_show_points($escenario_id) : true;
+
+      $points_to_add = ($gamificacion && function_exists('gincana_points_calculate'))
         ? gincana_points_calculate($user_id, $escenario_id, $estacion_id, $time_ms, ! $had_fail)
         : 0;
 
-      if (!function_exists('gincana_points_add')) {
-        return new WP_REST_Response(['ok'=>false,'error'=>'points_add_missing'], 500);
+      if ($gamificacion) {
+        if (!function_exists('gincana_points_add')) {
+          return new WP_REST_Response(['ok'=>false,'error'=>'points_add_missing'], 500);
+        }
+        gincana_points_add($user_id, $escenario_id, $points_to_add, 'passed', $estacion_id, [
+          'time_ms'   => $time_ms,
+          'first_try' => ! $had_fail
+        ]);
       }
-
-      gincana_points_add($user_id, $escenario_id, $points_to_add, 'passed', $estacion_id, [
-        'time_ms'   => $time_ms,
-        'first_try' => ! $had_fail
-      ]);
 
       // Limpiar user_meta de estado de quiz/ahorcado/sopa de esta prueba+estación
       if ($prueba_id) {

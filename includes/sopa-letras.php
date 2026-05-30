@@ -27,18 +27,16 @@ function gc_sopa_normaliza_palabra($palabra) {
 }
 
 /**
- * Devuelve las 8 direcciones (dr, dc) posibles.
+ * Devuelve las 4 direcciones "naturales" (la palabra se lee en su orden
+ * normal, no al revés). Si en algún momento quisieras permitir
+ * direcciones invertidas, basta con añadir [0,-1], [-1,0], [-1,-1], [1,-1].
  */
 function gc_sopa_direcciones() {
     return [
-        [ 0,  1],  // → este
-        [ 0, -1],  // ← oeste
-        [ 1,  0],  // ↓ sur
-        [-1,  0],  // ↑ norte
-        [ 1,  1],  // ↘ SE
-        [-1, -1],  // ↖ NW
-        [ 1, -1],  // ↙ SW
-        [-1,  1],  // ↗ NE
+        [ 0,  1],  // → este  (izquierda a derecha)
+        [ 1,  0],  // ↓ sur   (arriba a abajo)
+        [ 1,  1],  // ↘ SE diagonal descendente
+        [-1,  1],  // ↗ NE diagonal ascendente (también orden natural)
     ];
 }
 
