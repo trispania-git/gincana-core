@@ -836,7 +836,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
 
     // Validación: tipos texto-libres necesitan respuesta_texto_correcta;
     // tipos de selección necesitan opciones.
-    $es_texto_libre = in_array($tipo_preg, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado', 'sopa_letras'], true);
+    $es_texto_libre = in_array($tipo_preg, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado', 'sopa_letras', 'jeroglifico'], true);
     if ($es_texto_libre) {
         if ($resp_text === '') {
             return gc_station_wrap_message('La prueba de este ' . $label . ' no está lista (falta la respuesta correcta).', 'error');
@@ -850,7 +850,9 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
         $enunciado = $tipo_preg === 'multiple_imagen' ? '¿Cuál es la imagen correcta?'
             : ($tipo_preg === 'cifrado_cesar' ? 'Descifra el mensaje'
             : ($tipo_preg === 'anagrama' ? 'Adivina la palabra'
-            : ($tipo_preg === 'ahorcado' ? 'Adivina la palabra letra a letra' : '')));
+            : ($tipo_preg === 'ahorcado' ? 'Adivina la palabra letra a letra'
+            : ($tipo_preg === 'jeroglifico' ? '¿Qué palabra forman las dos imágenes?'
+            : ''))));
     }
 
     $nonce = function_exists('wp_create_nonce') ? wp_create_nonce('wp_rest') : '';
@@ -1200,6 +1202,40 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                         </details>
                     </div>
                     <input type="hidden" name="gc_station_answer" id="gc_station_answer_text" value="" />
+
+                <?php elseif ($p_tipo === 'jeroglifico' && $p_resp_text !== ''):
+                    $jero_img1 = isset($pregunta['jero_img1']) ? $pregunta['jero_img1'] : '';
+                    $jero_img2 = isset($pregunta['jero_img2']) ? $pregunta['jero_img2'] : '';
+                    $jero_pie1 = isset($pregunta['jero_pie1']) ? $pregunta['jero_pie1'] : '';
+                    $jero_pie2 = isset($pregunta['jero_pie2']) ? $pregunta['jero_pie2'] : '';
+                ?>
+                    <div style="margin:14px 0 14px;text-align:center;">
+                        <div style="display:inline-block;margin-bottom:12px;padding:6px 14px;border-radius:999px;background:#dbeafe;color:#1e40af;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;">🧩 Jeroglífico</div>
+                        <div class="gc-jero-imgs" style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:nowrap;margin:0 auto;max-width:520px;">
+                            <div style="flex:1;min-width:0;text-align:center;">
+                                <?php if ($jero_img1): ?>
+                                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;aspect-ratio:1/1;max-width:200px;margin:0 auto;">
+                                        <img src="<?php echo esc_url($jero_img1); ?>" alt="<?php echo esc_attr($jero_pie1); ?>" style="width:100%;height:100%;object-fit:cover;display:block;">
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($jero_pie1): ?>
+                                    <div style="margin-top:8px;font-size:13px;color:#475569;font-style:italic;"><?php echo esc_html($jero_pie1); ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <div style="flex-shrink:0;font-size:36px;font-weight:700;color:#1e40af;line-height:1;padding:0 4px;">+</div>
+                            <div style="flex:1;min-width:0;text-align:center;">
+                                <?php if ($jero_img2): ?>
+                                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;aspect-ratio:1/1;max-width:200px;margin:0 auto;">
+                                        <img src="<?php echo esc_url($jero_img2); ?>" alt="<?php echo esc_attr($jero_pie2); ?>" style="width:100%;height:100%;object-fit:cover;display:block;">
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($jero_pie2): ?>
+                                    <div style="margin-top:8px;font-size:13px;color:#475569;font-style:italic;"><?php echo esc_html($jero_pie2); ?></div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="text" name="gc_station_answer" id="gc_station_answer_text" autocomplete="off" autocapitalize="characters" style="width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:18px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;text-align:center;" placeholder="Escribe la palabra…" />
 
                 <?php elseif ($p_tipo === 'sopa_letras' && $p_resp_text !== ''):
                     $sopa_cols = isset($pregunta['cols']) ? (int) $pregunta['cols'] : (isset($pregunta['tamano_grid']) ? (int) $pregunta['tamano_grid'] : 10);
@@ -1661,7 +1697,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
             const mode = form.dataset.mode || 'multiple';
             let payloadAnswer = null;
 
-            if (mode === 'texto' || mode === 'cifrado_cesar' || mode === 'anagrama' || mode === 'ahorcado') {
+            if (mode === 'texto' || mode === 'cifrado_cesar' || mode === 'anagrama' || mode === 'ahorcado' || mode === 'jeroglifico') {
                 const txt = (form.querySelector('input[name="gc_station_answer"]') || {}).value || '';
                 if (!txt.trim()) {
                     msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">Escribe tu respuesta.</div>';

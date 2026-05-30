@@ -446,7 +446,7 @@ add_action('rest_api_init', function(){
         $ans  = array_key_exists($i, $answers_to_check) ? $answers_to_check[$i] : null;
 
         // Tipos de respuesta libre (string normalizado)
-        if ( in_array($tipo, ['texto', 'cifrado_cesar', 'anagrama', 'ahorcado'], true) ) {
+        if ( in_array($tipo, ['texto', 'cifrado_cesar', 'anagrama', 'ahorcado', 'jeroglifico'], true) ) {
           $correcta = $norm($p['respuesta_texto_correcta'] ?? '');
           $user     = $norm($ans);
           if ($correcta === '' || $user === '' || $user !== $correcta) { $all_ok = false; break; }

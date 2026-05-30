@@ -124,6 +124,7 @@ function gc_render_prueba_metabox($post) {
                     <option value="anagrama" <?php selected($tipo, 'anagrama'); ?>>Anagrama (reordenar letras) 🔀</option>
                     <option value="ahorcado" <?php selected($tipo, 'ahorcado'); ?>>Ahorcado (adivinar palabra letra a letra) 🎯</option>
                     <option value="sopa_letras" <?php selected($tipo, 'sopa_letras'); ?>>Sopa de letras (encontrar la palabra) 🔡</option>
+                    <option value="jeroglifico" <?php selected($tipo, 'jeroglifico'); ?>>Jeroglífico (2 imágenes → 1 palabra) 🧩</option>
                 </select>
                 <p class="description" style="margin-top:6px;">
                     <strong>Multiple imágenes:</strong> el jugador elige la imagen correcta entre 4 opciones.
@@ -131,6 +132,7 @@ function gc_render_prueba_metabox($post) {
                     <strong>Anagrama:</strong> muestra letras desordenadas y el jugador escribe la palabra original.
                     <strong>Ahorcado:</strong> el jugador descubre la palabra letra a letra; cada letra fallada gasta un intento.
                     <strong>Sopa de letras:</strong> una palabra escondida en un grid. El jugador la encuentra arrastrando o tocando primera/última letra.
+                    <strong>Jeroglífico:</strong> dos imágenes que combinadas forman una palabra. Ej: rascar + cielo = RASCACIELOS.
                 </p>
             </td>
         </tr>
@@ -179,6 +181,43 @@ function gc_render_prueba_metabox($post) {
                     <label><?php echo $p_tipo === 'anagrama' ? 'Palabra a adivinar (las letras se mostrarán desordenadas):' : 'Respuesta correcta (texto):'; ?></label><br>
                     <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" placeholder="<?php echo $p_tipo === 'anagrama' ? 'Ej: GYMKANA' : ''; ?>" />
                 </p>
+            <?php elseif ($p_tipo === 'jeroglifico'):
+                $jero_img1 = $p['jero_img1']  ?? '';
+                $jero_img2 = $p['jero_img2']  ?? '';
+                $jero_pie1 = $p['jero_pie1']  ?? '';
+                $jero_pie2 = $p['jero_pie2']  ?? '';
+            ?>
+                <p>
+                    <label>Palabra a adivinar:</label><br>
+                    <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" placeholder="Ej: RASCACIELOS" />
+                    <span style="color:#64748b;font-size:12px;">Mayúsculas y sin acentos al comparar. Acepta espacios y signos (se ignoran al validar).</span>
+                </p>
+                <p><strong>Pista visual (las 2 imágenes):</strong></p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                    <div style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
+                        <p style="margin:0 0 6px;font-size:13px;font-weight:600;">Imagen 1</p>
+                        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+                            <input type="text" name="gc_preguntas[<?php echo $qi; ?>][jero_img1]" value="<?php echo esc_attr($jero_img1); ?>" class="gc-media-input" style="flex:1;" placeholder="URL imagen 1" />
+                            <button type="button" class="button gc-media-select" data-type="image">Imagen</button>
+                        </div>
+                        <?php if ($jero_img1): ?>
+                            <img src="<?php echo esc_url($jero_img1); ?>" alt="" style="width:100%;max-height:160px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;margin-bottom:6px;">
+                        <?php endif; ?>
+                        <input type="text" name="gc_preguntas[<?php echo $qi; ?>][jero_pie1]" value="<?php echo esc_attr($jero_pie1); ?>" style="width:100%;" placeholder="Pista de texto (opcional)" />
+                    </div>
+                    <div style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
+                        <p style="margin:0 0 6px;font-size:13px;font-weight:600;">Imagen 2</p>
+                        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+                            <input type="text" name="gc_preguntas[<?php echo $qi; ?>][jero_img2]" value="<?php echo esc_attr($jero_img2); ?>" class="gc-media-input" style="flex:1;" placeholder="URL imagen 2" />
+                            <button type="button" class="button gc-media-select" data-type="image">Imagen</button>
+                        </div>
+                        <?php if ($jero_img2): ?>
+                            <img src="<?php echo esc_url($jero_img2); ?>" alt="" style="width:100%;max-height:160px;object-fit:cover;border-radius:6px;border:1px solid #e2e8f0;margin-bottom:6px;">
+                        <?php endif; ?>
+                        <input type="text" name="gc_preguntas[<?php echo $qi; ?>][jero_pie2]" value="<?php echo esc_attr($jero_pie2); ?>" style="width:100%;" placeholder="Pista de texto (opcional)" />
+                    </div>
+                </div>
+                <p style="color:#64748b;font-size:12px;margin-top:8px;">Las dos imágenes aparecen separadas por un "+" en el frontend. Las pistas de texto se muestran como pie de cada imagen.</p>
             <?php elseif ($p_tipo === 'sopa_letras'):
                 $sopa_cols = isset($p['cols']) ? (int) $p['cols'] : 10;
                 $sopa_rows = isset($p['rows']) ? (int) $p['rows'] : 7;
@@ -373,6 +412,29 @@ function gc_render_prueba_metabox($post) {
                 var ph = tipoNow === 'anagrama' ? 'Ej: GYMKANA' : '';
                 html += '<p><label>' + labelTxt + '</label><br>'
                     + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="' + ph + '" /></p>';
+            } else if (tipoNow === 'jeroglifico') {
+                html += '<p><label>Palabra a adivinar:</label><br>'
+                    + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="Ej: RASCACIELOS" />'
+                    + '<span style="color:#64748b;font-size:12px;">Mayúsculas y sin acentos al comparar.</span></p>'
+                    + '<p><strong>Pista visual (las 2 imágenes):</strong></p>'
+                    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">'
+                    +   '<div style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">'
+                    +     '<p style="margin:0 0 6px;font-size:13px;font-weight:600;">Imagen 1</p>'
+                    +     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">'
+                    +       '<input type="text" name="gc_preguntas[' + idx + '][jero_img1]" class="gc-media-input" style="flex:1;" placeholder="URL imagen 1" />'
+                    +       '<button type="button" class="button gc-media-select" data-type="image">Imagen</button>'
+                    +     '</div>'
+                    +     '<input type="text" name="gc_preguntas[' + idx + '][jero_pie1]" style="width:100%;" placeholder="Pista de texto (opcional)" />'
+                    +   '</div>'
+                    +   '<div style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">'
+                    +     '<p style="margin:0 0 6px;font-size:13px;font-weight:600;">Imagen 2</p>'
+                    +     '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">'
+                    +       '<input type="text" name="gc_preguntas[' + idx + '][jero_img2]" class="gc-media-input" style="flex:1;" placeholder="URL imagen 2" />'
+                    +       '<button type="button" class="button gc-media-select" data-type="image">Imagen</button>'
+                    +     '</div>'
+                    +     '<input type="text" name="gc_preguntas[' + idx + '][jero_pie2]" style="width:100%;" placeholder="Pista de texto (opcional)" />'
+                    +   '</div>'
+                    + '</div>';
             } else if (tipoNow === 'sopa_letras') {
                 html += '<p><label>Palabra a encontrar:</label><br>'
                     + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="Ej: GYMKANA" />'
@@ -563,7 +625,7 @@ add_action('save_post', function ($post_id) {
             $enunciado = sanitize_textarea_field($p['enunciado'] ?? '');
 
             $p_tipo = sanitize_text_field($p['tipo'] ?? 'multiple');
-            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama','ahorcado','sopa_letras'], true) ) {
+            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama','ahorcado','sopa_letras','jeroglifico'], true) ) {
                 $p_tipo = 'multiple';
             }
             $correcta_idx = isset($p['correcta']) ? (int)$p['correcta'] : -1;
@@ -588,7 +650,7 @@ add_action('save_post', function ($post_id) {
                 'enunciado' => $enunciado,
             ];
 
-            if (in_array($p_tipo, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado', 'sopa_letras'], true)) {
+            if (in_array($p_tipo, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado', 'sopa_letras', 'jeroglifico'], true)) {
                 $pregunta['respuesta_texto_correcta'] = sanitize_text_field($p['respuesta_texto_correcta'] ?? '');
                 $pregunta['opciones'] = [];
                 if ($p_tipo === 'cifrado_cesar') {
@@ -600,6 +662,12 @@ add_action('save_post', function ($post_id) {
                 if ($p_tipo === 'ahorcado') {
                     $pregunta['pista']     = sanitize_text_field($p['pista'] ?? '');
                     $pregunta['categoria'] = sanitize_text_field($p['categoria'] ?? '');
+                }
+                if ($p_tipo === 'jeroglifico') {
+                    $pregunta['jero_img1'] = esc_url_raw($p['jero_img1'] ?? '');
+                    $pregunta['jero_img2'] = esc_url_raw($p['jero_img2'] ?? '');
+                    $pregunta['jero_pie1'] = sanitize_text_field($p['jero_pie1'] ?? '');
+                    $pregunta['jero_pie2'] = sanitize_text_field($p['jero_pie2'] ?? '');
                 }
                 if ($p_tipo === 'sopa_letras') {
                     $preset_validos = ['8x6'=>[8,6], '10x7'=>[10,7], '12x8'=>[12,8], '14x10'=>[14,10]];
