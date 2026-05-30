@@ -836,7 +836,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
 
     // Validación: tipos texto-libres necesitan respuesta_texto_correcta;
     // tipos de selección necesitan opciones.
-    $es_texto_libre = in_array($tipo_preg, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado'], true);
+    $es_texto_libre = in_array($tipo_preg, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado', 'sopa_letras'], true);
     if ($es_texto_libre) {
         if ($resp_text === '') {
             return gc_station_wrap_message('La prueba de este ' . $label . ' no está lista (falta la respuesta correcta).', 'error');
@@ -1198,6 +1198,182 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     </div>
                     <input type="hidden" name="gc_station_answer" id="gc_station_answer_text" value="" />
 
+                <?php elseif ($p_tipo === 'sopa_letras' && $p_resp_text !== ''):
+                    $sopa_tamano = isset($pregunta['tamano_grid']) ? (int) $pregunta['tamano_grid'] : 10;
+                    if (!in_array($sopa_tamano, [8,10,12,15], true)) $sopa_tamano = 10;
+                    $sopa = function_exists('gc_sopa_get_or_create')
+                        ? gc_sopa_get_or_create($user_id, $test_id, $station_id, $p_resp_text, $sopa_tamano)
+                        : null;
+                ?>
+                <?php if (!$sopa): ?>
+                    <div style="padding:14px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;">
+                        No se ha podido generar la sopa de letras. Comprueba que la palabra tiene entre 3 letras y el tamaño del grid configurado.
+                    </div>
+                <?php else: ?>
+                    <div style="margin:14px 0 10px;text-align:center;">
+                        <div style="display:inline-block;margin-bottom:14px;padding:8px 16px;border-radius:999px;background:#dbeafe;color:#1e40af;font-size:14px;font-weight:700;">
+                            🔡 Encuentra la palabra de <strong><?php echo (int) mb_strlen($sopa['palabra']); ?></strong> letras
+                        </div>
+                        <div style="margin-bottom:10px;font-size:13px;color:#64748b;">
+                            Mantén pulsada la primera letra y arrastra hasta la última (horizontal, vertical o diagonal).
+                            <br>O toca la primera y luego la última.
+                        </div>
+                    </div>
+                    <?php
+                        $gtam = (int) $sopa['tamano'];
+                        $grid = $sopa['grid'];
+                    ?>
+                    <div class="gc-sopa-wrap" data-tamano="<?php echo $gtam; ?>" style="margin:0 auto 18px;max-width:100%;overflow:auto;">
+                        <table class="gc-sopa-grid" style="margin:0 auto;border-collapse:collapse;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;">
+                            <?php for ($r = 0; $r < $gtam; $r++): ?>
+                            <tr>
+                                <?php for ($c = 0; $c < $gtam; $c++): ?>
+                                    <td class="gc-sopa-cell" data-r="<?php echo $r; ?>" data-c="<?php echo $c; ?>"
+                                        style="border:1px solid #cbd5e1;width:32px;height:32px;text-align:center;vertical-align:middle;font-family:'Courier New',monospace;font-weight:700;font-size:16px;color:#1e293b;background:#fff;cursor:pointer;transition:background 0.08s, color 0.08s;">
+                                        <?php echo esc_html($grid[$r][$c]); ?>
+                                    </td>
+                                <?php endfor; ?>
+                            </tr>
+                            <?php endfor; ?>
+                        </table>
+                    </div>
+                    <div id="gc-sopa-feedback" style="text-align:center;min-height:24px;font-size:13px;color:#64748b;margin-bottom:8px;"></div>
+                    <input type="hidden" name="gc_station_answer" id="gc_station_answer_text" value="" />
+
+                    <style>
+                        .gc-sopa-cell.is-hover { background:#dbeafe !important; color:#1e40af !important; }
+                        .gc-sopa-cell.is-selected { background:#2563eb !important; color:#fff !important; }
+                        .gc-sopa-cell.is-correct { background:#16a34a !important; color:#fff !important; }
+                        @media (max-width: 380px) {
+                            .gc-sopa-grid td { width: 26px !important; height: 26px !important; font-size: 13px !important; }
+                        }
+                    </style>
+                    <script>
+                    (function(){
+                        var wrap = document.querySelector('.gc-sopa-wrap');
+                        if (!wrap) return;
+                        if (wrap.dataset.gcBound) return;
+                        wrap.dataset.gcBound = '1';
+                        var grid  = wrap.querySelector('.gc-sopa-grid');
+                        var fb    = document.getElementById('gc-sopa-feedback');
+                        var hidden = document.getElementById('gc_station_answer_text');
+                        var dragging = false;
+                        var firstCell = null;
+
+                        function clearMarks(cls) {
+                            grid.querySelectorAll('td').forEach(function(td){ td.classList.remove(cls); });
+                        }
+                        function getCellAt(x, y) {
+                            var el = document.elementFromPoint(x, y);
+                            if (!el) return null;
+                            return el.closest('.gc-sopa-cell');
+                        }
+                        // Devuelve la lista de celdas en línea recta entre dos puntos.
+                        // Null si no forman horizontal/vertical/diagonal exacta.
+                        function celdasEntre(a, b) {
+                            var r1 = parseInt(a.dataset.r,10), c1 = parseInt(a.dataset.c,10);
+                            var r2 = parseInt(b.dataset.r,10), c2 = parseInt(b.dataset.c,10);
+                            var dr = r2 - r1, dc = c2 - c1;
+                            var len = Math.max(Math.abs(dr), Math.abs(dc));
+                            if (len === 0) return [a];
+                            var srt = function(n){ return n === 0 ? 0 : (n > 0 ? 1 : -1); };
+                            var sr = srt(dr), sc = srt(dc);
+                            // Validar línea recta exacta (horizontal, vertical o diagonal 45º)
+                            if (dr !== 0 && dc !== 0 && Math.abs(dr) !== Math.abs(dc)) return null;
+                            var cells = [];
+                            for (var i = 0; i <= len; i++) {
+                                var rr = r1 + sr * i, cc = c1 + sc * i;
+                                var td = grid.querySelector('.gc-sopa-cell[data-r="'+rr+'"][data-c="'+cc+'"]');
+                                if (!td) return null;
+                                cells.push(td);
+                            }
+                            return cells;
+                        }
+                        function previsualizar(b) {
+                            if (!firstCell || !b) return;
+                            clearMarks('is-hover');
+                            var cells = celdasEntre(firstCell, b);
+                            if (!cells) return;
+                            cells.forEach(function(td){ td.classList.add('is-hover'); });
+                        }
+                        function confirmarSeleccion(b) {
+                            if (!firstCell || !b) return;
+                            var cells = celdasEntre(firstCell, b);
+                            clearMarks('is-hover');
+                            if (!cells) {
+                                clearMarks('is-selected');
+                                firstCell = null;
+                                if (fb) fb.textContent = 'Tiene que ser una línea recta (horizontal, vertical o diagonal).';
+                                return;
+                            }
+                            clearMarks('is-selected');
+                            cells.forEach(function(td){ td.classList.add('is-selected'); });
+                            // Construir payload JSON [[r,c],...]
+                            var coords = cells.map(function(td){
+                                return [parseInt(td.dataset.r,10), parseInt(td.dataset.c,10)];
+                            });
+                            if (hidden) hidden.value = JSON.stringify(coords);
+                            if (fb) fb.textContent = cells.length + ' letras seleccionadas. Pulsa Responder.';
+                            firstCell = null;
+                        }
+
+                        // Drag con ratón
+                        grid.addEventListener('mousedown', function(e){
+                            var td = e.target.closest('.gc-sopa-cell');
+                            if (!td) return;
+                            e.preventDefault();
+                            // Si ya hay una primera celda y se hace click en la "segunda", confirma
+                            if (firstCell && firstCell !== td) { confirmarSeleccion(td); return; }
+                            firstCell = td;
+                            dragging = true;
+                            clearMarks('is-selected');
+                            td.classList.add('is-hover');
+                            if (fb) fb.textContent = 'Suelta o toca la última letra de la palabra.';
+                        });
+                        document.addEventListener('mousemove', function(e){
+                            if (!dragging) return;
+                            var td = getCellAt(e.clientX, e.clientY);
+                            if (td) previsualizar(td);
+                        });
+                        document.addEventListener('mouseup', function(e){
+                            if (!dragging) return;
+                            dragging = false;
+                            var td = getCellAt(e.clientX, e.clientY);
+                            // Si soltamos sobre la misma celda inicial, dejamos firstCell para click-click
+                            if (td && td !== firstCell) confirmarSeleccion(td);
+                        });
+
+                        // Touch
+                        grid.addEventListener('touchstart', function(e){
+                            var t = e.touches[0]; if (!t) return;
+                            var td = getCellAt(t.clientX, t.clientY);
+                            if (!td) return;
+                            e.preventDefault();
+                            if (firstCell && firstCell !== td) { confirmarSeleccion(td); return; }
+                            firstCell = td;
+                            dragging = true;
+                            clearMarks('is-selected');
+                            td.classList.add('is-hover');
+                            if (fb) fb.textContent = 'Arrastra hasta la última letra.';
+                        }, {passive:false});
+                        grid.addEventListener('touchmove', function(e){
+                            if (!dragging) return;
+                            var t = e.touches[0]; if (!t) return;
+                            e.preventDefault();
+                            var td = getCellAt(t.clientX, t.clientY);
+                            if (td) previsualizar(td);
+                        }, {passive:false});
+                        grid.addEventListener('touchend', function(e){
+                            if (!dragging) return;
+                            dragging = false;
+                            var t = (e.changedTouches && e.changedTouches[0]) || null;
+                            var td = t ? getCellAt(t.clientX, t.clientY) : null;
+                            if (td && td !== firstCell) confirmarSeleccion(td);
+                        });
+                    })();
+                    </script>
+                <?php endif; ?>
+
                 <?php elseif ($p_tipo === 'cifrado_cesar' && $p_resp_text !== ''): ?>
                     <?php $cifrado = $cesar_encode($p_resp_text, $p_rotacion); ?>
                     <div style="margin:14px 0;padding:18px 20px;border-radius:12px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:2px solid #c4b5fd;text-align:center;">
@@ -1478,6 +1654,13 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     return;
                 }
                 payloadAnswer = txt.trim();
+            } else if (mode === 'sopa_letras') {
+                const sel = (form.querySelector('input[name="gc_station_answer"]') || {}).value || '';
+                if (!sel) {
+                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">Selecciona la palabra en el grid.</div>';
+                    return;
+                }
+                payloadAnswer = sel; // JSON con [[r,c],...]
             } else {
                 const checked = form.querySelector('input[name="gc_station_answer"]:checked');
                 if (!checked) {

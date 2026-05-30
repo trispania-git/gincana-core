@@ -120,12 +120,14 @@ function gc_render_prueba_metabox($post) {
                     <option value="cifrado_cesar" <?php selected($tipo, 'cifrado_cesar'); ?>>Descifrar mensaje (cifrado César) 🔐</option>
                     <option value="anagrama" <?php selected($tipo, 'anagrama'); ?>>Anagrama (reordenar letras) 🔀</option>
                     <option value="ahorcado" <?php selected($tipo, 'ahorcado'); ?>>Ahorcado (adivinar palabra letra a letra) 🎯</option>
+                    <option value="sopa_letras" <?php selected($tipo, 'sopa_letras'); ?>>Sopa de letras (encontrar la palabra) 🔡</option>
                 </select>
                 <p class="description" style="margin-top:6px;">
                     <strong>Multiple imágenes:</strong> el jugador elige la imagen correcta entre 4 opciones.
                     <strong>Cifrado César:</strong> muestra un mensaje cifrado y el jugador escribe la palabra original.
                     <strong>Anagrama:</strong> muestra letras desordenadas y el jugador escribe la palabra original.
                     <strong>Ahorcado:</strong> el jugador descubre la palabra letra a letra; cada letra fallada gasta un intento.
+                    <strong>Sopa de letras:</strong> una palabra escondida en un grid. El jugador la encuentra arrastrando o tocando primera/última letra.
                 </p>
             </td>
         </tr>
@@ -172,6 +174,24 @@ function gc_render_prueba_metabox($post) {
                     <label><?php echo $p_tipo === 'anagrama' ? 'Palabra a adivinar (las letras se mostrarán desordenadas):' : 'Respuesta correcta (texto):'; ?></label><br>
                     <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" placeholder="<?php echo $p_tipo === 'anagrama' ? 'Ej: GYMKANA' : ''; ?>" />
                 </p>
+            <?php elseif ($p_tipo === 'sopa_letras'):
+                $sopa_tamano = isset($p['tamano_grid']) ? (int) $p['tamano_grid'] : 10;
+            ?>
+                <p>
+                    <label>Palabra a encontrar:</label><br>
+                    <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" placeholder="Ej: GYMKANA" />
+                    <span style="color:#64748b;font-size:12px;">Se mostrará en MAYÚSCULAS, sin acentos. Mínimo 3 letras, máximo igual al tamaño del grid.</span>
+                </p>
+                <p>
+                    <label>Tamaño del grid:</label><br>
+                    <select name="gc_preguntas[<?php echo $qi; ?>][tamano_grid]">
+                        <?php foreach ([8, 10, 12, 15] as $t): ?>
+                            <option value="<?php echo $t; ?>" <?php selected($sopa_tamano, $t); ?>><?php echo $t; ?> × <?php echo $t; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <span style="color:#64748b;font-size:12px;">10×10 funciona bien para móviles. Palabras largas necesitan grid mayor.</span>
+                </p>
+                <p style="color:#64748b;font-size:12px;">El grid se genera al primer acceso de cada jugador y se mantiene fijo aunque recargue la página.</p>
             <?php elseif ($p_tipo === 'ahorcado'):
                 $pista_txt = $p['pista'] ?? '';
                 $categoria = $p['categoria'] ?? '';
@@ -339,6 +359,17 @@ function gc_render_prueba_metabox($post) {
                 var ph = tipoNow === 'anagrama' ? 'Ej: GYMKANA' : '';
                 html += '<p><label>' + labelTxt + '</label><br>'
                     + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="' + ph + '" /></p>';
+            } else if (tipoNow === 'sopa_letras') {
+                html += '<p><label>Palabra a encontrar:</label><br>'
+                    + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="Ej: GYMKANA" />'
+                    + '<span style="color:#64748b;font-size:12px;">MAYÚSCULAS, sin acentos. Mín. 3 letras.</span></p>'
+                    + '<p><label>Tamaño del grid:</label><br>'
+                    + '<select name="gc_preguntas[' + idx + '][tamano_grid]">'
+                    +   '<option value="8">8 × 8</option>'
+                    +   '<option value="10" selected>10 × 10</option>'
+                    +   '<option value="12">12 × 12</option>'
+                    +   '<option value="15">15 × 15</option>'
+                    + '</select></p>';
             } else if (tipoNow === 'ahorcado') {
                 html += '<p><label>Palabra a adivinar:</label><br>'
                     + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="Ej: GYMKANA" />'
@@ -507,7 +538,7 @@ add_action('save_post', function ($post_id) {
             $enunciado = sanitize_textarea_field($p['enunciado'] ?? '');
 
             $p_tipo = sanitize_text_field($p['tipo'] ?? 'multiple');
-            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama','ahorcado'], true) ) {
+            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama','ahorcado','sopa_letras'], true) ) {
                 $p_tipo = 'multiple';
             }
             $correcta_idx = isset($p['correcta']) ? (int)$p['correcta'] : -1;
@@ -532,7 +563,7 @@ add_action('save_post', function ($post_id) {
                 'enunciado' => $enunciado,
             ];
 
-            if (in_array($p_tipo, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado'], true)) {
+            if (in_array($p_tipo, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado', 'sopa_letras'], true)) {
                 $pregunta['respuesta_texto_correcta'] = sanitize_text_field($p['respuesta_texto_correcta'] ?? '');
                 $pregunta['opciones'] = [];
                 if ($p_tipo === 'cifrado_cesar') {
@@ -544,6 +575,11 @@ add_action('save_post', function ($post_id) {
                 if ($p_tipo === 'ahorcado') {
                     $pregunta['pista']     = sanitize_text_field($p['pista'] ?? '');
                     $pregunta['categoria'] = sanitize_text_field($p['categoria'] ?? '');
+                }
+                if ($p_tipo === 'sopa_letras') {
+                    $tam = isset($p['tamano_grid']) ? (int) $p['tamano_grid'] : 10;
+                    if (!in_array($tam, [8, 10, 12, 15], true)) $tam = 10;
+                    $pregunta['tamano_grid'] = $tam;
                 }
             } elseif ($p_tipo === 'multiple_imagen') {
                 $opciones = [];

@@ -2,14 +2,14 @@
 /**
  * Plugin Name: Gincana Core
  * Description: Lógica de escenarios, estaciones, pruebas y gamificación ligera (puntos, intentos, ranking) para la gimcana digital.
- * Version: 1.0.42
+ * Version: 1.0.43
  * Author: Welow Marketing
  * Text Domain: gincana-core
  */
 
 if ( ! defined('ABSPATH') ) exit;
 
-define('GINCANA_CORE_VERSION', '1.0.42');
+define('GINCANA_CORE_VERSION', '1.0.43');
 define('GINCANA_CORE_PATH', plugin_dir_path(__FILE__));
 define('GINCANA_CORE_URL', plugin_dir_url(__FILE__));
 
@@ -17,6 +17,7 @@ define('GINCANA_CORE_URL', plugin_dir_url(__FILE__));
 require_once GINCANA_CORE_PATH . 'includes/cpt.php';
 require_once GINCANA_CORE_PATH . 'includes/helpers.php';
 require_once GINCANA_CORE_PATH . 'includes/theme.php';
+require_once GINCANA_CORE_PATH . 'includes/sopa-letras.php';
 require_once GINCANA_CORE_PATH . 'includes/shortcodes.php';
 require_once GINCANA_CORE_PATH . 'includes/permalinks.php';
 require_once GINCANA_CORE_PATH . 'includes/class-activator.php';

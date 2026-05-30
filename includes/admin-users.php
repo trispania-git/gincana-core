@@ -45,7 +45,8 @@ function gincana_core_users_cb(){
         "DELETE FROM $wpdb->usermeta WHERE user_id=%d AND (
           meta_key LIKE 'gc_quiz_state_%%_started' OR
           meta_key LIKE 'gc_ahorcado_revealed_%%' OR
-          meta_key LIKE 'gc_ahorcado_miss_%%'
+          meta_key LIKE 'gc_ahorcado_miss_%%' OR
+          meta_key LIKE 'gc_sopa_%%'
         )", $reset_user
       ));
       // Limpiar asignaciones de pool de preguntas
@@ -61,7 +62,8 @@ function gincana_core_users_cb(){
           meta_key LIKE 'gc_pool_assigned_%%' OR
           meta_key LIKE 'gc_quiz_state_%%_started' OR
           meta_key LIKE 'gc_ahorcado_revealed_%%' OR
-          meta_key LIKE 'gc_ahorcado_miss_%%'
+          meta_key LIKE 'gc_ahorcado_miss_%%' OR
+          meta_key LIKE 'gc_sopa_%%'
         )", $reset_user
       ));
     } elseif ($action === 'reset_escenario' && $reset_esc) {
@@ -77,7 +79,8 @@ function gincana_core_users_cb(){
         "DELETE FROM $wpdb->usermeta WHERE
           meta_key LIKE 'gc_quiz_state_%_started' OR
           meta_key LIKE 'gc_ahorcado_revealed_%' OR
-          meta_key LIKE 'gc_ahorcado_miss_%'"
+          meta_key LIKE 'gc_ahorcado_miss_%' OR
+          meta_key LIKE 'gc_sopa_%'"
       );
       $wpdb->query($wpdb->prepare(
         "DELETE FROM $wpdb->usermeta WHERE meta_key = %s", 'gc_pool_assigned_' . $reset_esc

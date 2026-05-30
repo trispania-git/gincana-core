@@ -232,11 +232,14 @@ add_action('rest_api_init', function(){
         'first_try' => ! $had_fail
       ]);
 
-      // Limpiar user_meta de estado de quiz/ahorcado de esta prueba+estación
+      // Limpiar user_meta de estado de quiz/ahorcado/sopa de esta prueba+estación
       if ($prueba_id) {
         delete_user_meta($user_id, 'gc_quiz_state_' . $prueba_id . '_' . $estacion_id . '_started');
         delete_user_meta($user_id, 'gc_ahorcado_revealed_' . $prueba_id . '_' . $estacion_id);
         delete_user_meta($user_id, 'gc_ahorcado_miss_' . $prueba_id . '_' . $estacion_id);
+        if (function_exists('gc_sopa_limpiar')) {
+          gc_sopa_limpiar($user_id, $prueba_id, $estacion_id);
+        }
       }
 
       return new WP_REST_Response([
@@ -435,6 +438,20 @@ add_action('rest_api_init', function(){
           $correcta = $norm($p['respuesta_texto_correcta'] ?? '');
           $user     = $norm($ans);
           if ($correcta === '' || $user === '' || $user !== $correcta) { $all_ok = false; break; }
+        } elseif ($tipo === 'sopa_letras') {
+          // Validar selección [[r,c],...] contra word_path persistido
+          $seleccion = is_string($ans) ? json_decode($ans, true) : (is_array($ans) ? $ans : null);
+          if (!is_array($seleccion) || empty($seleccion)) { $all_ok = false; break; }
+          $uid_sopa = (int) get_current_user_id();
+          $eid_sopa = (int) get_post_meta($prueba_id, 'gc_estacion_ref', true);
+          if (function_exists('gc_sopa_get_or_create')) {
+            $tam = isset($p['tamano_grid']) ? (int) $p['tamano_grid'] : 10;
+            $sopa_state = gc_sopa_get_or_create($uid_sopa, $prueba_id, $eid_sopa, $p['respuesta_texto_correcta'] ?? '', $tam);
+            if (!$sopa_state || empty($sopa_state['word_path'])) { $all_ok = false; break; }
+            if (!gc_sopa_es_correcta($seleccion, $sopa_state['word_path'])) { $all_ok = false; break; }
+          } else {
+            $all_ok = false; break;
+          }
         } else {
           // multiple, multiple_imagen, vf → comprobar índice de opciones
           $ops = $p['opciones'] ?? [];
