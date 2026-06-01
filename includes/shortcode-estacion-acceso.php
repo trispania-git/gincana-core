@@ -1118,17 +1118,41 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                         var lbClose  = document.getElementById('gc-img-lightbox-close');
                         if (!lb || !lbImg) return;
 
+                        // Bandera para distinguir cierres por 'atrás' del navegador de cierres por X/clic.
+                        var lbHistoryPushed = false;
+                        var isClosing = false;
+
                         function openLb(url, caption) {
                             lbImg.src = url;
                             lbCap.textContent = caption || '';
                             lb.style.display = 'flex';
                             document.body.style.overflow = 'hidden';
+                            // Insertamos una entrada en el historial: así si el usuario
+                            // pulsa 'atrás' en el móvil, el navegador hace popstate y
+                            // nosotros cerramos el lightbox SIN salir de la página.
+                            try {
+                                history.pushState({ gcLightbox: true }, '');
+                                lbHistoryPushed = true;
+                            } catch (e) {}
                         }
-                        function closeLb() {
+                        function closeLb(fromPopstate) {
+                            if (isClosing) return;
+                            isClosing = true;
                             lb.style.display = 'none';
                             lbImg.src = '';
                             document.body.style.overflow = '';
+                            // Si NO venimos de popstate (cerramos con X o clic), retiramos
+                            // nuestra entrada del historial haciendo history.back() para
+                            // que el botón 'atrás' del móvil no requiera dos pulsaciones.
+                            if (!fromPopstate && lbHistoryPushed) {
+                                lbHistoryPushed = false;
+                                try { history.back(); } catch (e) {}
+                            } else {
+                                lbHistoryPushed = false;
+                            }
+                            setTimeout(function(){ isClosing = false; }, 50);
                         }
+
                         document.querySelectorAll('.gc-img-zoom').forEach(function(btn){
                             btn.addEventListener('click', function(e){
                                 e.preventDefault(); e.stopPropagation();
@@ -1137,10 +1161,14 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                                 openLb(card.dataset.imgUrl || '', card.dataset.imgCaption || '');
                             });
                         });
-                        if (lbClose) lbClose.addEventListener('click', closeLb);
-                        lb.addEventListener('click', function(e){ if (e.target === lb) closeLb(); });
+                        if (lbClose) lbClose.addEventListener('click', function(){ closeLb(false); });
+                        lb.addEventListener('click', function(e){ if (e.target === lb) closeLb(false); });
                         document.addEventListener('keydown', function(e){
-                            if (e.key === 'Escape' && lb.style.display === 'flex') closeLb();
+                            if (e.key === 'Escape' && lb.style.display === 'flex') closeLb(false);
+                        });
+                        // Botón 'atrás' del navegador (incluido el del móvil): cierra el lightbox
+                        window.addEventListener('popstate', function(){
+                            if (lb.style.display === 'flex') closeLb(true);
                         });
                     })();
                     </script>
