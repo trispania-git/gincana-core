@@ -221,6 +221,23 @@ function gc_render_estacion_metabox($post) {
             </td>
         </tr>
 
+        <?php $moraleja = get_post_meta($post->ID, 'gc_moraleja', true); ?>
+        <tr>
+            <th><label for="gc_moraleja">💡 Moraleja</label></th>
+            <td>
+                <?php
+                wp_editor($moraleja, 'gc_moraleja', [
+                    'textarea_name' => 'gc_moraleja',
+                    'textarea_rows' => 4,
+                    'media_buttons' => false,
+                    'teeny'         => true,
+                    'quicktags'     => true,
+                ]);
+                ?>
+                <p class="description">Mensaje que se muestra al jugador <strong>tras superar la prueba</strong> de esta estación. Suele ser una curiosidad, dato cultural o reflexión relacionada con el lugar. Si se deja vacío, no se muestra nada.</p>
+            </td>
+        </tr>
+
         <tr>
             <th><label for="gc_pista_busqueda">Pista 1</label></th>
             <td>
@@ -391,6 +408,7 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_orden', (int) ($_POST['gc_orden'] ?? 0));
     update_post_meta($post_id, 'gc_deshabilitada', isset($_POST['gc_deshabilitada']) ? '1' : '0');
     update_post_meta($post_id, 'gc_descripcion', wp_kses_post($_POST['gc_descripcion'] ?? ''));
+    update_post_meta($post_id, 'gc_moraleja', wp_kses_post($_POST['gc_moraleja'] ?? ''));
     update_post_meta($post_id, 'gc_pista_busqueda', sanitize_text_field($_POST['gc_pista_busqueda'] ?? ''));
     update_post_meta($post_id, 'gc_pista_busqueda_2', sanitize_text_field($_POST['gc_pista_busqueda_2'] ?? ''));
     update_post_meta($post_id, 'gc_audio', esc_url_raw($_POST['gc_audio'] ?? ''));

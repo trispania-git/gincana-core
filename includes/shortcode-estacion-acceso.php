@@ -194,6 +194,15 @@ function gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id)
         <div style="padding:24px 20px;border-radius:14px;background:#f7fff7;border:2px solid #16a34a;text-align:center;">
             <div style="font-size:48px;margin-bottom:8px;">✅</div>
             <h2 style="margin:0 0 8px;color:#146c2e;">¡Ya completaste esta <?php echo esc_html($label); ?>!</h2>
+            <?php
+                $moraleja_visto = get_post_meta($station_id, 'gc_moraleja', true);
+                if ($moraleja_visto):
+            ?>
+            <div style="margin:14px 0 4px;padding:14px 16px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;text-align:left;">
+                <div style="font-size:13px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">💡 La moraleja</div>
+                <div style="font-size:15px;color:#451a03;line-height:1.5;"><?php echo wp_kses_post(wpautop($moraleja_visto)); ?></div>
+            </div>
+            <?php endif; ?>
             <a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:12px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>
         </div>
         <?php
@@ -298,6 +307,15 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
         <div style="padding:24px 20px;border-radius:14px;background:#f7fff7;border:2px solid #16a34a;text-align:center;">
             <div style="font-size:48px;margin-bottom:8px;">✅</div>
             <h2 style="margin:0 0 8px;color:#146c2e;">¡Ya completaste esta <?php echo esc_html($label); ?>!</h2>
+            <?php
+                $moraleja_visto = get_post_meta($station_id, 'gc_moraleja', true);
+                if ($moraleja_visto):
+            ?>
+            <div style="margin:14px 0 4px;padding:14px 16px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;text-align:left;">
+                <div style="font-size:13px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">💡 La moraleja</div>
+                <div style="font-size:15px;color:#451a03;line-height:1.5;"><?php echo wp_kses_post(wpautop($moraleja_visto)); ?></div>
+            </div>
+            <?php endif; ?>
             <a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:12px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>
         </div>
         <?php
@@ -1809,7 +1827,20 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     $acierto_html = $img_acierto_url
                         ? '<img src="' . esc_url($img_acierto_url) . '" alt="" style="max-width:100%;height:auto;border-radius:12px;margin-bottom:12px;" />'
                         : '';
+                    // Moraleja de la estación (texto opcional que se muestra tras superar la prueba)
+                    $moraleja_raw  = get_post_meta($station_id, 'gc_moraleja', true);
+                    $moraleja_html = '';
+                    if ($moraleja_raw) {
+                        $moraleja_html = '<div style="margin-top:14px;padding:14px 16px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;text-align:left;">'
+                                       . '<div style="font-size:13px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">💡 La moraleja</div>'
+                                       . '<div style="font-size:15px;color:#451a03;line-height:1.5;">' . wp_kses_post(wpautop($moraleja_raw)) . '</div>'
+                                       . '</div>';
+                    }
                     ?>
+                    var moralejaHtml = <?php echo wp_json_encode($moraleja_html); ?>;
+                    // Cuánto tiempo dejar la moraleja visible antes de redirigir (si la hay)
+                    var redirectDelay = moralejaHtml ? 6000 : 1800;
+
                     <?php if ($tipo_qr_redirect === 'validacion_gps'): ?>
                     // GPS: mostrar resumen en la misma página
                     var wrap = document.querySelector('.gc-adult-station');
@@ -1818,14 +1849,17 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                             + <?php echo json_encode($acierto_html); ?>
                             + '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Ubicación verificada</p>'
                             + '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Desafío completado' + ptsTxtGps + '</p>'
+                            + moralejaHtml
                             + '<a href="<?php echo esc_url($escenario_url_js); ?>" style="display:inline-block;margin-top:16px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>'
                             + '</div>';
                     }
                     <?php else: ?>
-                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;"><?php echo $acierto_html ? addslashes($acierto_html) : ''; ?>✅ Respuesta correcta.' + ptsTxt + '</div>';
+                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;"><?php echo $acierto_html ? addslashes($acierto_html) : ''; ?>✅ Respuesta correcta.' + ptsTxt + '</div>'
+                        + moralejaHtml
+                        + (moralejaHtml ? '<div style="text-align:center;margin-top:14px;"><a href="<?php echo esc_url($escenario_url_js); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a></div>' : '');
                     setTimeout(function(){
                         window.location.href = <?php echo json_encode($escenario_url_js); ?>;
-                    }, 1800);
+                    }, redirectDelay);
                     <?php endif; ?>
                 } else {
                     msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">La respuesta era correcta, pero no se pudo registrar el progreso.</div>';
@@ -1931,6 +1965,14 @@ add_shortcode('gincana_estacion_contenido', function($atts){
         } else {
             $lbl = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
             echo '<p style="margin:0 0 12px;font-size:16px;">&#10003; Ya has completado este ' . esc_html($lbl) . '.</p>';
+        }
+        // Moraleja
+        $moraleja_done = get_post_meta($station_id, 'gc_moraleja', true);
+        if ($moraleja_done) {
+            echo '<div style="margin:14px 0 4px;padding:14px 16px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;text-align:left;">'
+               . '<div style="font-size:13px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">💡 La moraleja</div>'
+               . '<div style="font-size:15px;color:#451a03;line-height:1.5;">' . wp_kses_post(wpautop($moraleja_done)) . '</div>'
+               . '</div>';
         }
         echo '<a href="' . esc_url($escenario_url) . '" style="display:inline-block;margin-top:8px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
         echo '</div>';
