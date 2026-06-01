@@ -86,27 +86,39 @@ function gincana_core_users_cb(){
         "DELETE FROM $wpdb->usermeta WHERE meta_key = %s", 'gc_pool_assigned_' . $reset_esc
       ));
     } elseif ($action === 'clean_station_content' && $reset_esc) {
-      // Limpiar contenido falso/placeholder de estaciones de un escenario
-      $stations = get_posts([
-        'post_type'       => 'estacion',
-        'post_status'     => 'any',
-        'numberposts'     => -1,
-        'fields'          => 'ids',
-        'meta_query'      => [['key'=>'gc_escenario_ref','value'=>(int)$reset_esc,'compare'=>'=']],
-        'no_found_rows'   => true,
-        'suppress_filters'=> true,
-      ]);
-      $cleaned = 0;
-      $metas_to_clean = ['gc_descripcion','gc_audio','gc_maps_url','gc_img_1','gc_img_2'];
-      foreach ($stations as $sid) {
-        foreach ($metas_to_clean as $mk) {
-          delete_post_meta((int)$sid, $mk);
+      // PROTECCIÓN: exige escribir 'BORRAR' (chequeo server-side por si el JS falla)
+      $confirm = isset($_POST['gc_clean_confirm']) ? trim((string) $_POST['gc_clean_confirm']) : '';
+      if (mb_strtoupper($confirm) !== 'BORRAR') {
+        echo '<div class="notice notice-error is-dismissible"><p><strong>Cancelado:</strong> no se escribió la confirmación correcta. No se ha borrado nada.</p></div>';
+      } else {
+        $stations = get_posts([
+          'post_type'       => 'estacion',
+          'post_status'     => 'any',
+          'numberposts'     => -1,
+          'fields'          => 'ids',
+          'meta_query'      => [['key'=>'gc_escenario_ref','value'=>(int)$reset_esc,'compare'=>'=']],
+          'no_found_rows'   => true,
+          'suppress_filters'=> true,
+        ]);
+        $cleaned = 0;
+        // Lista COMPLETA del contenido editorial de cada estación.
+        $metas_to_clean = [
+          'gc_descripcion', 'gc_moraleja',
+          'gc_audio', 'gc_maps_url', 'gc_direccion',
+          'gc_latitud', 'gc_longitud',
+          'gc_img_1', 'gc_img_2', 'gc_img_3',
+          'gc_pista_busqueda', 'gc_pista_busqueda_2',
+        ];
+        foreach ($stations as $sid) {
+          foreach ($metas_to_clean as $mk) {
+            delete_post_meta((int)$sid, $mk);
+          }
+          // También vaciar the_content por si tiene contenido Divi
+          wp_update_post(['ID' => (int)$sid, 'post_content' => '']);
+          $cleaned++;
         }
-        // También vaciar the_content por si tiene contenido Divi
-        wp_update_post(['ID' => (int)$sid, 'post_content' => '']);
-        $cleaned++;
+        echo '<div class="notice notice-success is-dismissible"><p>Contenido limpiado en <strong>' . $cleaned . '</strong> estaciones del escenario.</p></div>';
       }
-      echo '<div class="notice notice-success is-dismissible"><p>Contenido limpiado en <strong>' . $cleaned . '</strong> estaciones del escenario.</p></div>';
     }
 
     if (in_array($action, ['reset_user_escenario','reset_user_all','reset_escenario']) && ($deleted_pts || $deleted_prog)) {
@@ -167,12 +179,19 @@ function gincana_core_users_cb(){
           Vaciar datos del escenario &laquo;<?php echo esc_html(get_the_title($escenario_id)); ?>&raquo;
         </button>
       </form>
-      <form method="post" onsubmit="return confirm('¿Seguro? Esto borrará descripción, audio e imágenes de TODAS las estaciones de este escenario.');">
+      <form method="post" onsubmit="
+        var c = prompt('⚠️ ESTA ACCIÓN ES IRREVERSIBLE.\n\nSe borrará de TODAS las estaciones del escenario «<?php echo esc_js(get_the_title($escenario_id)); ?>»:\n\n• Descripción cultural\n• Moraleja\n• Audio, dirección, Google Maps\n• Coordenadas GPS (latitud y longitud)\n• Imágenes 1, 2 y 3\n• Pista 1 y Pista 2\n• Contenido del editor (post_content)\n\nNO afecta a: orden, escenario asociado, QR token, prueba enlazada.\n\nPara confirmar, escribe BORRAR (en mayúsculas):');
+        if (c === null) return false;
+        if (c.trim().toUpperCase() !== 'BORRAR') { alert('Cancelado: no escribiste \'BORRAR\'.'); return false; }
+        this.querySelector('input[name=gc_clean_confirm]').value = c.trim();
+        return true;
+      ">
         <?php wp_nonce_field('gc_reset_data'); ?>
         <input type="hidden" name="gc_reset_action" value="clean_station_content" />
         <input type="hidden" name="gc_reset_escenario" value="<?php echo (int)$escenario_id; ?>" />
-        <button type="submit" class="button" style="color:#b45309;border-color:#b45309;">
-          Limpiar contenido de estaciones &laquo;<?php echo esc_html(get_the_title($escenario_id)); ?>&raquo;
+        <input type="hidden" name="gc_clean_confirm" value="" />
+        <button type="submit" class="button" style="color:#fff;background:#dc2626;border-color:#991b1b;font-weight:600;">
+          ⚠️ Borrar contenido de estaciones de «<?php echo esc_html(get_the_title($escenario_id)); ?>»
         </button>
       </form>
     </div>
