@@ -1038,7 +1038,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
             $started_at_srv   = (int) $quiz_state['started_at'];
         ?>
         <div id="gc-quiz-panel" style="display:none;padding:20px;border:1px solid #dcdcde;border-radius:14px;background:#fff;">
-            <h2 style="margin-top:0;">Pregunta del <?php echo esc_html($label); ?></h2>
+            <h2 style="margin-top:0;">Prueba</h2>
 
             <!-- Barra de intentos + tiempo (solo si hay límite configurado) -->
             <?php if ($intentos_max > 0 || $tiempo_max_s > 0): ?>
