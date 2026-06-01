@@ -298,6 +298,16 @@ function gc_render_escenario_metabox($post) {
                 </div>
             </label>
 
+            <?php $moraleja_activa = get_post_meta($post->ID, 'gc_moraleja_activa', true) === '1'; ?>
+            <label class="gc-wiz-toggle">
+                <input type="checkbox" name="gc_moraleja_activa" value="1" id="gc_moraleja_activa" <?php checked($moraleja_activa, true); ?> />
+                <span class="gc-switch"></span>
+                <div>
+                    <div class="gc-toggle-label">Moraleja tras cada estación 💡</div>
+                    <div class="gc-toggle-desc">Al superar la prueba de una estación, se muestra un texto cultural / reflexión configurable. La moraleja concreta se escribe en cada estación.</div>
+                </div>
+            </label>
+
             <?php
                 $orden_libre    = get_post_meta($post->ID, 'gc_orden_libre', true) === '1';
                 // Compat: si aún quedaba gc_orden_aleatorio del esquema antiguo, equivale a libre
@@ -1047,6 +1057,7 @@ function gc_render_escenario_metabox($post) {
                 ]);
 
                 var pistas = ch('gc_pistas_activas');
+                var moraleja = ch('gc_moraleja_activa');
                 var ordenLibre   = ch('gc_orden_libre');
                 var ordenSecreto = ch('gc_orden_secreto');
                 var ordenTxt = ordenSecreto ? 'Aleatorio (secreto)' : (ordenLibre ? 'Libre' : 'Secuencial');
@@ -1055,6 +1066,7 @@ function gc_render_escenario_metabox($post) {
                     ['Prueba/quiz', prueba ? si : no],
                     ['Gamificacion', puntos ? si : no],
                     ['Pistas', pistas ? si : no],
+                    ['Moraleja', moraleja ? si : no],
                     ['Orden', ordenTxt]
                 ];
                 if (prueba) {
@@ -1130,6 +1142,7 @@ add_action('save_post', function ($post_id) {
     if ($tipo_qr === 'solo_pregunta' || $tipo_qr === 'validacion_boton_quiz') $req_prueba = '1';
     update_post_meta($post_id, 'gc_requiere_prueba', $req_prueba);
     update_post_meta($post_id, 'gc_pistas_activas', isset($_POST['gc_pistas_activas']) ? '1' : '0');
+    update_post_meta($post_id, 'gc_moraleja_activa', isset($_POST['gc_moraleja_activa']) ? '1' : '0');
     // Orden libre vs orden aleatorio secreto: mutuamente excluyentes
     $is_libre   = isset($_POST['gc_orden_libre']) ? '1' : '0';
     $is_secreto = isset($_POST['gc_orden_secreto']) ? '1' : '0';

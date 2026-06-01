@@ -253,6 +253,17 @@ if ( ! function_exists('gc_permite_guest') ) {
 }
 
 /**
+ * ¿El escenario tiene activada la moraleja por estación?
+ * Si es true, el campo 'Moraleja' aparece en cada estación y se muestra
+ * al jugador tras superar la prueba.
+ */
+if ( ! function_exists('gc_moraleja_activa') ) {
+  function gc_moraleja_activa($escenario_id) {
+    return get_post_meta((int)$escenario_id, 'gc_moraleja_activa', true) === '1';
+  }
+}
+
+/**
  * ¿El escenario se juega en ORDEN LIBRE? El jugador elige en qué orden
  * hacer las estaciones, todas están visibles desde el inicio.
  * El "orden" configurado para cada estación se sigue mostrando como número.

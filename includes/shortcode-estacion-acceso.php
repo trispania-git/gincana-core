@@ -195,7 +195,8 @@ function gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id)
             <div style="font-size:48px;margin-bottom:8px;">✅</div>
             <h2 style="margin:0 0 8px;color:#146c2e;">¡Ya completaste esta <?php echo esc_html($label); ?>!</h2>
             <?php
-                $moraleja_visto = get_post_meta($station_id, 'gc_moraleja', true);
+                $moraleja_show2 = function_exists('gc_moraleja_activa') && gc_moraleja_activa($escenario_id);
+                $moraleja_visto = $moraleja_show2 ? get_post_meta($station_id, 'gc_moraleja', true) : '';
                 if ($moraleja_visto):
             ?>
             <div style="margin:14px 0 4px;padding:14px 16px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;text-align:left;">
@@ -308,7 +309,8 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
             <div style="font-size:48px;margin-bottom:8px;">✅</div>
             <h2 style="margin:0 0 8px;color:#146c2e;">¡Ya completaste esta <?php echo esc_html($label); ?>!</h2>
             <?php
-                $moraleja_visto = get_post_meta($station_id, 'gc_moraleja', true);
+                $moraleja_show2 = function_exists('gc_moraleja_activa') && gc_moraleja_activa($escenario_id);
+                $moraleja_visto = $moraleja_show2 ? get_post_meta($station_id, 'gc_moraleja', true) : '';
                 if ($moraleja_visto):
             ?>
             <div style="margin:14px 0 4px;padding:14px 16px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;text-align:left;">
@@ -1827,8 +1829,10 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     $acierto_html = $img_acierto_url
                         ? '<img src="' . esc_url($img_acierto_url) . '" alt="" style="max-width:100%;height:auto;border-radius:12px;margin-bottom:12px;" />'
                         : '';
-                    // Moraleja de la estación (texto opcional que se muestra tras superar la prueba)
-                    $moraleja_raw  = get_post_meta($station_id, 'gc_moraleja', true);
+                    // Moraleja de la estación (texto opcional que se muestra tras superar la prueba).
+                    // Solo si el escenario tiene la opción 'gc_moraleja_activa' encendida.
+                    $moraleja_show = function_exists('gc_moraleja_activa') && gc_moraleja_activa($escenario_id);
+                    $moraleja_raw  = $moraleja_show ? get_post_meta($station_id, 'gc_moraleja', true) : '';
                     $moraleja_html = '';
                     if ($moraleja_raw) {
                         $moraleja_html = '<div style="margin-top:14px;padding:14px 16px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;text-align:left;">'
@@ -1966,8 +1970,9 @@ add_shortcode('gincana_estacion_contenido', function($atts){
             $lbl = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
             echo '<p style="margin:0 0 12px;font-size:16px;">&#10003; Ya has completado este ' . esc_html($lbl) . '.</p>';
         }
-        // Moraleja
-        $moraleja_done = get_post_meta($station_id, 'gc_moraleja', true);
+        // Moraleja: solo si el escenario tiene la opción activa
+        $moraleja_show3 = function_exists('gc_moraleja_activa') && gc_moraleja_activa($escenario_id);
+        $moraleja_done = $moraleja_show3 ? get_post_meta($station_id, 'gc_moraleja', true) : '';
         if ($moraleja_done) {
             echo '<div style="margin:14px 0 4px;padding:14px 16px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;text-align:left;">'
                . '<div style="font-size:13px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">💡 La moraleja</div>'
