@@ -170,28 +170,18 @@ function gincana_core_users_cb(){
     </form>
 
     <?php if ($escenario_id && !$focus_user): ?>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;margin:0 0 16px;">
-      <form method="post" onsubmit="return confirm('¿Seguro? Esto eliminará TODOS los puntos y progreso de TODOS los usuarios en este escenario.');">
+    <div style="margin:0 0 16px;padding:14px 16px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;">
+      <p style="margin:0 0 10px;font-size:13px;color:#475569;">
+        <strong>Acciones de escenario.</strong> Para borrar los datos de un usuario concreto, primero
+        filtra por ese usuario arriba (sale en la lista de la izquierda) y verás los botones de
+        borrado individual.
+      </p>
+      <form method="post" onsubmit="return confirm('¿Seguro? Esto eliminará TODOS los puntos, progreso e intentos de TODOS los usuarios en este escenario. El contenido de las estaciones (texto, imágenes…) NO se ve afectado.');">
         <?php wp_nonce_field('gc_reset_data'); ?>
         <input type="hidden" name="gc_reset_action" value="reset_escenario" />
         <input type="hidden" name="gc_reset_escenario" value="<?php echo (int)$escenario_id; ?>" />
         <button type="submit" class="button" style="color:#dc2626;border-color:#dc2626;">
-          Vaciar datos del escenario &laquo;<?php echo esc_html(get_the_title($escenario_id)); ?>&raquo;
-        </button>
-      </form>
-      <form method="post" onsubmit="
-        var c = prompt('⚠️ ESTA ACCIÓN ES IRREVERSIBLE.\n\nSe borrará de TODAS las estaciones del escenario «<?php echo esc_js(get_the_title($escenario_id)); ?>»:\n\n• Descripción cultural\n• Moraleja\n• Audio, dirección, Google Maps\n• Coordenadas GPS (latitud y longitud)\n• Imágenes 1, 2 y 3\n• Pista 1 y Pista 2\n• Contenido del editor (post_content)\n\nNO afecta a: orden, escenario asociado, QR token, prueba enlazada.\n\nPara confirmar, escribe BORRAR (en mayúsculas):');
-        if (c === null) return false;
-        if (c.trim().toUpperCase() !== 'BORRAR') { alert('Cancelado: no escribiste \'BORRAR\'.'); return false; }
-        this.querySelector('input[name=gc_clean_confirm]').value = c.trim();
-        return true;
-      ">
-        <?php wp_nonce_field('gc_reset_data'); ?>
-        <input type="hidden" name="gc_reset_action" value="clean_station_content" />
-        <input type="hidden" name="gc_reset_escenario" value="<?php echo (int)$escenario_id; ?>" />
-        <input type="hidden" name="gc_clean_confirm" value="" />
-        <button type="submit" class="button" style="color:#fff;background:#dc2626;border-color:#991b1b;font-weight:600;">
-          ⚠️ Borrar contenido de estaciones de «<?php echo esc_html(get_the_title($escenario_id)); ?>»
+          🗑️ Vaciar progreso de TODOS los usuarios en &laquo;<?php echo esc_html(get_the_title($escenario_id)); ?>&raquo;
         </button>
       </form>
     </div>
