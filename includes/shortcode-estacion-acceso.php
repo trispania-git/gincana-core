@@ -1842,11 +1842,10 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     }
                     ?>
                     var moralejaHtml = <?php echo wp_json_encode($moraleja_html); ?>;
-                    // Cuánto tiempo dejar la moraleja visible antes de redirigir (si la hay)
-                    var redirectDelay = moralejaHtml ? 6000 : 1800;
 
                     <?php if ($tipo_qr_redirect === 'validacion_gps'): ?>
-                    // GPS: mostrar resumen en la misma página
+                    // GPS: mostrar resumen en la misma página. NO hay redirect
+                    // automático: el jugador pulsa el botón cuando ha terminado de leer.
                     var wrap = document.querySelector('.gc-adult-station');
                     if (wrap) {
                         wrap.innerHTML = '<div style="padding:24px 20px;border-radius:14px;background:#f7fff7;border:2px solid #16a34a;text-align:center;">'
@@ -1854,16 +1853,22 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                             + '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Ubicación verificada</p>'
                             + '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Desafío completado' + ptsTxtGps + '</p>'
                             + moralejaHtml
-                            + '<a href="<?php echo esc_url($escenario_url_js); ?>" style="display:inline-block;margin-top:16px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>'
+                            + '<a href="<?php echo esc_url($escenario_url_js); ?>" style="display:inline-block;margin-top:16px;padding:14px 28px;border:0;border-radius:12px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:16px;">👉 Continuar</a>'
                             + '</div>';
                     }
                     <?php else: ?>
-                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;"><?php echo $acierto_html ? addslashes($acierto_html) : ''; ?>✅ Respuesta correcta.' + ptsTxt + '</div>'
-                        + moralejaHtml
-                        + (moralejaHtml ? '<div style="text-align:center;margin-top:14px;"><a href="<?php echo esc_url($escenario_url_js); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a></div>' : '');
-                    setTimeout(function(){
-                        window.location.href = <?php echo json_encode($escenario_url_js); ?>;
-                    }, redirectDelay);
+                    if (moralejaHtml) {
+                        // Con moraleja: mostrar texto + botón de continuar; NO redirect automático
+                        msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;"><?php echo $acierto_html ? addslashes($acierto_html) : ''; ?>✅ Respuesta correcta.' + ptsTxt + '</div>'
+                            + moralejaHtml
+                            + '<div style="text-align:center;margin-top:16px;"><a href="<?php echo esc_url($escenario_url_js); ?>" style="display:inline-block;padding:14px 28px;border:0;border-radius:12px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:16px;">👉 Continuar</a></div>';
+                    } else {
+                        // Sin moraleja: auto-redirect rápido como antes
+                        msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;"><?php echo $acierto_html ? addslashes($acierto_html) : ''; ?>✅ Respuesta correcta.' + ptsTxt + '</div>';
+                        setTimeout(function(){
+                            window.location.href = <?php echo json_encode($escenario_url_js); ?>;
+                        }, 1800);
+                    }
                     <?php endif; ?>
                 } else {
                     msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">La respuesta era correcta, pero no se pudo registrar el progreso.</div>';
