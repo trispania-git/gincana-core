@@ -115,6 +115,29 @@ function gincana_core_render_qr_codes_page() {
         <button type="button" class="button button-primary" onclick="window.print();">🖨️ Imprimir QR</button>
       </div>
 
+      <?php
+        // QR del escenario (punto de entrada al juego)
+        $esc_url     = get_permalink($selected_esc);
+        $esc_qr_size = (int) round($qr_size * 1.25); // un poco mayor que el de las estaciones
+        $esc_qr_img  = 'https://api.qrserver.com/v1/create-qr-code/?size=' . $esc_qr_size . 'x' . $esc_qr_size . '&data=' . urlencode($esc_url) . '&format=png&margin=8';
+      ?>
+      <div class="gc-qr-grid gc-qr-grid-escenario">
+        <div class="gc-qr-card gc-qr-card-escenario">
+          <div class="gc-qr-card-header">
+            <span class="gc-qr-order gc-qr-order-escenario">▶</span>
+            <span class="gc-qr-title"><?php echo esc_html($esc_title); ?></span>
+            <span class="gc-qr-badge">Inicio · Escenario</span>
+          </div>
+          <div class="gc-qr-img">
+            <img src="<?php echo esc_url($esc_qr_img); ?>" alt="QR <?php echo esc_attr($esc_title); ?>" width="<?php echo (int)$esc_qr_size; ?>" height="<?php echo (int)$esc_qr_size; ?>" />
+          </div>
+          <div class="gc-qr-pista" style="background:#eef2ff;border-color:#a5b4fc;color:#3730a3;">📍 Coloca este QR en la entrada o en el punto de salida del juego.</div>
+          <div class="gc-qr-url"><?php echo esc_html($esc_url); ?></div>
+        </div>
+      </div>
+
+      <h3 class="gc-qr-subhead"><?php echo esc_html(ucfirst($label)); ?>s · <?php echo count($stations); ?></h3>
+
       <div class="gc-qr-grid">
         <?php foreach ($stations as $sid):
           $sid   = (int) $sid;
@@ -153,12 +176,44 @@ function gincana_core_render_qr_codes_page() {
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 20px;
     }
+    .gc-qr-grid-escenario {
+      grid-template-columns: 1fr;
+      max-width: 520px;
+      margin: 0 auto 24px;
+    }
+    .gc-qr-subhead {
+      margin: 24px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e2e8f0;
+      font-size: 16px;
+      color: #334155;
+    }
     .gc-qr-card {
       border: 1px solid #dcdcde;
       border-radius: 12px;
       padding: 16px;
       background: #fff;
       text-align: center;
+    }
+    .gc-qr-card-escenario {
+      border: 2px solid #6366f1;
+      background: linear-gradient(180deg,#eef2ff 0%,#fff 60%);
+      box-shadow: 0 2px 10px rgba(99,102,241,0.15);
+    }
+    .gc-qr-order-escenario {
+      background: #6366f1 !important;
+      font-size: 18px !important;
+    }
+    .gc-qr-badge {
+      margin-left: auto;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #6366f1;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .gc-qr-card-header {
       display: flex;
@@ -225,12 +280,29 @@ function gincana_core_render_qr_codes_page() {
         grid-template-columns: repeat(2, 1fr);
         gap: 16px;
       }
+      .gc-qr-grid-escenario {
+        grid-template-columns: 1fr !important;
+        max-width: 100% !important;
+      }
+      .gc-qr-card-escenario {
+        page-break-after: always;
+        break-after: page;
+        border: 3px solid #333 !important;
+        background: #fff !important;
+        box-shadow: none !important;
+      }
       .gc-qr-card {
         break-inside: avoid;
         page-break-inside: avoid;
         border: 2px solid #333;
       }
       .gc-qr-url { display: none; }
+      .gc-qr-badge {
+        background: #333 !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
     }
   </style>
   <?php
