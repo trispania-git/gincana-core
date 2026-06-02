@@ -115,12 +115,15 @@ function gc_sopa_genera_grid($palabra, $cols = 10, $rows = 8) {
  * Devuelve la sopa de letras del usuario para una prueba+estación;
  * la genera y persiste si no existía.
  */
-function gc_sopa_get_or_create($user_id, $prueba_id, $estacion_id, $palabra, $cols = 10, $rows = 8) {
+function gc_sopa_get_or_create($user_id, $prueba_id, $estacion_id, $palabra, $cols = 10, $rows = 8, $q_index = 0) {
     $user_id     = (int) $user_id;
     $prueba_id   = (int) $prueba_id;
     $estacion_id = (int) $estacion_id;
-    $meta_key    = 'gc_sopa_' . $prueba_id . '_' . $estacion_id;
-    $cookie_key  = 'gc_sopa_' . $prueba_id . '_' . $estacion_id;
+    $q_index     = (int) $q_index;
+    // Persistencia por pregunta (q_index) para que pruebas con varias palabras
+    // mantengan un grid independiente por cada una y no se machaquen entre sí.
+    $meta_key    = 'gc_sopa_' . $prueba_id . '_' . $estacion_id . '_q' . $q_index;
+    $cookie_key  = 'gc_sopa_' . $prueba_id . '_' . $estacion_id . '_q' . $q_index;
 
     // Cargar de meta (logueado) o cookie (guest)
     $data = null;
@@ -190,21 +193,41 @@ function gc_sopa_es_correcta($seleccion, $word_path) {
 }
 
 /**
- * Limpia el grid guardado (al completar la estación o al reiniciar).
+ * Limpia el/los grid(s) guardado(s) (al completar la estación o al reiniciar).
+ * Borra todas las variantes por q_index (gc_sopa_<prueba>_<estacion>_q*) y la
+ * clave legacy sin sufijo (gc_sopa_<prueba>_<estacion>).
  */
 function gc_sopa_limpiar($user_id, $prueba_id, $estacion_id) {
-    $key = 'gc_sopa_' . (int)$prueba_id . '_' . (int)$estacion_id;
+    $prefix = 'gc_sopa_' . (int)$prueba_id . '_' . (int)$estacion_id;
+    $legacy_key = $prefix;
     if ($user_id > 0) {
-        delete_user_meta($user_id, $key);
+        global $wpdb;
+        // Borrar todas las variantes _q* del usuario en una sola consulta.
+        $like = $wpdb->esc_like($prefix . '_q') . '%';
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$wpdb->usermeta} WHERE user_id = %d AND meta_key LIKE %s",
+            (int) $user_id, $like
+        ));
+        // Y la clave legacy sin _q (compatibilidad con versiones anteriores).
+        delete_user_meta($user_id, $legacy_key);
     }
-    if (isset($_COOKIE[$key])) {
-        setcookie(
-            $key, '',
-            time() - 3600,
-            defined('COOKIEPATH') ? COOKIEPATH : '/',
-            defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '',
-            is_ssl(), false
-        );
-        unset($_COOKIE[$key]);
+    // Cookies (guest): borrar _q0.._q19 y la legacy.
+    $candidates = [$legacy_key];
+    for ($i = 0; $i < 20; $i++) {
+        $candidates[] = $prefix . '_q' . $i;
+    }
+    foreach ($candidates as $key) {
+        if (isset($_COOKIE[$key])) {
+            if (!headers_sent()) {
+                setcookie(
+                    $key, '',
+                    time() - 3600,
+                    defined('COOKIEPATH') ? COOKIEPATH : '/',
+                    defined('COOKIE_DOMAIN') ? COOKIE_DOMAIN : '',
+                    is_ssl(), false
+                );
+            }
+            unset($_COOKIE[$key]);
+        }
     }
 }

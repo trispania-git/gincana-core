@@ -1289,7 +1289,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     $sopa_cols = isset($pregunta['cols']) ? (int) $pregunta['cols'] : (isset($pregunta['tamano_grid']) ? (int) $pregunta['tamano_grid'] : 10);
                     $sopa_rows = isset($pregunta['rows']) ? (int) $pregunta['rows'] : (isset($pregunta['tamano_grid']) ? (int) $pregunta['tamano_grid'] : 7);
                     $sopa = function_exists('gc_sopa_get_or_create')
-                        ? gc_sopa_get_or_create($user_id, $test_id, $station_id, $p_resp_text, $sopa_cols, $sopa_rows)
+                        ? gc_sopa_get_or_create($user_id, $test_id, $station_id, $p_resp_text, $sopa_cols, $sopa_rows, (int) $q_index)
                         : null;
                 ?>
                 <?php if (!$sopa): ?>

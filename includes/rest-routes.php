@@ -459,7 +459,10 @@ add_action('rest_api_init', function(){
           if (function_exists('gc_sopa_get_or_create')) {
             $cols = isset($p['cols']) ? (int) $p['cols'] : (isset($p['tamano_grid']) ? (int) $p['tamano_grid'] : 10);
             $rows = isset($p['rows']) ? (int) $p['rows'] : (isset($p['tamano_grid']) ? (int) $p['tamano_grid'] : 7);
-            $sopa_state = gc_sopa_get_or_create($uid_sopa, $prueba_id, $eid_sopa, $p['respuesta_texto_correcta'] ?? '', $cols, $rows);
+            // Índice real de la pregunta: si vino en el request (modo pool o normal con una sola pregunta visible),
+            // ese es el índice del grid; si no, el de la iteración (foreach preserva claves del array original).
+            $qi_for_sopa = ($q_index !== null && is_numeric($q_index)) ? (int) $q_index : (int) $i;
+            $sopa_state = gc_sopa_get_or_create($uid_sopa, $prueba_id, $eid_sopa, $p['respuesta_texto_correcta'] ?? '', $cols, $rows, $qi_for_sopa);
             if (!$sopa_state || empty($sopa_state['word_path'])) { $all_ok = false; break; }
             if (!gc_sopa_es_correcta($seleccion, $sopa_state['word_path'])) { $all_ok = false; break; }
           } else {
