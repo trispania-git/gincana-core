@@ -699,6 +699,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
 
       <?php elseif ($accion_final === 'ninguna' && $completed === $total && $total > 0):
         $enhorabuena_msg = get_post_meta($escenario_id, 'gc_enhorabuena_msg', true);
+        $enhorabuena_imagen = get_post_meta($escenario_id, 'gc_enhorabuena_imagen', true);
         $diploma_activo  = get_post_meta($escenario_id, 'gc_diploma_activo', true) === '1';
         $diploma_msg     = get_post_meta($escenario_id, 'gc_diploma_msg', true);
         $diploma_fondo   = get_post_meta($escenario_id, 'gc_diploma_fondo', true);
@@ -730,9 +731,15 @@ add_shortcode('gincana_estaciones_lista', function($atts){
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           </div>
           <h3 style="margin:0 0 4px;font-size:20px;font-weight:700;color:#14532d;">¡Enhorabuena!</h3>
-          <p style="margin:0 0 8px;font-size:15px;color:#166534;">
-            <?php echo $enhorabuena_msg ? esc_html($enhorabuena_msg) : 'Has completado todas ' . esc_html($label_estacion_plural) . '.'; ?>
+          <p style="margin:0 0 8px;font-size:15px;color:#166534;white-space:pre-line;">
+            <?php echo $enhorabuena_msg ? esc_html($enhorabuena_msg) : esc_html('Has completado todas ' . $label_estacion_plural . '.'); ?>
           </p>
+
+          <?php if ($enhorabuena_imagen): ?>
+            <div style="margin:14px 0 4px;">
+              <img src="<?php echo esc_url($enhorabuena_imagen); ?>" alt="" style="max-width:100%;height:auto;max-height:320px;border-radius:12px;display:inline-block;box-shadow:0 2px 12px rgba(22,163,74,0.18);" />
+            </div>
+          <?php endif; ?>
 
           <?php if ($diploma_activo): ?>
             <div style="margin-top:16px;">

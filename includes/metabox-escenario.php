@@ -35,6 +35,7 @@ function gc_render_escenario_metabox($post) {
     $accion_final    = get_post_meta($post->ID, 'gc_accion_final', true) ?: 'ninguna';
     $foto_texto      = get_post_meta($post->ID, 'gc_foto_texto', true);
     $enhorabuena_msg = get_post_meta($post->ID, 'gc_enhorabuena_msg', true);
+    $enhorabuena_imagen = get_post_meta($post->ID, 'gc_enhorabuena_imagen', true);
     $diploma_activo  = get_post_meta($post->ID, 'gc_diploma_activo', true);
     $diploma_msg     = get_post_meta($post->ID, 'gc_diploma_msg', true);
     $diploma_pie_activo = get_post_meta($post->ID, 'gc_diploma_pie_activo', true);
@@ -446,10 +447,15 @@ function gc_render_escenario_metabox($post) {
             <div id="gc_enhorabuena_row" class="gc-wiz-conditional" style="<?php echo $accion_final !== 'ninguna' ? 'display:none;' : ''; ?>">
                 <div class="gc-wiz-field">
                     <label for="gc_enhorabuena_msg">Mensaje de enhorabuena</label>
-                    <input type="text" name="gc_enhorabuena_msg" id="gc_enhorabuena_msg"
-                           value="<?php echo esc_attr($enhorabuena_msg); ?>"
-                           placeholder="¡Enhorabuena! Has completado todas las estaciones." />
-                    <div class="gc-hint">Si se deja vacio se usa un texto generico.</div>
+                    <textarea name="gc_enhorabuena_msg" id="gc_enhorabuena_msg" rows="4"
+                              placeholder="¡Enhorabuena! Has completado todas las estaciones."
+                              style="width:100%;resize:vertical;min-height:90px;"><?php echo esc_textarea($enhorabuena_msg); ?></textarea>
+                    <div class="gc-hint">Puedes usar varias líneas. Si se deja vacío se usa un texto genérico.</div>
+                </div>
+                <div class="gc-wiz-field" style="margin-top:12px;">
+                    <label>Imagen bajo el mensaje</label>
+                    <?php gc_render_media_field('gc_enhorabuena_imagen', $enhorabuena_imagen, 'image', 'Seleccionar imagen'); ?>
+                    <div class="gc-hint">Opcional. Se muestra centrada debajo del mensaje (por ejemplo, una insignia, sello o foto de premio).</div>
                 </div>
 
                 <label class="gc-wiz-toggle" style="margin-top:12px;">
@@ -1079,7 +1085,8 @@ function gc_render_escenario_metabox($post) {
                 if (accion === 'subir_foto' && fotoTexto) accRows.push(['Texto foto', esc(fotoTexto)]);
                 if (accion === 'ninguna') {
                     var enhMsg = v('gc_enhorabuena_msg');
-                    if (enhMsg) accRows.push(['Mensaje enhorabuena', esc(enhMsg)]);
+                    if (enhMsg) accRows.push(['Mensaje enhorabuena', esc(enhMsg).replace(/\n/g,'<br>')]);
+                    accRows.push(['Imagen enhorabuena', v('gc_enhorabuena_imagen') ? dot('#16a34a') + 'Sí' : dot('#dc2626') + 'No']);
                     var diploma = ch('gc_diploma_activo');
                     accRows.push(['Diploma descargable', diploma ? si : no]);
                     if (diploma) {
@@ -1168,7 +1175,8 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_foto_texto', sanitize_text_field($_POST['gc_foto_texto'] ?? ''));
 
     // Campos de enhorabuena y diploma
-    update_post_meta($post_id, 'gc_enhorabuena_msg', sanitize_text_field($_POST['gc_enhorabuena_msg'] ?? ''));
+    update_post_meta($post_id, 'gc_enhorabuena_msg', sanitize_textarea_field($_POST['gc_enhorabuena_msg'] ?? ''));
+    update_post_meta($post_id, 'gc_enhorabuena_imagen', esc_url_raw($_POST['gc_enhorabuena_imagen'] ?? ''));
     update_post_meta($post_id, 'gc_diploma_activo', isset($_POST['gc_diploma_activo']) ? '1' : '0');
     update_post_meta($post_id, 'gc_diploma_msg', sanitize_text_field($_POST['gc_diploma_msg'] ?? ''));
     update_post_meta($post_id, 'gc_diploma_pie_activo', isset($_POST['gc_diploma_pie_activo']) ? '1' : '0');
