@@ -42,6 +42,7 @@ function gc_render_escenario_metabox($post) {
     if ($diploma_pie_activo === '') $diploma_pie_activo = '1';
     $diploma_pie_texto = get_post_meta($post->ID, 'gc_diploma_pie_texto', true);
     $diploma_fondo   = get_post_meta($post->ID, 'gc_diploma_fondo', true);
+    $diploma_imagen  = get_post_meta($post->ID, 'gc_diploma_imagen', true);
     $label_estacion  = get_post_meta($post->ID, 'gc_label_estacion', true);
     $label_plural    = get_post_meta($post->ID, 'gc_label_estacion_plural', true);
     $cta_texto       = get_post_meta($post->ID, 'gc_cta_texto', true);
@@ -470,15 +471,20 @@ function gc_render_escenario_metabox($post) {
                 <div id="gc_diploma_opciones" style="margin-top:12px;padding:14px 16px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;<?php echo $diploma_activo !== '1' ? 'display:none;' : ''; ?>">
                     <div class="gc-wiz-field" style="margin:0 0 12px;">
                         <label for="gc_diploma_msg">Mensaje del diploma</label>
-                        <input type="text" name="gc_diploma_msg" id="gc_diploma_msg"
-                               value="<?php echo esc_attr($diploma_msg); ?>"
-                               placeholder="Ensena esta imagen en la oficina de turismo y recibe tu premio" />
-                        <div class="gc-hint">Texto que aparece en la parte inferior de la imagen.</div>
+                        <textarea name="gc_diploma_msg" id="gc_diploma_msg" rows="3"
+                                  placeholder="Enseña esta imagen en la oficina de turismo y recibe tu premio"
+                                  style="width:100%;resize:vertical;min-height:72px;"><?php echo esc_textarea($diploma_msg); ?></textarea>
+                        <div class="gc-hint">Texto que aparece en la parte inferior del diploma. Puedes usar varias líneas.</div>
                     </div>
                     <div class="gc-wiz-field" style="margin:0 0 12px;">
                         <label>Imagen de fondo del diploma</label>
                         <?php gc_render_media_field('gc_diploma_fondo', $diploma_fondo, 'image', 'Seleccionar fondo'); ?>
                         <div class="gc-hint">Opcional (800&times;1200px recomendado, vertical). La imagen se oscurece automaticamente para que el texto sea legible. Si no se sube, se usa un degradado por defecto.</div>
+                    </div>
+                    <div class="gc-wiz-field" style="margin:0 0 12px;">
+                        <label>Imagen bajo el mensaje del diploma</label>
+                        <?php gc_render_media_field('gc_diploma_imagen', $diploma_imagen, 'image', 'Seleccionar imagen'); ?>
+                        <div class="gc-hint">Opcional. Se dibuja en el diploma debajo del texto (sello, logo de patrocinador, foto de premio…). Si se deja vacío se usa la portada del escenario.</div>
                     </div>
 
                     <label class="gc-wiz-toggle" style="margin:0 0 10px;">
@@ -1091,8 +1097,9 @@ function gc_render_escenario_metabox($post) {
                     accRows.push(['Diploma descargable', diploma ? si : no]);
                     if (diploma) {
                         var dipMsg = v('gc_diploma_msg');
-                        if (dipMsg) accRows.push(['Mensaje diploma', esc(dipMsg)]);
+                        if (dipMsg) accRows.push(['Mensaje diploma', esc(dipMsg).replace(/\n/g,'<br>')]);
                         accRows.push(['Fondo diploma', v('gc_diploma_fondo') ? dot('#16a34a') + 'Si' : dot('#dc2626') + 'No']);
+                        accRows.push(['Imagen diploma', v('gc_diploma_imagen') ? dot('#16a34a') + 'Si' : dot('#dc2626') + 'No (usa portada)']);
                         var pieActivo = ch('gc_diploma_pie_activo');
                         accRows.push(['Pie en diploma', pieActivo ? si : no]);
                         if (pieActivo) {
@@ -1178,10 +1185,11 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_enhorabuena_msg', sanitize_textarea_field($_POST['gc_enhorabuena_msg'] ?? ''));
     update_post_meta($post_id, 'gc_enhorabuena_imagen', esc_url_raw($_POST['gc_enhorabuena_imagen'] ?? ''));
     update_post_meta($post_id, 'gc_diploma_activo', isset($_POST['gc_diploma_activo']) ? '1' : '0');
-    update_post_meta($post_id, 'gc_diploma_msg', sanitize_text_field($_POST['gc_diploma_msg'] ?? ''));
+    update_post_meta($post_id, 'gc_diploma_msg', sanitize_textarea_field($_POST['gc_diploma_msg'] ?? ''));
     update_post_meta($post_id, 'gc_diploma_pie_activo', isset($_POST['gc_diploma_pie_activo']) ? '1' : '0');
     update_post_meta($post_id, 'gc_diploma_pie_texto', sanitize_text_field($_POST['gc_diploma_pie_texto'] ?? ''));
     update_post_meta($post_id, 'gc_diploma_fondo', esc_url_raw($_POST['gc_diploma_fondo'] ?? ''));
+    update_post_meta($post_id, 'gc_diploma_imagen', esc_url_raw($_POST['gc_diploma_imagen'] ?? ''));
 
     update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
     update_post_meta($post_id, 'gc_label_estacion_plural', sanitize_text_field($_POST['gc_label_estacion_plural'] ?? ''));

@@ -703,8 +703,11 @@ add_shortcode('gincana_estaciones_lista', function($atts){
         $diploma_activo  = get_post_meta($escenario_id, 'gc_diploma_activo', true) === '1';
         $diploma_msg     = get_post_meta($escenario_id, 'gc_diploma_msg', true);
         $diploma_fondo   = get_post_meta($escenario_id, 'gc_diploma_fondo', true);
+        $diploma_imagen  = get_post_meta($escenario_id, 'gc_diploma_imagen', true);
         $diploma_mostrar_puntos = get_post_meta($escenario_id, 'gc_mostrar_puntos', true) === '1';
         $diploma_portada = get_post_meta($escenario_id, 'gc_portada', true);
+        // Imagen del diploma: prioridad imagen específica, luego portada del escenario
+        $diploma_img_final = $diploma_imagen ?: $diploma_portada;
         $diploma_pie_activo = get_post_meta($escenario_id, 'gc_diploma_pie_activo', true);
         if ($diploma_pie_activo === '') $diploma_pie_activo = '1';
         $diploma_pie_texto  = get_post_meta($escenario_id, 'gc_diploma_pie_texto', true);
@@ -760,23 +763,31 @@ add_shortcode('gincana_estaciones_lista', function($atts){
               var totalPts  = <?php echo (int) $user_total_pts; ?>;
               var diplomaMsg = <?php echo wp_json_encode($diploma_msg ?: ''); ?>;
               var fondoUrl  = <?php echo wp_json_encode($diploma_fondo ?: ''); ?>;
-              var portadaUrl = <?php echo wp_json_encode($diploma_portada ?: ''); ?>;
+              var portadaUrl = <?php echo wp_json_encode($diploma_img_final ?: ''); ?>;
               var mostrarPuntos = <?php echo $diploma_mostrar_puntos ? 'true' : 'false'; ?>;
               var pieActivo = <?php echo $diploma_pie_activo === '1' ? 'true' : 'false'; ?>;
               var pieTexto  = <?php echo wp_json_encode($diploma_pie_texto); ?>;
               var fecha     = new Date().toLocaleDateString('es-ES', {day:'numeric',month:'long',year:'numeric'});
               var font = function(w, s) { return w + ' ' + s + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'; };
 
-              // Dividir texto en líneas que quepan en maxW
+              // Dividir texto en líneas que quepan en maxW.
+              // Respeta los saltos de línea explícitos (\n) y además
+              // hace word-wrap dentro de cada uno.
               function wrapText(ctx, text, maxW) {
-                var words = text.split(' '), lines = [], line = '';
-                for (var i = 0; i < words.length; i++) {
-                  var test = line + (line ? ' ' : '') + words[i];
-                  if (ctx.measureText(test).width > maxW && line) {
-                    lines.push(line); line = words[i];
-                  } else { line = test; }
+                var lines = [];
+                var paragraphs = String(text).replace(/\r/g, '').split('\n');
+                for (var p = 0; p < paragraphs.length; p++) {
+                  var paragraph = paragraphs[p];
+                  if (paragraph === '') { lines.push(''); continue; }
+                  var words = paragraph.split(' '), line = '';
+                  for (var i = 0; i < words.length; i++) {
+                    var test = line + (line ? ' ' : '') + words[i];
+                    if (ctx.measureText(test).width > maxW && line) {
+                      lines.push(line); line = words[i];
+                    } else { line = test; }
+                  }
+                  if (line) lines.push(line);
                 }
-                if (line) lines.push(line);
                 return lines;
               }
 
