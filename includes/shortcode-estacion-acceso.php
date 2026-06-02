@@ -1323,6 +1323,9 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                         </div>
                     </div>
                     <div id="gc-sopa-feedback" style="text-align:center;min-height:24px;font-size:13px;color:#64748b;margin-bottom:8px;"></div>
+                    <div style="text-align:center;margin-bottom:10px;">
+                        <button type="button" id="gc-sopa-clear" style="padding:8px 14px;border:1px solid #cbd5e1;border-radius:999px;background:#fff;color:#475569;font-size:13px;font-weight:600;cursor:pointer;">↩ Borrar selección</button>
+                    </div>
                     <input type="hidden" name="gc_station_answer" id="gc_station_answer_text" value="" />
 
                     <style>
@@ -1359,7 +1362,19 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                         var firstCell = null;
 
                         function clearMarks(cls) {
-                            grid.querySelectorAll('td').forEach(function(td){ td.classList.remove(cls); });
+                            grid.querySelectorAll('.gc-sopa-cell').forEach(function(td){ td.classList.remove(cls); });
+                        }
+                        function resetSeleccion() {
+                            clearMarks('is-hover');
+                            clearMarks('is-selected');
+                            firstCell = null;
+                            dragging = false;
+                            if (hidden) hidden.value = '';
+                            if (fb) fb.textContent = 'Selección borrada. Toca la primera letra y arrastra hasta la última.';
+                        }
+                        var clearBtn = document.getElementById('gc-sopa-clear');
+                        if (clearBtn) {
+                            clearBtn.addEventListener('click', function(e){ e.preventDefault(); resetSeleccion(); });
                         }
                         function getCellAt(x, y) {
                             var el = document.elementFromPoint(x, y);
