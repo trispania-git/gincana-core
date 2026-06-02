@@ -1506,7 +1506,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     <input type="text" name="gc_station_answer" id="gc_station_answer_text" autocomplete="off" autocapitalize="characters" style="width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:18px;font-weight:600;letter-spacing:2px;text-transform:uppercase;text-align:center;" placeholder="Escribe la palabra…" />
 
                 <?php elseif ($p_tipo === 'texto'): ?>
-                    <input type="text" name="gc_station_answer" id="gc_station_answer_text" autocomplete="off" style="width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:16px;" placeholder="Escribe tu respuesta…" />
+                    <input type="text" name="gc_station_answer" id="gc_station_answer_text" autocomplete="off" autocapitalize="characters" style="width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:16px;text-transform:uppercase;" placeholder="Escribe tu respuesta…" />
 
                 <?php else: ?>
                     <?php // multiple, vf: radios texto ?>
@@ -1649,6 +1649,21 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                 if (lbl) lbl.classList.add('is-selected');
             });
         });
+
+        // Forzar mayúsculas en el input de respuesta libre (texto, anagrama, cifrado, jeroglífico…).
+        // text-transform:uppercase es solo visual; aquí actualizamos el .value real preservando el cursor.
+        var answerTextInput = form.querySelector('#gc_station_answer_text');
+        if (answerTextInput && answerTextInput.type === 'text') {
+            answerTextInput.addEventListener('input', function(){
+                var pos = this.selectionStart;
+                var v = this.value;
+                var u = v.toLocaleUpperCase();
+                if (u !== v) {
+                    this.value = u;
+                    try { this.setSelectionRange(pos, pos); } catch(_) {}
+                }
+            });
+        }
 
         // === Lógica del tipo 'ahorcado' ===
         if ((form.dataset.mode || '') === 'ahorcado') {
