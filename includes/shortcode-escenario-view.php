@@ -440,6 +440,15 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     </div>
     <?php endif; ?>
 
+    <?php
+    // Si el escenario obliga a empezar por la portada y el visitante todavía
+    // no se ha registrado, mostramos aquí el alta (login + guest) en lugar
+    // del listado de estaciones. Así no entra en un bucle de "Debes comenzar
+    // desde el principio" al clicar una estación sin haber puesto su nombre.
+    if (!$user_id && function_exists('gc_forzar_portada') && gc_forzar_portada($escenario_id)):
+        echo gc_render_login_o_guest($escenario_id, 'Empieza la gincana', 'Escribe tu nombre para arrancar y aparecer en el ranking.');
+    else:
+    ?>
     <div class="gc-cards">
       <?php foreach ($est_ids as $i => $eid):
         // En orden secreto el "número" mostrado es la posición en el orden custom
@@ -969,6 +978,7 @@ add_shortcode('gincana_estaciones_lista', function($atts){
       ?>
 
     </div>
+    <?php endif; // !$user_id && gc_forzar_portada ?>
     <?php
     // Los logos NO se renderizan aquí en la portada del escenario porque la
     // plantilla de Divi añade un footer propio con el itinerario sticky.
