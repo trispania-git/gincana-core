@@ -564,6 +564,9 @@ if ( ! function_exists('gc_requiere_prueba') ) {
  * ¿Puede este usuario acceder a esta estación según el orden vigente?
  *
  * Reglas:
+ *  - Si el escenario NO tiene activo "Obligar a empezar por la portada"
+ *    (gc_forzar_portada), no se aplica ningún control de orden y se
+ *    permite todo. La opción del escenario es el interruptor maestro.
  *  - Modo "orden libre": siempre se puede (todas están abiertas).
  *  - Si la estación ya está pasada: se permite (review).
  *  - En cualquier otro modo (orden secreto del usuario o secuencial fijo):
@@ -578,6 +581,12 @@ if ( ! function_exists('gc_user_can_access_station') ) {
     $escenario_id = (int) $escenario_id;
     $station_id   = (int) $station_id;
     if (!$escenario_id || !$station_id) return true;
+
+    // Si el escenario no obliga a empezar por la portada, no aplicamos
+    // ningún gating de orden — el QR aleatorio sigue siendo libre.
+    if (!function_exists('gc_forzar_portada') || !gc_forzar_portada($escenario_id)) {
+      return true;
+    }
 
     // Orden libre: cualquier estación es accesible.
     if (function_exists('gc_orden_libre') && gc_orden_libre($escenario_id)) {
