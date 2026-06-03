@@ -99,6 +99,16 @@ function gc_shortcode_estacion_acceso() {
         echo '</div>';
     }
 
+    // Si el escenario obliga a empezar por la portada y el usuario no se ha
+    // registrado todavía, no mostramos ni quiz ni alta inline: solo un aviso
+    // y un botón hacia la portada del escenario.
+    if (!$is_logged && function_exists('gc_forzar_portada') && gc_forzar_portada($escenario_id)) {
+        echo gc_render_forzar_portada_card($escenario_id, $title, $label);
+        if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id);
+        echo '</div>';
+        return ob_get_clean();
+    }
+
     if ($tipo_escenario === 'infantil') {
         if (!$is_logged) {
             echo gc_render_infantil_station_qr_no_login($station_id, $title, $escenario_id);
@@ -2067,11 +2077,18 @@ add_shortcode('gincana_estacion_contenido', function($atts){
 
     // Si no esta logueado
     if (!$is_logged) {
-        // Infantil: mostrar pista + CTA login
-        if ($tipo_escenario === 'infantil') {
-            echo gc_render_infantil_station_pista($station_id, $title, $escenario_id);
+        // Si el escenario obliga a empezar por la portada, no se ofrece el
+        // alta inline aquí: se redirige (con aviso) a la portada.
+        if (function_exists('gc_forzar_portada') && gc_forzar_portada($escenario_id)) {
+            $lbl_est = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
+            echo gc_render_forzar_portada_card($escenario_id, $title, $lbl_est);
+        } else {
+            // Infantil: mostrar pista + CTA login
+            if ($tipo_escenario === 'infantil') {
+                echo gc_render_infantil_station_pista($station_id, $title, $escenario_id);
+            }
+            echo gc_render_login_o_guest($escenario_id, '¿Quieres participar en la gimkana?', 'Escribe tu nombre y empieza a jugar.');
         }
-        echo gc_render_login_o_guest($escenario_id, '¿Quieres participar en la gimkana?', 'Escribe tu nombre y empieza a jugar.');
     } else {
         // Logueado, acceso directo (sin QR)
         $tipo_qr = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';

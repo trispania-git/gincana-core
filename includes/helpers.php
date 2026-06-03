@@ -300,6 +300,18 @@ if ( ! function_exists('gc_orden_aleatorio') ) {
 }
 
 /**
+ * ¿El escenario obliga a empezar por la portada?
+ * Si es true, un QR escaneado por un usuario que aún no se ha registrado
+ * NO ofrece el alta inline en la estación: muestra un aviso y un botón
+ * que lleva a la portada del escenario para que se registre allí.
+ */
+if ( ! function_exists('gc_forzar_portada') ) {
+  function gc_forzar_portada($escenario_id) {
+    return get_post_meta((int)$escenario_id, 'gc_forzar_portada', true) === '1';
+  }
+}
+
+/**
  * Devuelve el orden personal de las estaciones para un usuario+escenario.
  *
  * Persistencia:
@@ -545,6 +557,38 @@ if ( ! function_exists('gc_requiere_prueba') ) {
     if (function_exists('gc_get_tipo_qr') && gc_get_tipo_qr($escenario_id) === 'solo_pregunta') return true;
     $val = get_post_meta((int)$escenario_id, 'gc_requiere_prueba', true);
     return ($val === '' || $val === '1'); // vacío (legacy) o '1' = sí
+  }
+}
+
+/**
+ * Card que se muestra cuando un escenario tiene 'forzar_portada' activo y
+ * un usuario llega a una estación sin haberse registrado todavía. En lugar
+ * del alta inline, se le pide ir a la portada del escenario.
+ */
+if ( ! function_exists('gc_render_forzar_portada_card') ) {
+  function gc_render_forzar_portada_card($escenario_id, $station_title = '', $label = 'estación') {
+    $escenario_url = get_permalink((int) $escenario_id) ?: home_url('/');
+    $esc_title     = get_the_title((int) $escenario_id);
+    ob_start();
+    ?>
+    <div style="margin:18px 0;padding:24px 22px;border-radius:14px;background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:2px solid #6366f1;text-align:center;">
+      <div style="font-size:42px;margin-bottom:6px;">🚪</div>
+      <h3 style="margin:0 0 6px;color:#3730a3;font-size:20px;">Empieza desde la portada del escenario</h3>
+      <p style="margin:0 0 14px;color:#4338ca;font-size:15px;line-height:1.5;">
+        <?php if ($station_title): ?>
+          Has llegado a <strong><?php echo esc_html($station_title); ?></strong>, pero para participar primero tienes que arrancar desde la portada del escenario.
+        <?php else: ?>
+          Para participar primero tienes que arrancar desde la portada del escenario.
+        <?php endif; ?>
+        <br>Allí pondrás tu nombre y verás todo el recorrido.
+      </p>
+      <a href="<?php echo esc_url($escenario_url); ?>"
+         style="display:inline-block;padding:13px 26px;border:0;border-radius:10px;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 2px 10px rgba(79,70,229,0.3);">
+        Ir a la portada de <?php echo esc_html($esc_title ?: 'la gincana'); ?>
+      </a>
+    </div>
+    <?php
+    return ob_get_clean();
   }
 }
 

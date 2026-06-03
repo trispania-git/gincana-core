@@ -201,6 +201,7 @@ function gc_render_escenario_metabox($post) {
             <!-- Acceso: con registro o sin registro (invitado) -->
             <?php
                 $permitir_guest = get_post_meta($post->ID, 'gc_permitir_guest', true) === '1';
+                $forzar_portada = get_post_meta($post->ID, 'gc_forzar_portada', true) === '1';
             ?>
             <div style="margin-top:24px;padding-top:20px;border-top:1px solid #e2e8f0;">
                 <h4 style="margin:0 0 12px;font-size:15px;color:#334155;">Acceso de jugadores</h4>
@@ -210,6 +211,15 @@ function gc_render_escenario_metabox($post) {
                     <div>
                         <div class="gc-toggle-label">Permitir jugar sin registro 🙋</div>
                         <div class="gc-toggle-desc">Los jugadores podrán participar simplemente escribiendo su nombre, sin crear cuenta ni iniciar sesión. Aparecerán en el ranking con ese nombre.</div>
+                    </div>
+                </label>
+
+                <label class="gc-wiz-toggle" style="margin-top:10px;">
+                    <input type="checkbox" name="gc_forzar_portada" value="1" id="gc_forzar_portada" <?php checked($forzar_portada, true); ?> />
+                    <span class="gc-switch"></span>
+                    <div>
+                        <div class="gc-toggle-label">Obligar a empezar por la portada 🚪</div>
+                        <div class="gc-toggle-desc">Si alguien escanea un QR de estación sin estar registrado, no se le mostrará el formulario de "Pon tu nombre" allí: verá un aviso y un botón para ir a la portada del escenario, donde se da de alta y arranca con el orden de juego completo.</div>
                     </div>
                 </label>
             </div>
@@ -1063,9 +1073,11 @@ function gc_render_escenario_metabox($post) {
                     + '</div>';
 
                 var guestOn = ch('gc_permitir_guest');
+                var forzarPortada = ch('gc_forzar_portada');
                 html += section('1. Tipo de escenario', [
                     ['Tipo', lb('tipo_escenario', tipoEsc)],
-                    ['Sin registro', guestOn ? si : no]
+                    ['Sin registro', guestOn ? si : no],
+                    ['Forzar empezar por portada', forzarPortada ? si : no]
                 ]);
 
                 var pistas = ch('gc_pistas_activas');
@@ -1147,6 +1159,7 @@ add_action('save_post', function ($post_id) {
 
     update_post_meta($post_id, 'gc_tipo_escenario', $tipo);
     update_post_meta($post_id, 'gc_permitir_guest', isset($_POST['gc_permitir_guest']) ? '1' : '0');
+    update_post_meta($post_id, 'gc_forzar_portada', isset($_POST['gc_forzar_portada']) ? '1' : '0');
     $tipo_qr = sanitize_text_field($_POST['gc_tipo_qr'] ?? 'enlace');
     if ( ! in_array($tipo_qr, ['enlace', 'validacion_boton', 'validacion_boton_quiz', 'validacion_quiz', 'validacion_gps', 'solo_pregunta'], true) ) $tipo_qr = 'enlace';
     update_post_meta($post_id, 'gc_tipo_qr', $tipo_qr);
