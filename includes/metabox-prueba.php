@@ -123,6 +123,7 @@ function gc_render_prueba_metabox($post) {
                     <option value="cifrado_cesar" <?php selected($tipo, 'cifrado_cesar'); ?>>Descifrar mensaje (cifrado César) 🔐</option>
                     <option value="anagrama" <?php selected($tipo, 'anagrama'); ?>>Anagrama (reordenar letras) 🔀</option>
                     <option value="ahorcado" <?php selected($tipo, 'ahorcado'); ?>>Ahorcado (adivinar palabra letra a letra) 🎯</option>
+                    <option value="ahorcado_light" <?php selected($tipo, 'ahorcado_light'); ?>>Ahorcado light (algunas letras ya visibles) 🎈</option>
                     <option value="sopa_letras" <?php selected($tipo, 'sopa_letras'); ?>>Sopa de letras (encontrar la palabra) 🔡</option>
                     <option value="jeroglifico" <?php selected($tipo, 'jeroglifico'); ?>>Jeroglífico (2 imágenes → 1 palabra) 🧩</option>
                 </select>
@@ -257,15 +258,23 @@ function gc_render_prueba_metabox($post) {
                     <span style="color:#64748b;font-size:12px;">Las celdas se ajustan al ancho del móvil. Cuanto más ancho, más cómoda la lectura.</span>
                 </p>
                 <p style="color:#64748b;font-size:12px;">El grid se genera al primer acceso de cada jugador y se mantiene fijo aunque recargue la página.</p>
-            <?php elseif ($p_tipo === 'ahorcado'):
-                $pista_txt = $p['pista'] ?? '';
-                $categoria = $p['categoria'] ?? '';
+            <?php elseif ($p_tipo === 'ahorcado' || $p_tipo === 'ahorcado_light'):
+                $pista_txt    = $p['pista'] ?? '';
+                $categoria    = $p['categoria'] ?? '';
+                $pista_pattern = $p['pista_pattern'] ?? '';
             ?>
                 <p>
-                    <label>Palabra a adivinar:</label><br>
-                    <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" placeholder="Ej: GYMKANA" />
-                    <span style="color:#64748b;font-size:12px;">Solo se mostrarán las letras (los espacios y signos se respetan). Las tildes se ignoran al comparar.</span>
+                    <label>Palabra o frase a adivinar:</label><br>
+                    <input type="text" name="gc_preguntas[<?php echo $qi; ?>][respuesta_texto_correcta]" value="<?php echo esc_attr($resp_text); ?>" style="width:100%;" placeholder="Ej: RASCACIELOS DE PALENCIA" />
+                    <span style="color:#64748b;font-size:12px;">Solo cuentan letras como huecos: los espacios y signos se respetan y no hay que rellenarlos. Las tildes se ignoran al comparar.</span>
                 </p>
+                <?php if ($p_tipo === 'ahorcado_light'): ?>
+                <p>
+                    <label>Patrón visible al inicio (usa <code>_</code> para los huecos):</label><br>
+                    <input type="text" name="gc_preguntas[<?php echo $qi; ?>][pista_pattern]" value="<?php echo esc_attr($pista_pattern); ?>" style="width:100%;font-family:'Courier New',monospace;letter-spacing:1px;" placeholder="Ej: R_SC_CIELOS DE P_LENCIA" />
+                    <span style="color:#64748b;font-size:12px;">Mismo número de caracteres que la palabra/frase. Las letras visibles se muestran al jugador desde el principio; los <code>_</code> son los huecos que debe adivinar. Si dejas este campo vacío, no se revela ninguna letra (igual que el ahorcado clásico).</span>
+                </p>
+                <?php endif; ?>
                 <p>
                     <label>Categoría (opcional):</label><br>
                     <input type="text" name="gc_preguntas[<?php echo $qi; ?>][categoria]" value="<?php echo esc_attr($categoria); ?>" style="width:100%;" placeholder="Ej: Animal · Ciudad · Deporte…" />
@@ -463,11 +472,16 @@ function gc_render_prueba_metabox($post) {
                     +   '<option value="12x8">Grande (12 × 8)</option>'
                     +   '<option value="14x10">Extra (14 × 10)</option>'
                     + '</select></p>';
-            } else if (tipoNow === 'ahorcado') {
-                html += '<p><label>Palabra a adivinar:</label><br>'
-                    + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="Ej: GYMKANA" />'
-                    + '<span style="color:#64748b;font-size:12px;">Solo letras se mostrarán. Las tildes se ignoran al comparar.</span></p>'
-                    + '<p><label>Categoría (opcional):</label><br>'
+            } else if (tipoNow === 'ahorcado' || tipoNow === 'ahorcado_light') {
+                html += '<p><label>Palabra o frase a adivinar:</label><br>'
+                    + '<input type="text" name="gc_preguntas[' + idx + '][respuesta_texto_correcta]" style="width:100%;" placeholder="Ej: RASCACIELOS DE PALENCIA" />'
+                    + '<span style="color:#64748b;font-size:12px;">Solo cuentan letras como huecos. Espacios y signos no hay que rellenarlos. Las tildes se ignoran.</span></p>';
+                if (tipoNow === 'ahorcado_light') {
+                    html += '<p><label>Patrón visible al inicio (usa <code>_</code> para huecos):</label><br>'
+                        + '<input type="text" name="gc_preguntas[' + idx + '][pista_pattern]" style="width:100%;font-family:Courier New,monospace;letter-spacing:1px;" placeholder="Ej: R_SC_CIELOS DE P_LENCIA" />'
+                        + '<span style="color:#64748b;font-size:12px;">Mismo número de caracteres que la palabra/frase. Las letras visibles aparecen al jugador desde el principio.</span></p>';
+                }
+                html += '<p><label>Categoría (opcional):</label><br>'
                     + '<input type="text" name="gc_preguntas[' + idx + '][categoria]" style="width:100%;" placeholder="Ej: Animal · Ciudad · Deporte…" /></p>'
                     + '<p><label>Pista de texto (opcional):</label><br>'
                     + '<input type="text" name="gc_preguntas[' + idx + '][pista]" style="width:100%;" placeholder="Ej: Es lo que estás jugando ahora mismo." /></p>'
@@ -642,7 +656,7 @@ add_action('save_post', function ($post_id) {
             $enunciado = sanitize_textarea_field($p['enunciado'] ?? '');
 
             $p_tipo = sanitize_text_field($p['tipo'] ?? 'multiple');
-            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama','ahorcado','sopa_letras','jeroglifico'], true) ) {
+            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama','ahorcado','ahorcado_light','sopa_letras','jeroglifico'], true) ) {
                 $p_tipo = 'multiple';
             }
             $correcta_idx = isset($p['correcta']) ? (int)$p['correcta'] : -1;
@@ -669,7 +683,7 @@ add_action('save_post', function ($post_id) {
                 'imagen'    => esc_url_raw($imagen_raw),
             ];
 
-            if (in_array($p_tipo, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado', 'sopa_letras', 'jeroglifico'], true)) {
+            if (in_array($p_tipo, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado', 'ahorcado_light', 'sopa_letras', 'jeroglifico'], true)) {
                 $pregunta['respuesta_texto_correcta'] = sanitize_text_field($p['respuesta_texto_correcta'] ?? '');
                 $pregunta['opciones'] = [];
                 if ($p_tipo === 'cifrado_cesar') {
@@ -678,9 +692,12 @@ add_action('save_post', function ($post_id) {
                     if ($rot > 25) $rot = 25;
                     $pregunta['rotacion'] = $rot;
                 }
-                if ($p_tipo === 'ahorcado') {
+                if ($p_tipo === 'ahorcado' || $p_tipo === 'ahorcado_light') {
                     $pregunta['pista']     = sanitize_text_field($p['pista'] ?? '');
                     $pregunta['categoria'] = sanitize_text_field($p['categoria'] ?? '');
+                    if ($p_tipo === 'ahorcado_light') {
+                        $pregunta['pista_pattern'] = sanitize_text_field($p['pista_pattern'] ?? '');
+                    }
                 }
                 if ($p_tipo === 'jeroglifico') {
                     $pregunta['jero_img1'] = esc_url_raw($p['jero_img1'] ?? '');

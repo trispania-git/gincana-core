@@ -305,8 +305,28 @@ add_action('rest_api_init', function(){
       $revealed = (array) get_user_meta($user_id, $reveal_key, true);
       $missed   = (array) get_user_meta($user_id, $miss_key, true);
 
+      // En ahorcado_light, las letras del patrón también cuentan como reveladas
+      // (no las guardamos en user_meta — se recalculan siempre desde el patrón).
+      $tipo_preg     = isset($pregunta['tipo']) ? (string) $pregunta['tipo'] : 'ahorcado';
+      $pista_pattern = ($tipo_preg === 'ahorcado_light' && isset($pregunta['pista_pattern']))
+                        ? (string) $pregunta['pista_pattern'] : '';
+      $pattern_letters = [];
+      if ($pista_pattern !== '') {
+        $plen = mb_strlen($pista_pattern);
+        for ($pi = 0; $pi < $plen; $pi++) {
+          $pch = mb_substr($pista_pattern, $pi, 1);
+          if ($pch === '_') continue;
+          if (preg_match('/\p{L}/u', $pch)) {
+            $pattern_letters[] = mb_strtoupper(remove_accents($pch));
+          }
+        }
+        $pattern_letters = array_values(array_unique($pattern_letters));
+      }
+      // Para chequear duplicados y completitud unimos letras del usuario + del patrón.
+      $revealed_effective = array_values(array_unique(array_merge((array) $revealed, $pattern_letters)));
+
       // ¿La letra ya se había usado?
-      if (in_array($letra, $revealed, true) || in_array($letra, $missed, true)) {
+      if (in_array($letra, $revealed_effective, true) || in_array($letra, $missed, true)) {
         return new WP_REST_Response(['ok'=>false,'error'=>'letter_already_used','state'=>$state_pre], 200);
       }
 
@@ -336,16 +356,18 @@ add_action('rest_api_init', function(){
         ], ['%d','%d','%d','%d','%s','%d','%s','%s','%s']);
       }
 
-      // ¿Palabra completa descubierta?
+      // ¿Palabra completa descubierta? (considera también las letras del patrón
+      // en ahorcado_light, no solo las que el usuario ha tecleado).
       $all_letters = [];
       $len = mb_strlen($palabra_norm);
       for ($i = 0; $i < $len; $i++) {
         $ch = mb_substr($palabra_norm, $i, 1);
         if (preg_match('/\p{L}/u', $ch)) $all_letters[$ch] = true;
       }
+      $revealed_after = array_values(array_unique(array_merge((array) $revealed, $pattern_letters)));
       $palabra_completa = true;
       foreach (array_keys($all_letters) as $L) {
-        if (!in_array($L, $revealed, true)) { $palabra_completa = false; break; }
+        if (!in_array($L, $revealed_after, true)) { $palabra_completa = false; break; }
       }
 
       $state_post = gc_quiz_user_state($user_id, $prueba_id, $estacion_id);
@@ -455,7 +477,7 @@ add_action('rest_api_init', function(){
         $ans  = array_key_exists($i, $answers_to_check) ? $answers_to_check[$i] : null;
 
         // Tipos de respuesta libre (string normalizado)
-        if ( in_array($tipo, ['texto', 'cifrado_cesar', 'anagrama', 'ahorcado', 'jeroglifico'], true) ) {
+        if ( in_array($tipo, ['texto', 'cifrado_cesar', 'anagrama', 'ahorcado', 'ahorcado_light', 'jeroglifico'], true) ) {
           $correcta = $norm($p['respuesta_texto_correcta'] ?? '');
           $user     = $norm($ans);
           if ($correcta === '' || $user === '' || $user !== $correcta) { $all_ok = false; break; }

@@ -879,7 +879,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
 
     // Validación: tipos texto-libres necesitan respuesta_texto_correcta;
     // tipos de selección necesitan opciones.
-    $es_texto_libre = in_array($tipo_preg, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado', 'sopa_letras', 'jeroglifico'], true);
+    $es_texto_libre = in_array($tipo_preg, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado', 'ahorcado_light', 'sopa_letras', 'jeroglifico'], true);
     if ($es_texto_libre) {
         if ($resp_text === '') {
             return gc_station_wrap_message('La prueba de este ' . $label . ' no está lista (falta la respuesta correcta).', 'error');
@@ -894,8 +894,9 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
             : ($tipo_preg === 'cifrado_cesar' ? 'Descifra el mensaje'
             : ($tipo_preg === 'anagrama' ? 'Adivina la palabra'
             : ($tipo_preg === 'ahorcado' ? 'Adivina la palabra letra a letra'
+            : ($tipo_preg === 'ahorcado_light' ? 'Completa los huecos que faltan'
             : ($tipo_preg === 'jeroglifico' ? '¿Qué palabra forman las dos imágenes?'
-            : ''))));
+            : '')))));
     }
 
     $nonce = function_exists('wp_create_nonce') ? wp_create_nonce('wp_rest') : '';
@@ -1205,10 +1206,12 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     })();
                     </script>
 
-                <?php elseif ($p_tipo === 'ahorcado' && $p_resp_text !== ''):
+                <?php elseif (($p_tipo === 'ahorcado' || $p_tipo === 'ahorcado_light') && $p_resp_text !== ''):
                     $palabra      = mb_strtoupper($p_resp_text);
                     $pista_txt    = isset($pregunta['pista']) ? (string) $pregunta['pista'] : '';
                     $categoria    = isset($pregunta['categoria']) ? (string) $pregunta['categoria'] : '';
+                    $pista_pattern = ($p_tipo === 'ahorcado_light' && isset($pregunta['pista_pattern']))
+                                      ? (string) $pregunta['pista_pattern'] : '';
                     // Estado server-side de letras descubiertas e intentos fallidos para esta partida
                     $reveal_key   = 'gc_ahorcado_revealed_' . $test_id . '_' . $station_id;
                     $reveal_meta  = get_user_meta($user_id, $reveal_key, true);
@@ -1216,6 +1219,20 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     $miss_key     = 'gc_ahorcado_miss_' . $test_id . '_' . $station_id;
                     $miss_meta    = get_user_meta($user_id, $miss_key, true);
                     $missed       = is_array($miss_meta) ? array_map('strval', $miss_meta) : [];
+
+                    // Ahorcado light: letras del patrón se consideran reveladas desde el inicio.
+                    // Cualquier carácter del patrón distinto de "_" (y que sea letra) entra a $revealed.
+                    if ($pista_pattern !== '') {
+                        $plen = mb_strlen($pista_pattern);
+                        for ($pi = 0; $pi < $plen; $pi++) {
+                            $pch = mb_substr($pista_pattern, $pi, 1);
+                            if ($pch === '_') continue;
+                            if (preg_match('/\p{L}/u', $pch)) {
+                                $revealed[] = mb_strtoupper(remove_accents($pch));
+                            }
+                        }
+                        $revealed = array_values(array_unique($revealed));
+                    }
 
                     // Calcular las letras únicas de la palabra (solo letras alfabéticas)
                     $letras_palabra = [];
@@ -1697,8 +1714,8 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
             });
         }
 
-        // === Lógica del tipo 'ahorcado' ===
-        if ((form.dataset.mode || '') === 'ahorcado') {
+        // === Lógica del tipo 'ahorcado' (clásico y light) ===
+        if ((form.dataset.mode || '') === 'ahorcado' || (form.dataset.mode || '') === 'ahorcado_light') {
             const teclado     = wrap.querySelector('#gc-ahorcado-teclado');
             const palabraWrap = wrap.querySelector('#gc-ahorcado-palabra');
             const erroneasEl  = wrap.querySelector('#gc-ahorcado-erroneas');
@@ -1807,7 +1824,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
             const mode = form.dataset.mode || 'multiple';
             let payloadAnswer = null;
 
-            if (mode === 'texto' || mode === 'cifrado_cesar' || mode === 'anagrama' || mode === 'ahorcado' || mode === 'jeroglifico') {
+            if (mode === 'texto' || mode === 'cifrado_cesar' || mode === 'anagrama' || mode === 'ahorcado' || mode === 'ahorcado_light' || mode === 'jeroglifico') {
                 const txt = (form.querySelector('input[name="gc_station_answer"]') || {}).value || '';
                 if (!txt.trim()) {
                     msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">Escribe tu respuesta.</div>';
