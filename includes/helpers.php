@@ -561,6 +561,114 @@ if ( ! function_exists('gc_requiere_prueba') ) {
 }
 
 /**
+ * ¿Puede este usuario acceder a esta estación según el orden vigente?
+ *
+ * Reglas:
+ *  - Modo "orden libre": siempre se puede (todas están abiertas).
+ *  - Si la estación ya está pasada: se permite (review).
+ *  - En cualquier otro modo (orden secreto del usuario o secuencial fijo):
+ *    sólo se permite si la estación coincide con la "siguiente desbloqueada"
+ *    para ese usuario.
+ *
+ * Devuelve true si está permitido, false en caso contrario.
+ */
+if ( ! function_exists('gc_user_can_access_station') ) {
+  function gc_user_can_access_station($user_id, $escenario_id, $station_id) {
+    $user_id      = (int) $user_id;
+    $escenario_id = (int) $escenario_id;
+    $station_id   = (int) $station_id;
+    if (!$escenario_id || !$station_id) return true;
+
+    // Orden libre: cualquier estación es accesible.
+    if (function_exists('gc_orden_libre') && gc_orden_libre($escenario_id)) {
+      return true;
+    }
+
+    // Si ya está pasada, permitir review.
+    if ($user_id && function_exists('gincana_user_passed') && gincana_user_passed($user_id, $station_id)) {
+      return true;
+    }
+
+    // Obtener todas las estaciones publicadas del escenario, ordenadas por gc_orden.
+    $q = new WP_Query([
+      'post_type'      => 'estacion',
+      'post_status'    => 'publish',
+      'posts_per_page' => -1,
+      'orderby'        => 'meta_value_num',
+      'order'          => 'ASC',
+      'meta_query'     => [
+        'relation' => 'AND',
+        ['key'=>'gc_escenario_ref','value'=>$escenario_id,'compare'=>'='],
+        ['key'=>'gc_orden','compare'=>'EXISTS'],
+      ],
+      'meta_key'       => 'gc_orden',
+      'fields'         => 'ids',
+      'no_found_rows'  => true,
+    ]);
+    $est_ids = $q->have_posts() ? array_map('intval', $q->posts) : [];
+    wp_reset_postdata();
+    if (empty($est_ids)) return true;
+
+    // Excluir deshabilitadas
+    $active = [];
+    foreach ($est_ids as $eid) {
+      if (get_post_meta($eid, 'gc_deshabilitada', true) !== '1') $active[] = (int) $eid;
+    }
+    if (empty($active)) return true;
+
+    // En orden secreto, sustituir por el orden personal aleatorio del usuario.
+    if (function_exists('gc_orden_secreto') && gc_orden_secreto($escenario_id)
+        && function_exists('gc_get_user_random_order')) {
+      $active = gc_get_user_random_order($user_id, $escenario_id, $active);
+    }
+
+    // Buscar la primera estación no pasada → esa es la "actual" para este usuario.
+    foreach ($active as $eid) {
+      if ($user_id && function_exists('gincana_user_passed') && gincana_user_passed($user_id, (int) $eid)) {
+        continue;
+      }
+      // Primera no pasada → comparamos con la estación solicitada.
+      return ((int) $eid === $station_id);
+    }
+
+    // Todas pasadas → ya completó la gincana; permitir.
+    return true;
+  }
+}
+
+/**
+ * Card de aviso cuando el usuario abre el QR (o el enlace) de una estación
+ * que no le corresponde según el orden vigente. No revela qué estación le
+ * toca: solo le invita a volver a la portada.
+ */
+if ( ! function_exists('gc_render_estacion_fuera_de_orden_card') ) {
+  function gc_render_estacion_fuera_de_orden_card($escenario_id, $station_title = '') {
+    $escenario_url = get_permalink((int) $escenario_id) ?: home_url('/');
+    $esc_title     = get_the_title((int) $escenario_id);
+    ob_start();
+    ?>
+    <div style="margin:18px 0;padding:22px 22px 20px;border-radius:14px;background:#fffbeb;border:1px solid #fcd34d;text-align:center;">
+      <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 14px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
+        <span aria-hidden="true">⚠</span>
+        <span>Aviso</span>
+      </div>
+      <h3 style="margin:0 0 6px;color:#78350f;font-size:18px;line-height:1.4;font-weight:700;">
+        Esta no es tu estación actual
+      </h3>
+      <p style="margin:0 0 16px;color:#92400e;font-size:14px;line-height:1.5;">
+        Sigue el orden que te ha tocado. Vuelve a la portada para ver cuál te toca ahora.
+      </p>
+      <a href="<?php echo esc_url($escenario_url); ?>"
+         style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#d97706;color:#fff;text-decoration:none;font-weight:700;font-size:15px;">
+        Ir a la portada<?php echo $esc_title ? ' de ' . esc_html($esc_title) : ''; ?>
+      </a>
+    </div>
+    <?php
+    return ob_get_clean();
+  }
+}
+
+/**
  * Card que se muestra cuando un escenario tiene 'forzar_portada' activo y
  * un usuario llega a una estación sin haberse registrado todavía. En lugar
  * del alta inline, se le pide ir a la portada del escenario.

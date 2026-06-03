@@ -109,6 +109,18 @@ function gc_shortcode_estacion_acceso() {
         return ob_get_clean();
     }
 
+    // Si el escenario tiene un orden vigente (secreto o secuencial) y la
+    // estación abierta NO es la que toca al usuario, mostramos aviso. Se
+    // saltea en orden libre y para estaciones ya pasadas (review). Sólo
+    // tiene sentido si hay usuario identificado.
+    if ($is_logged && function_exists('gc_user_can_access_station')
+        && !gc_user_can_access_station(get_current_user_id(), $escenario_id, $station_id)) {
+        echo gc_render_estacion_fuera_de_orden_card($escenario_id, $title);
+        if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id);
+        echo '</div>';
+        return ob_get_clean();
+    }
+
     if ($tipo_escenario === 'infantil') {
         if (!$is_logged) {
             echo gc_render_infantil_station_qr_no_login($station_id, $title, $escenario_id);
@@ -2089,6 +2101,10 @@ add_shortcode('gincana_estacion_contenido', function($atts){
             }
             echo gc_render_login_o_guest($escenario_id, '¿Quieres participar en la gimkana?', 'Escribe tu nombre y empieza a jugar.');
         }
+    } elseif (function_exists('gc_user_can_access_station')
+              && !gc_user_can_access_station($user_id, $escenario_id, $station_id)) {
+        // Identificado pero la estación no es la que toca según el orden
+        echo gc_render_estacion_fuera_de_orden_card($escenario_id, $title);
     } else {
         // Logueado, acceso directo (sin QR)
         $tipo_qr = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';
