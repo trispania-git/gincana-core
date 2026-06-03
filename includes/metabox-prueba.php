@@ -164,6 +164,7 @@ function gc_render_prueba_metabox($post) {
             $opciones  = $p['opciones'] ?? [];
             $resp_text = $p['respuesta_texto_correcta'] ?? '';
             $rotacion  = isset($p['rotacion']) ? (int) $p['rotacion'] : 3;
+            $p_imagen  = $p['imagen'] ?? '';
         ?>
         <div class="gc-pregunta-block" style="border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:12px;background:#fafafa;">
             <p style="margin:0 0 8px;">
@@ -174,6 +175,17 @@ function gc_render_prueba_metabox($post) {
                 <label>Enunciado:</label><br>
                 <textarea name="gc_preguntas[<?php echo $qi; ?>][enunciado]" rows="2" style="width:100%;"><?php echo esc_textarea($enunciado); ?></textarea>
             </p>
+            <p style="margin-bottom:6px;"><label>Imagen (opcional):</label></p>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+                <input type="text" name="gc_preguntas[<?php echo $qi; ?>][imagen]" value="<?php echo esc_attr($p_imagen); ?>" class="gc-media-input" style="flex:1;" placeholder="URL de la imagen" />
+                <button type="button" class="button gc-media-select" data-type="image">Imagen</button>
+                <?php if ($p_imagen): ?>
+                    <button type="button" class="button gc-media-clear" title="Quitar">&times;</button>
+                <?php endif; ?>
+            </div>
+            <?php if ($p_imagen): ?>
+                <div style="margin-bottom:10px;"><img src="<?php echo esc_url($p_imagen); ?>" alt="" style="max-height:140px;border-radius:6px;border:1px solid #e2e8f0;"></div>
+            <?php endif; ?>
             <input type="hidden" name="gc_preguntas[<?php echo $qi; ?>][tipo]" value="<?php echo esc_attr($p_tipo); ?>" />
 
             <?php if ($p_tipo === 'texto' || $p_tipo === 'anagrama'): ?>
@@ -405,6 +417,11 @@ function gc_render_prueba_metabox($post) {
                 + '<p style="margin:0 0 8px;"><strong>Pregunta ' + (idx+1) + '</strong>'
                 + '<button type="button" class="button gc-remove-pregunta" style="float:right;color:#dc2626;" onclick="this.closest(\'.gc-pregunta-block\').remove();">Eliminar</button></p>'
                 + '<p><label>Enunciado:</label><br><textarea name="gc_preguntas[' + idx + '][enunciado]" rows="2" style="width:100%;"></textarea></p>'
+                + '<p style="margin-bottom:6px;"><label>Imagen (opcional):</label></p>'
+                + '<div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;">'
+                +   '<input type="text" name="gc_preguntas[' + idx + '][imagen]" class="gc-media-input" style="flex:1;" placeholder="URL de la imagen" />'
+                +   '<button type="button" class="button gc-media-select" data-type="image">Imagen</button>'
+                + '</div>'
                 + '<input type="hidden" name="gc_preguntas[' + idx + '][tipo]" value="' + tipoNow + '" />';
 
             if (tipoNow === 'texto' || tipoNow === 'anagrama') {
@@ -634,6 +651,7 @@ add_action('save_post', function ($post_id) {
             // No exigimos enunciado: en multiple_imagen / cifrado / anagrama puede ser
             // opcional mientras se configura. Pero al menos un campo con datos.
             $resp_text_raw = trim((string) ($p['respuesta_texto_correcta'] ?? ''));
+            $imagen_raw    = trim((string) ($p['imagen'] ?? ''));
             $tiene_opciones = false;
             if (isset($p['opciones']) && is_array($p['opciones'])) {
                 foreach ($p['opciones'] as $opt) {
@@ -643,11 +661,12 @@ add_action('save_post', function ($post_id) {
                     }
                 }
             }
-            if ($enunciado === '' && $resp_text_raw === '' && !$tiene_opciones) continue;
+            if ($enunciado === '' && $resp_text_raw === '' && $imagen_raw === '' && !$tiene_opciones) continue;
 
             $pregunta = [
                 'tipo'      => $p_tipo,
                 'enunciado' => $enunciado,
+                'imagen'    => esc_url_raw($imagen_raw),
             ];
 
             if (in_array($p_tipo, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado', 'sopa_letras', 'jeroglifico'], true)) {

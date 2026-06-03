@@ -853,6 +853,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
     $opciones    = isset($pregunta['opciones']) && is_array($pregunta['opciones']) ? $pregunta['opciones'] : [];
     $tipo_preg   = isset($pregunta['tipo']) ? $pregunta['tipo'] : 'multiple';
     $resp_text   = trim((string) ($pregunta['respuesta_texto_correcta'] ?? ''));
+    $p_imagen    = isset($pregunta['imagen']) ? (string) $pregunta['imagen'] : '';
 
     // Validación: tipos texto-libres necesitan respuesta_texto_correcta;
     // tipos de selección necesitan opciones.
@@ -1061,6 +1062,15 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
             <?php endif; ?>
 
             <p style="font-size:18px;line-height:1.5;"><strong><?php echo esc_html($enunciado); ?></strong></p>
+
+            <?php if ($p_imagen): ?>
+                <div style="margin:0 0 16px;text-align:center;">
+                    <a href="<?php echo esc_url($p_imagen); ?>" target="_blank" rel="noopener" style="display:inline-block;text-decoration:none;">
+                        <img src="<?php echo esc_url($p_imagen); ?>" alt="" style="max-width:100%;max-height:340px;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 2px 10px rgba(15,23,42,0.08);" />
+                    </a>
+                    <div style="margin-top:6px;font-size:12px;color:#94a3b8;">Toca la imagen para verla en grande.</div>
+                </div>
+            <?php endif; ?>
 
             <form id="gc-adult-station-form"
                   data-mode="<?php echo esc_attr($p_tipo); ?>"
