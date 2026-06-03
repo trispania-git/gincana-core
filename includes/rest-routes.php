@@ -420,9 +420,18 @@ add_action('rest_api_init', function(){
 
       $norm = function($s){
         $s = wp_strip_all_tags((string)$s);
-        $s = strtolower(trim($s));
+        $s = trim((string) $s);
+        // Importante: remove_accents PRIMERO (mientras los acentos siguen
+        // visibles) y luego mb_strtolower (UTF-8 aware). strtolower() de
+        // PHP es single-byte y NO baja a minúscula caracteres como É/Ñ,
+        // por lo que la comparación "CAFÉ" vs "café" fallaba.
         if (function_exists('remove_accents')) {
           $s = remove_accents($s);
+        }
+        if (function_exists('mb_strtolower')) {
+          $s = mb_strtolower($s, 'UTF-8');
+        } else {
+          $s = strtolower($s);
         }
         return preg_replace('/\s+/', ' ', $s);
       };
