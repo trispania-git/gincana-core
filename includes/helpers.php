@@ -571,20 +571,17 @@ if ( ! function_exists('gc_render_forzar_portada_card') ) {
     $esc_title     = get_the_title((int) $escenario_id);
     ob_start();
     ?>
-    <div style="margin:18px 0;padding:24px 22px;border-radius:14px;background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:2px solid #6366f1;text-align:center;">
-      <div style="font-size:42px;margin-bottom:6px;">🚪</div>
-      <h3 style="margin:0 0 6px;color:#3730a3;font-size:20px;">Empieza desde la portada del escenario</h3>
-      <p style="margin:0 0 14px;color:#4338ca;font-size:15px;line-height:1.5;">
-        <?php if ($station_title): ?>
-          Has llegado a <strong><?php echo esc_html($station_title); ?></strong>, pero para participar primero tienes que arrancar desde la portada del escenario.
-        <?php else: ?>
-          Para participar primero tienes que arrancar desde la portada del escenario.
-        <?php endif; ?>
-        <br>Allí pondrás tu nombre y verás todo el recorrido.
-      </p>
+    <div style="margin:18px 0;padding:22px 22px 20px;border-radius:14px;background:#fffbeb;border:1px solid #fcd34d;text-align:center;">
+      <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 14px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
+        <span aria-hidden="true">⚠</span>
+        <span>Aviso</span>
+      </div>
+      <h3 style="margin:0 0 14px;color:#78350f;font-size:18px;line-height:1.4;font-weight:700;">
+        Debes comenzar desde el principio
+      </h3>
       <a href="<?php echo esc_url($escenario_url); ?>"
-         style="display:inline-block;padding:13px 26px;border:0;border-radius:10px;background:#4f46e5;color:#fff;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 2px 10px rgba(79,70,229,0.3);">
-        Ir a la portada de <?php echo esc_html($esc_title ?: 'la gincana'); ?>
+         style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#d97706;color:#fff;text-decoration:none;font-weight:700;font-size:15px;">
+        Ir a la portada<?php echo $esc_title ? ' de ' . esc_html($esc_title) : ''; ?>
       </a>
     </div>
     <?php
