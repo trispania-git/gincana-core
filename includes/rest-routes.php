@@ -504,7 +504,15 @@ add_action('rest_api_init', function(){
             $all_ok = false; break;
           }
         } else {
-          // multiple, multiple_imagen, vf → comprobar índice de opciones
+          // multiple, multiple_imagen, vf → comprobar índice de opciones.
+          // Salvaguarda: si la respuesta llega como string JSON (array de
+          // strings) y no como número, es porque la pregunta fue editada
+          // como lista_libre en el frontend aunque el meta haya quedado
+          // desfasado. Tratar como lista_libre y pasar.
+          if (is_string($ans) && strlen($ans) > 0 && $ans[0] === '[') {
+            $maybe = json_decode($ans, true);
+            if (is_array($maybe)) { continue; }
+          }
           $ops = $p['opciones'] ?? [];
           if (!is_numeric($ans) || !isset($ops[(int)$ans])) { $all_ok = false; break; }
           $is_ok = !empty($ops[(int)$ans]['es_correcta']);
