@@ -472,17 +472,23 @@ add_action('rest_api_init', function(){
       }
 
       $all_ok = true;
+
+      // === SHORT-CIRCUIT: prueba de tipo "Lista libre" ===
+      // Si el desplegable principal de la prueba es lista_libre, todo se da
+      // por bueno: el bucle se salta entero. Esto cubre los casos en los que
+      // alguna pregunta del meta tenga un tipo desfasado.
+      $skip_validation = ($tipo_global === 'lista_libre');
+
       foreach ($pregs_to_check as $i => $p) {
+        if ($skip_validation) { continue; }
+
         $tipo = !empty($p['tipo']) ? $p['tipo'] : $tipo_global;
         $ans  = array_key_exists($i, $answers_to_check) ? $answers_to_check[$i] : null;
 
-        // === Lista libre ===
+        // === Lista libre (per-pregunta) ===
         // El tipo "lista_libre" NO valida nada. Comprobamos por tipo guardado
-        // y, como salvaguarda, también por forma de la respuesta: si llega un
-        // array JSON con varios strings, asumimos lista_libre aunque el meta
-        // del tipo haya quedado desfasado (p. ej. la prueba se creó como
-        // multiple/texto y luego se cambió a lista_libre sin re-guardar
-        // todas las preguntas).
+        // y, como salvaguarda extra, también por forma de la respuesta: si
+        // llega un array JSON con varios strings, asumimos lista_libre.
         $looks_like_lista = false;
         if (is_string($ans) && strlen($ans) > 0 && $ans[0] === '[') {
           $maybe = json_decode($ans, true);
