@@ -7,6 +7,33 @@ if ( ! defined('ABSPATH') ) exit;
 
 add_shortcode('gincana_estacion_acceso', 'gc_shortcode_estacion_acceso');
 
+/**
+ * Evitar que los plugins de caché (WP Rocket, W3TC, WP Super Cache,
+ * LiteSpeed, Comet, Cloudflare APO…) sirvan versiones cacheadas de las
+ * páginas dependientes de QR/sesión. Estas páginas cambian según el
+ * gc_token de la URL y según el usuario (invitado vs logueado), así que
+ * cachearlas mezcla tokens y provoca "QR no válido" o validaciones
+ * incorrectas en móviles anónimos (los admin logueados no lo notan porque
+ * la caché ya los excluye).
+ */
+function gc_no_cache_dynamic_pages() {
+    $is_qr        = isset($_GET['gc_station']) || isset($_GET['gc_token']);
+    $is_estacion  = function_exists('is_singular') && is_singular('estacion');
+    $is_escenario = function_exists('is_singular') && is_singular('escenario');
+    if (!$is_qr && !$is_estacion && !$is_escenario) return;
+
+    if (!defined('DONOTCACHEPAGE')) define('DONOTCACHEPAGE', true);
+    if (!defined('DONOTCACHEOBJECT')) define('DONOTCACHEOBJECT', true);
+    if (!defined('DONOTCACHEDB')) define('DONOTCACHEDB', true);
+    if (function_exists('nocache_headers')) nocache_headers();
+    // LiteSpeed Cache
+    do_action('litespeed_control_set_nocache', 'gincana: página dinámica de QR/estación');
+    // WP Rocket (por si DONOTCACHEPAGE no bastara)
+    if (!defined('DONOTROCKETOPTIMIZE')) define('DONOTROCKETOPTIMIZE', true);
+}
+add_action('template_redirect', 'gc_no_cache_dynamic_pages', 0);
+add_action('send_headers', 'gc_no_cache_dynamic_pages', 0);
+
 function gc_shortcode_estacion_acceso() {
     // Evitar ejecución duplicada si Divi renderiza el shortcode más de una vez
     static $already_rendered = false;
