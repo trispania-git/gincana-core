@@ -423,6 +423,7 @@ add_action('rest_api_init', function(){
       $answers   = (array) $req->get_param('answers');
       $time_ms   = (int) $req->get_param('time_ms');
       $q_index   = $req->get_param('q_index'); // null si no viene (modo normal)
+      $q_mode    = sanitize_text_field((string) $req->get_param('q_mode')); // hint del front
 
       if (!$prueba_id) {
         return new WP_REST_Response(['ok'=>false,'error'=>'missing_prueba_id'], 400);
@@ -474,10 +475,10 @@ add_action('rest_api_init', function(){
       $all_ok = true;
 
       // === SHORT-CIRCUIT: prueba de tipo "Lista libre" ===
-      // Si el desplegable principal de la prueba es lista_libre, todo se da
-      // por bueno: el bucle se salta entero. Esto cubre los casos en los que
-      // alguna pregunta del meta tenga un tipo desfasado.
-      $skip_validation = ($tipo_global === 'lista_libre');
+      // Skip si el desplegable principal de la prueba es lista_libre, o si el
+      // frontend manda explícitamente q_mode='lista_libre' (hint del data-mode
+      // del formulario). Esto cubre cualquier desfase en el meta.
+      $skip_validation = ($tipo_global === 'lista_libre' || $q_mode === 'lista_libre');
 
       foreach ($pregs_to_check as $i => $p) {
         if ($skip_validation) { continue; }
@@ -486,13 +487,19 @@ add_action('rest_api_init', function(){
         $ans  = array_key_exists($i, $answers_to_check) ? $answers_to_check[$i] : null;
 
         // === Lista libre (per-pregunta) ===
-        // El tipo "lista_libre" NO valida nada. Comprobamos por tipo guardado
-        // y, como salvaguarda extra, también por forma de la respuesta: si
-        // llega un array JSON con varios strings, asumimos lista_libre.
+        // Si el tipo guardado es 'lista_libre' o, como salvaguarda, la
+        // respuesta tiene forma de array PLANO de strings (lista_libre del
+        // front), pasamos sin validar. Excluimos arrays anidados (que sí los
+        // usa sopa_letras: [[r,c],…]).
         $looks_like_lista = false;
         if (is_string($ans) && strlen($ans) > 0 && $ans[0] === '[') {
           $maybe = json_decode($ans, true);
-          if (is_array($maybe)) $looks_like_lista = true;
+          if (is_array($maybe)) {
+            // Plano = ningún elemento es a su vez array.
+            $flat = true;
+            foreach ($maybe as $el) { if (is_array($el)) { $flat = false; break; } }
+            if ($flat) $looks_like_lista = true;
+          }
         }
         if ($tipo === 'lista_libre' || $looks_like_lista) {
           // Las respuestas se guardan en el log de intentos vía payload general.

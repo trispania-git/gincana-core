@@ -1904,7 +1904,8 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                         prueba_id: pruebaId,
                         answers: [payloadAnswer],
                         time_ms: timeMs,
-                        q_index: qIndex
+                        q_index: qIndex,
+                        q_mode: mode
                     })
                 });
 
