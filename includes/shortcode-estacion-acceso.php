@@ -1913,11 +1913,25 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
             let payloadAnswer = null;
 
             if (mode === 'lista_libre') {
-                // Recogemos todas las cajas (incluso vacías) y las mandamos como
-                // JSON. El servidor no valida — solo registra y permite pasar.
+                // Recogemos todas las cajas. Se exige que TODAS estén rellenas
+                // (al menos un carácter); el contenido no se valida.
                 const inputs = form.querySelectorAll('input[name="gc_lista_libre[]"]');
                 const respuestas = [];
-                inputs.forEach(function(inp){ respuestas.push((inp.value || '').trim()); });
+                let vacias = 0;
+                inputs.forEach(function(inp){
+                    var v = (inp.value || '').trim();
+                    if (v === '') {
+                        vacias++;
+                        inp.style.borderColor = '#dc2626';
+                    } else {
+                        inp.style.borderColor = '#e2e8f0';
+                    }
+                    respuestas.push(v);
+                });
+                if (vacias > 0) {
+                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">Completa todos los campos antes de continuar (te queda' + (vacias === 1 ? '' : 'n') + ' <strong>' + vacias + '</strong> por rellenar).</div>';
+                    return;
+                }
                 payloadAnswer = JSON.stringify(respuestas);
             } else if (mode === 'texto' || mode === 'cifrado_cesar' || mode === 'anagrama' || mode === 'ahorcado' || mode === 'ahorcado_light' || mode === 'jeroglifico') {
                 const txt = (form.querySelector('input[name="gc_station_answer"]') || {}).value || '';
