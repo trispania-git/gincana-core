@@ -476,15 +476,28 @@ add_action('rest_api_init', function(){
         $tipo = !empty($p['tipo']) ? $p['tipo'] : $tipo_global;
         $ans  = array_key_exists($i, $answers_to_check) ? $answers_to_check[$i] : null;
 
+        // === Lista libre ===
+        // El tipo "lista_libre" NO valida nada. Comprobamos por tipo guardado
+        // y, como salvaguarda, también por forma de la respuesta: si llega un
+        // array JSON con varios strings, asumimos lista_libre aunque el meta
+        // del tipo haya quedado desfasado (p. ej. la prueba se creó como
+        // multiple/texto y luego se cambió a lista_libre sin re-guardar
+        // todas las preguntas).
+        $looks_like_lista = false;
+        if (is_string($ans) && strlen($ans) > 0 && $ans[0] === '[') {
+          $maybe = json_decode($ans, true);
+          if (is_array($maybe)) $looks_like_lista = true;
+        }
+        if ($tipo === 'lista_libre' || $looks_like_lista) {
+          // Las respuestas se guardan en el log de intentos vía payload general.
+          continue;
+        }
+
         // Tipos de respuesta libre (string normalizado)
         if ( in_array($tipo, ['texto', 'cifrado_cesar', 'anagrama', 'ahorcado', 'ahorcado_light', 'jeroglifico'], true) ) {
           $correcta = $norm($p['respuesta_texto_correcta'] ?? '');
           $user     = $norm($ans);
           if ($correcta === '' || $user === '' || $user !== $correcta) { $all_ok = false; break; }
-        } elseif ($tipo === 'lista_libre') {
-          // Sin validación: cualquier envío se considera correcto. Las respuestas
-          // se guardan en el log de intentos a través del payload general.
-          continue;
         } elseif ($tipo === 'sopa_letras') {
           // Validar selección [[r,c],...] contra word_path persistido
           $seleccion = is_string($ans) ? json_decode($ans, true) : (is_array($ans) ? $ans : null);
@@ -505,14 +518,6 @@ add_action('rest_api_init', function(){
           }
         } else {
           // multiple, multiple_imagen, vf → comprobar índice de opciones.
-          // Salvaguarda: si la respuesta llega como string JSON (array de
-          // strings) y no como número, es porque la pregunta fue editada
-          // como lista_libre en el frontend aunque el meta haya quedado
-          // desfasado. Tratar como lista_libre y pasar.
-          if (is_string($ans) && strlen($ans) > 0 && $ans[0] === '[') {
-            $maybe = json_decode($ans, true);
-            if (is_array($maybe)) { continue; }
-          }
           $ops = $p['opciones'] ?? [];
           if (!is_numeric($ans) || !isset($ops[(int)$ans])) { $all_ok = false; break; }
           $is_ok = !empty($ops[(int)$ans]['es_correcta']);
