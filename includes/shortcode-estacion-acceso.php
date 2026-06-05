@@ -43,8 +43,21 @@ function gc_shortcode_estacion_acceso() {
     $station_id = isset($_GET['gc_station']) ? absint($_GET['gc_station']) : 0;
     $token      = isset($_GET['gc_token']) ? sanitize_text_field(wp_unslash($_GET['gc_token'])) : '';
 
+    // Diagnóstico temporal: muestra por qué falla el acceso (parámetros
+    // recibidos, longitud y primeros/últimos caracteres del token, sin
+    // revelarlo entero). Se retirará una vez localizada la causa.
+    $mask = function($t){
+        $t = (string) $t; $n = strlen($t);
+        if ($n === 0) return '(vacío)';
+        if ($n <= 8) return '[' . $n . ']' . $t;
+        return '[' . $n . ']' . substr($t,0,4) . '…' . substr($t,-4);
+    };
+
     if ( ! $station_id || empty($token) ) {
-        return gc_station_wrap_message('Acceso no válido.', 'error');
+        return gc_station_wrap_message('Acceso no válido.', 'error')
+             . '<div style="font-size:11px;color:#94a3b8;font-family:monospace;word-break:break-all;margin-top:6px;">v' . (defined('GINCANA_CORE_VERSION')?GINCANA_CORE_VERSION:'?')
+             . ' · station=' . (int) $station_id . ' · token=' . esc_html($mask($token))
+             . ' · uri=' . esc_html(substr((string)($_SERVER['REQUEST_URI'] ?? ''), 0, 160)) . '</div>';
     }
 
     $post = get_post($station_id);
@@ -54,7 +67,10 @@ function gc_shortcode_estacion_acceso() {
 
     $saved_token = get_post_meta($station_id, 'gc_qr_token', true);
     if ( empty($saved_token) || ! hash_equals((string) $saved_token, (string) $token) ) {
-        return gc_station_wrap_message('QR no válido.', 'error');
+        return gc_station_wrap_message('QR no válido.', 'error')
+             . '<div style="font-size:11px;color:#94a3b8;font-family:monospace;word-break:break-all;margin-top:6px;">v' . (defined('GINCANA_CORE_VERSION')?GINCANA_CORE_VERSION:'?')
+             . ' · recibido=' . esc_html($mask($token))
+             . ' · guardado=' . esc_html($mask($saved_token)) . '</div>';
     }
 
     // Estación deshabilitada temporalmente
