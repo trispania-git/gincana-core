@@ -481,6 +481,10 @@ add_action('rest_api_init', function(){
           $correcta = $norm($p['respuesta_texto_correcta'] ?? '');
           $user     = $norm($ans);
           if ($correcta === '' || $user === '' || $user !== $correcta) { $all_ok = false; break; }
+        } elseif ($tipo === 'lista_libre') {
+          // Sin validación: cualquier envío se considera correcto. Las respuestas
+          // se guardan en el log de intentos a través del payload general.
+          continue;
         } elseif ($tipo === 'sopa_letras') {
           // Validar selección [[r,c],...] contra word_path persistido
           $seleccion = is_string($ans) ? json_decode($ans, true) : (is_array($ans) ? $ans : null);

@@ -878,12 +878,15 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
     $p_imagen    = isset($pregunta['imagen']) ? (string) $pregunta['imagen'] : '';
 
     // Validación: tipos texto-libres necesitan respuesta_texto_correcta;
-    // tipos de selección necesitan opciones.
+    // tipos de selección necesitan opciones; lista_libre no necesita nada
+    // salvo el enunciado.
     $es_texto_libre = in_array($tipo_preg, ['texto', 'anagrama', 'cifrado_cesar', 'ahorcado', 'ahorcado_light', 'sopa_letras', 'jeroglifico'], true);
     if ($es_texto_libre) {
         if ($resp_text === '') {
             return gc_station_wrap_message('La prueba de este ' . $label . ' no está lista (falta la respuesta correcta).', 'error');
         }
+    } elseif ($tipo_preg === 'lista_libre') {
+        // Sin chequeo de opciones ni respuesta — solo el enunciado.
     } else {
         if (empty($opciones)) {
             return gc_station_wrap_message('La prueba de este ' . $label . ' no está lista (faltan opciones).', 'error');
@@ -1557,6 +1560,21 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                 <?php elseif ($p_tipo === 'texto'): ?>
                     <input type="text" name="gc_station_answer" id="gc_station_answer_text" autocomplete="off" autocapitalize="characters" style="width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:16px;text-transform:uppercase;" placeholder="Escribe tu respuesta…" />
 
+                <?php elseif ($p_tipo === 'lista_libre'):
+                    $ll_cantidad   = isset($pregunta['cantidad']) ? max(1, min(10, (int) $pregunta['cantidad'])) : 5;
+                    $ll_placeholder = isset($pregunta['placeholder']) ? (string) $pregunta['placeholder'] : '';
+                ?>
+                    <div class="gc-lista-libre" style="display:flex;flex-direction:column;gap:10px;margin:14px 0;">
+                        <?php for ($li = 0; $li < $ll_cantidad; $li++): ?>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:34px;height:34px;border-radius:50%;background:#2563eb;color:#fff;font-weight:700;font-size:14px;"><?php echo ($li + 1); ?></span>
+                                <input type="text" name="gc_lista_libre[]" autocomplete="off" maxlength="100" style="flex:1;padding:12px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;" placeholder="<?php echo esc_attr($ll_placeholder); ?>" />
+                            </div>
+                        <?php endfor; ?>
+                    </div>
+                    <p style="font-size:12px;color:#64748b;margin:-2px 0 0;">Rellena tantas como quieras y pulsa <strong>Responder</strong>. No se valida nada.</p>
+                    <input type="hidden" name="gc_station_answer" id="gc_station_answer_text" value="" />
+
                 <?php elseif ($p_tipo === 'vf'): ?>
                     <?php // Verdadero / Falso: dos botones grandes, no editables ?>
                     <div style="display:flex;gap:12px;flex-wrap:wrap;margin:14px 0;">
@@ -1843,7 +1861,14 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
             const mode = form.dataset.mode || 'multiple';
             let payloadAnswer = null;
 
-            if (mode === 'texto' || mode === 'cifrado_cesar' || mode === 'anagrama' || mode === 'ahorcado' || mode === 'ahorcado_light' || mode === 'jeroglifico') {
+            if (mode === 'lista_libre') {
+                // Recogemos todas las cajas (incluso vacías) y las mandamos como
+                // JSON. El servidor no valida — solo registra y permite pasar.
+                const inputs = form.querySelectorAll('input[name="gc_lista_libre[]"]');
+                const respuestas = [];
+                inputs.forEach(function(inp){ respuestas.push((inp.value || '').trim()); });
+                payloadAnswer = JSON.stringify(respuestas);
+            } else if (mode === 'texto' || mode === 'cifrado_cesar' || mode === 'anagrama' || mode === 'ahorcado' || mode === 'ahorcado_light' || mode === 'jeroglifico') {
                 const txt = (form.querySelector('input[name="gc_station_answer"]') || {}).value || '';
                 if (!txt.trim()) {
                     msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">Escribe tu respuesta.</div>';

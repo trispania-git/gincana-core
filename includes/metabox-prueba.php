@@ -124,6 +124,7 @@ function gc_render_prueba_metabox($post) {
                     <option value="anagrama" <?php selected($tipo, 'anagrama'); ?>>Anagrama (reordenar letras) 🔀</option>
                     <option value="ahorcado" <?php selected($tipo, 'ahorcado'); ?>>Ahorcado (adivinar palabra letra a letra) 🎯</option>
                     <option value="ahorcado_light" <?php selected($tipo, 'ahorcado_light'); ?>>Ahorcado light (algunas letras ya visibles) 🎈</option>
+                    <option value="lista_libre" <?php selected($tipo, 'lista_libre'); ?>>Lista libre (sin validación, recoger respuestas) 📝</option>
                     <option value="sopa_letras" <?php selected($tipo, 'sopa_letras'); ?>>Sopa de letras (encontrar la palabra) 🔡</option>
                     <option value="jeroglifico" <?php selected($tipo, 'jeroglifico'); ?>>Jeroglífico (2 imágenes → 1 palabra) 🧩</option>
                 </select>
@@ -134,6 +135,7 @@ function gc_render_prueba_metabox($post) {
                     <strong>Ahorcado:</strong> el jugador descubre la palabra letra a letra; cada letra fallada gasta un intento.
                     <strong>Sopa de letras:</strong> una palabra escondida en un grid. El jugador la encuentra arrastrando o tocando primera/última letra.
                     <strong>Jeroglífico:</strong> dos imágenes que combinadas forman una palabra. Ej: rascar + cielo = RASCACIELOS.
+                    <strong>Lista libre:</strong> el jugador rellena entre 1 y 10 cajas de texto. No se valida nada; sirve para recoger respuestas abiertas (ej: "Cita 5 deportes").
                 </p>
             </td>
         </tr>
@@ -328,6 +330,21 @@ function gc_render_prueba_metabox($post) {
                     </div>
                 </div>
                 <?php endfor; ?>
+            <?php elseif ($p_tipo === 'lista_libre'):
+                $cantidad = isset($p['cantidad']) ? max(1, min(10, (int) $p['cantidad'])) : 5;
+                $placeholder_l = isset($p['placeholder']) ? (string) $p['placeholder'] : '';
+            ?>
+                <p>
+                    <label>Número de cajas a rellenar (1-10):</label><br>
+                    <input type="number" name="gc_preguntas[<?php echo $qi; ?>][cantidad]" value="<?php echo (int) $cantidad; ?>" min="1" max="10" style="width:90px;" />
+                    <span style="color:#64748b;font-size:12px;margin-left:8px;">El jugador verá ese número de cajas numeradas. No se valida ninguna respuesta — basta con enviar el formulario.</span>
+                </p>
+                <p>
+                    <label>Texto de placeholder (opcional):</label><br>
+                    <input type="text" name="gc_preguntas[<?php echo $qi; ?>][placeholder]" value="<?php echo esc_attr($placeholder_l); ?>" style="width:100%;" placeholder="Ej: Escribe un deporte…" />
+                    <span style="color:#64748b;font-size:12px;">Se muestra dentro de cada caja como pista.</span>
+                </p>
+                <p style="color:#64748b;font-size:12px;">Las respuestas quedan guardadas en el intento; el admin puede revisarlas más tarde.</p>
             <?php elseif ($p_tipo === 'vf'):
                 // Verdadero / Falso: opciones fijas, el admin sólo marca cuál es la correcta.
                 $vf_correct_idx = 0; // Por defecto Verdadero
@@ -534,6 +551,13 @@ function gc_render_prueba_metabox($post) {
                         + '<label style="white-space:nowrap;font-size:13px;"><input type="radio" name="gc_preguntas[' + idx + '][correcta]" value="' + i + '" /> Correcta</label>'
                         + '</div></div></div>';
                 }
+            } else if (tipoNow === 'lista_libre') {
+                html += '<p><label>Número de cajas a rellenar (1-10):</label><br>'
+                    + '<input type="number" name="gc_preguntas[' + idx + '][cantidad]" value="5" min="1" max="10" style="width:90px;" />'
+                    + '<span style="color:#64748b;font-size:12px;margin-left:8px;">No se valida nada. Basta con enviar el formulario.</span></p>'
+                    + '<p><label>Texto de placeholder (opcional):</label><br>'
+                    + '<input type="text" name="gc_preguntas[' + idx + '][placeholder]" style="width:100%;" placeholder="Ej: Escribe un deporte…" />'
+                    + '<span style="color:#64748b;font-size:12px;">Se muestra dentro de cada caja como pista.</span></p>';
             } else if (tipoNow === 'vf') {
                 html += '<p><strong>¿Cuál es la respuesta correcta?</strong></p>'
                     + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
@@ -698,7 +722,7 @@ add_action('save_post', function ($post_id) {
             $enunciado = sanitize_textarea_field($p['enunciado'] ?? '');
 
             $p_tipo = sanitize_text_field($p['tipo'] ?? 'multiple');
-            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama','ahorcado','ahorcado_light','sopa_letras','jeroglifico'], true) ) {
+            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama','ahorcado','ahorcado_light','sopa_letras','jeroglifico','lista_libre'], true) ) {
                 $p_tipo = 'multiple';
             }
             $correcta_idx = isset($p['correcta']) ? (int)$p['correcta'] : -1;
@@ -717,9 +741,9 @@ add_action('save_post', function ($post_id) {
                     }
                 }
             }
-            // En vf no se envían opciones desde el form (son fijas Verdadero/Falso):
+            // En vf y lista_libre no se envían opciones desde el form:
             // basta con que tenga enunciado o imagen para considerarla válida.
-            if ($p_tipo === 'vf') {
+            if ($p_tipo === 'vf' || $p_tipo === 'lista_libre') {
                 if ($enunciado === '' && $imagen_raw === '') continue;
             } else {
                 if ($enunciado === '' && $resp_text_raw === '' && $imagen_raw === '' && !$tiene_opciones) continue;
@@ -770,6 +794,14 @@ add_action('save_post', function ($post_id) {
                     $pregunta['cols'] = $cols;
                     $pregunta['rows'] = $rows;
                 }
+            } elseif ($p_tipo === 'lista_libre') {
+                $cnt = isset($p['cantidad']) ? (int) $p['cantidad'] : 5;
+                if ($cnt < 1) $cnt = 1;
+                if ($cnt > 10) $cnt = 10;
+                $pregunta['cantidad']    = $cnt;
+                $pregunta['placeholder'] = sanitize_text_field($p['placeholder'] ?? '');
+                $pregunta['opciones']    = [];
+                $pregunta['respuesta_texto_correcta'] = '';
             } elseif ($p_tipo === 'vf') {
                 // Opciones fijas: 0=Verdadero, 1=Falso. El admin solo elige cuál es correcta.
                 $vf_correct = ($correcta_idx === 1) ? 1 : 0;
