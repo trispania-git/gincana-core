@@ -336,6 +336,7 @@ function gc_render_prueba_metabox($post) {
                 } elseif (isset($opciones[0]['es_correcta'])) {
                     $vf_correct_idx = !empty($opciones[0]['es_correcta']) ? 0 : 0;
                 }
+                $vf_razon = isset($p['vf_razon']) ? (string) $p['vf_razon'] : '';
             ?>
                 <p><strong>¿Cuál es la respuesta correcta?</strong></p>
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -348,6 +349,11 @@ function gc_render_prueba_metabox($post) {
                         <span style="font-weight:700;color:#991b1b;">✗ Falso</span>
                     </label>
                 </div>
+                <p style="margin-top:12px;">
+                    <label for="gc_pregunta_vf_razon_<?php echo $qi; ?>"><strong>Razón / explicación (opcional):</strong></label><br>
+                    <textarea id="gc_pregunta_vf_razon_<?php echo $qi; ?>" name="gc_preguntas[<?php echo $qi; ?>][vf_razon]" rows="2" style="width:100%;resize:vertical;" placeholder="Ej: Es verdadero porque…"><?php echo esc_textarea($vf_razon); ?></textarea>
+                    <span style="color:#64748b;font-size:12px;">Se muestra al jugador justo después de acertar la respuesta. Si lo dejas vacío, no se muestra nada.</span>
+                </p>
                 <!-- Las opciones se generan automáticamente al guardar como 'Verdadero' y 'Falso' -->
             <?php else: ?>
                 <p><strong>Opciones:</strong></p>
@@ -539,7 +545,10 @@ function gc_render_prueba_metabox($post) {
                     +     '<input type="radio" name="gc_preguntas[' + idx + '][correcta]" value="1" />'
                     +     '<span style="font-weight:700;color:#991b1b;">✗ Falso</span>'
                     +   '</label>'
-                    + '</div>';
+                    + '</div>'
+                    + '<p style="margin-top:12px;"><label><strong>Razón / explicación (opcional):</strong></label><br>'
+                    + '<textarea name="gc_preguntas[' + idx + '][vf_razon]" rows="2" style="width:100%;resize:vertical;" placeholder="Ej: Es verdadero porque…"></textarea>'
+                    + '<span style="color:#64748b;font-size:12px;">Se muestra al jugador justo después de acertar. Si lo dejas vacío, no se muestra nada.</span></p>';
             } else {
                 // multiple
                 html += '<p><strong>Opciones:</strong></p>';
@@ -769,6 +778,7 @@ add_action('save_post', function ($post_id) {
                     ['texto' => 'Falso',     'es_correcta' => $vf_correct === 1 ? 1 : 0],
                 ];
                 $pregunta['respuesta_texto_correcta'] = '';
+                $pregunta['vf_razon'] = sanitize_textarea_field($p['vf_razon'] ?? '');
             } elseif ($p_tipo === 'multiple_imagen') {
                 $opciones = [];
                 $raw_opts = $p['opciones'] ?? [];

@@ -1966,8 +1966,23 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                                        . '<div style="font-size:15px;color:#451a03;line-height:1.5;">' . wp_kses_post(wpautop($moraleja_raw)) . '</div>'
                                        . '</div>';
                     }
+
+                    // Razón/explicación de una pregunta verdadero-falso. Se muestra
+                    // tras acertar, solo si está definida y la pregunta es de tipo 'vf'.
+                    $vf_razon_raw  = ($p_tipo === 'vf' && isset($pregunta['vf_razon'])) ? (string) $pregunta['vf_razon'] : '';
+                    $vf_razon_html = '';
+                    if ($vf_razon_raw !== '') {
+                        $vf_razon_html = '<div style="margin-top:14px;padding:14px 16px;border-radius:12px;background:#eff6ff;border:1px solid #bfdbfe;text-align:left;">'
+                                       . '<div style="font-size:13px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">📖 Por qué</div>'
+                                       . '<div style="font-size:15px;color:#1e3a8a;line-height:1.5;">' . wp_kses_post(wpautop($vf_razon_raw)) . '</div>'
+                                       . '</div>';
+                    }
                     ?>
                     var moralejaHtml = <?php echo wp_json_encode($moraleja_html); ?>;
+                    var vfRazonHtml  = <?php echo wp_json_encode($vf_razon_html); ?>;
+                    // Si hay razón VF la pegamos justo antes de la moraleja para que
+                    // se muestre como un único bloque adicional bajo la respuesta correcta.
+                    var extraInfoHtml = vfRazonHtml + moralejaHtml;
 
                     <?php if ($tipo_qr_redirect === 'validacion_gps'): ?>
                     // GPS: mostrar resumen en la misma página. NO hay redirect
@@ -1978,18 +1993,18 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                             + <?php echo json_encode($acierto_html); ?>
                             + '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Ubicación verificada</p>'
                             + '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Desafío completado' + ptsTxtGps + '</p>'
-                            + moralejaHtml
+                            + extraInfoHtml
                             + '<a href="<?php echo esc_url($escenario_url_js); ?>" style="display:inline-block;margin-top:16px;padding:14px 28px;border:0;border-radius:12px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:16px;">👉 Continuar</a>'
                             + '</div>';
                     }
                     <?php else: ?>
-                    if (moralejaHtml) {
-                        // Con moraleja: mostrar texto + botón de continuar; NO redirect automático
+                    if (extraInfoHtml) {
+                        // Con razón VF o moraleja: mostrar texto + botón de continuar; NO redirect automático
                         msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;"><?php echo $acierto_html ? addslashes($acierto_html) : ''; ?>✅ Respuesta correcta.' + ptsTxt + '</div>'
-                            + moralejaHtml
+                            + extraInfoHtml
                             + '<div style="text-align:center;margin-top:16px;"><a href="<?php echo esc_url($escenario_url_js); ?>" style="display:inline-block;padding:14px 28px;border:0;border-radius:12px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:16px;">👉 Continuar</a></div>';
                     } else {
-                        // Sin moraleja: auto-redirect rápido como antes
+                        // Sin razón ni moraleja: auto-redirect rápido como antes
                         msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;"><?php echo $acierto_html ? addslashes($acierto_html) : ''; ?>✅ Respuesta correcta.' + ptsTxt + '</div>';
                         setTimeout(function(){
                             window.location.href = <?php echo json_encode($escenario_url_js); ?>;
