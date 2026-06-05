@@ -438,7 +438,7 @@ add_action('rest_api_init', function(){
       $tipo_global = get_post_meta($prueba_id, 'gc_tipo', true);
 
       if (empty($pregs)) {
-        return new WP_REST_Response(['ok'=>false,'error'=>'no_questions'], 200);
+        return new WP_REST_Response(['ok'=>false,'error'=>'no_questions','_v'=>defined('GINCANA_CORE_VERSION')?GINCANA_CORE_VERSION:'?'], 200);
       }
 
       $norm = function($s){
@@ -466,7 +466,7 @@ add_action('rest_api_init', function(){
       if ($q_index !== null && is_numeric($q_index)) {
         $qi = (int)$q_index;
         if (!isset($pregs[$qi])) {
-          return new WP_REST_Response(['ok'=>false,'error'=>'invalid_q_index'], 400);
+          return new WP_REST_Response(['ok'=>false,'error'=>'invalid_q_index','_v'=>defined('GINCANA_CORE_VERSION')?GINCANA_CORE_VERSION:'?','_qi'=>$qi,'_keys'=>array_keys((array)$pregs)], 400);
         }
         $pregs_to_check = [$pregs[$qi]];
         $answers_to_check = [isset($answers[0]) ? $answers[0] : null];
@@ -569,9 +569,20 @@ add_action('rest_api_init', function(){
 
       // Estado tras este intento (para que el front actualice contadores)
       $state_post = gc_quiz_user_state($current_uid, $prueba_id, $estacion_id_from_prueba);
+      $ans0 = $answers_to_check[0] ?? null;
       return new WP_REST_Response([
         'ok'    => $all_ok,
         'state' => $state_post,
+        '_v'    => defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?',
+        '_debug'=> [
+          'tipo_global' => (string) $tipo_global,
+          'q_mode'      => (string) $q_mode,
+          'q_index'     => $q_index,
+          'skip'        => $skip_validation,
+          'tipos'       => array_values(array_map(function($p){ return isset($p['tipo']) ? $p['tipo'] : '(none)'; }, (array) $pregs_to_check)),
+          'ans0_type'   => gettype($ans0),
+          'ans0_head'   => is_string($ans0) ? substr($ans0, 0, 40) : null,
+        ],
       ], 200);
     }
   ]);
