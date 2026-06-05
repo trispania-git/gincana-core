@@ -907,6 +907,21 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
         return gc_station_wrap_message('Este ' . $label . ' no tiene una prueba configurada.', 'error');
     }
 
+    // === Puerta de identificación ===
+    // Los endpoints REST de validación (/quiz/submit, /progress/complete)
+    // exigen sesión iniciada. Un visitante anónimo puede VER el quiz pero al
+    // pulsar "Responder" el servidor lo rechazaría (login requerido) y parece
+    // que "falla la respuesta". Por eso, si no está identificado, mostramos
+    // primero el formulario de invitado/login. Al poner su nombre se crea la
+    // sesión de invitado, se recarga y ya puede responder.
+    if (!$user_id) {
+        return gc_render_login_o_guest(
+            $escenario_id,
+            'Escribe tu nombre para jugar',
+            'Necesitas identificarte (solo tu nombre) para poder responder a esta prueba.'
+        );
+    }
+
     $enunciado   = isset($pregunta['enunciado']) ? $pregunta['enunciado'] : '';
     $opciones    = isset($pregunta['opciones']) && is_array($pregunta['opciones']) ? $pregunta['opciones'] : [];
     $tipo_preg   = isset($pregunta['tipo']) ? $pregunta['tipo'] : 'multiple';
