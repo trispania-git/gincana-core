@@ -1572,7 +1572,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                             </div>
                         <?php endfor; ?>
                     </div>
-                    <p style="font-size:12px;color:#64748b;margin:-2px 0 0;">Rellena tantas como quieras y pulsa <strong>Responder</strong>. No se valida nada.</p>
+                    <p style="font-size:12px;color:#64748b;margin:-2px 0 0;">Rellena todos los campos y pulsa <strong>Responder</strong>.</p>
                     <input type="hidden" name="gc_station_answer" id="gc_station_answer_text" value="" />
 
                 <?php elseif ($p_tipo === 'vf'): ?>
