@@ -328,6 +328,27 @@ function gc_render_prueba_metabox($post) {
                     </div>
                 </div>
                 <?php endfor; ?>
+            <?php elseif ($p_tipo === 'vf'):
+                // Verdadero / Falso: opciones fijas, el admin sólo marca cuál es la correcta.
+                $vf_correct_idx = 0; // Por defecto Verdadero
+                if (isset($opciones[1]['es_correcta']) && !empty($opciones[1]['es_correcta'])) {
+                    $vf_correct_idx = 1;
+                } elseif (isset($opciones[0]['es_correcta'])) {
+                    $vf_correct_idx = !empty($opciones[0]['es_correcta']) ? 0 : 0;
+                }
+            ?>
+                <p><strong>¿Cuál es la respuesta correcta?</strong></p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <label style="flex:1;min-width:180px;display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid <?php echo $vf_correct_idx === 0 ? '#16a34a' : '#e2e8f0'; ?>;border-radius:10px;background:<?php echo $vf_correct_idx === 0 ? '#f0fdf4' : '#fff'; ?>;cursor:pointer;">
+                        <input type="radio" name="gc_preguntas[<?php echo $qi; ?>][correcta]" value="0" <?php checked($vf_correct_idx, 0); ?> />
+                        <span style="font-weight:700;color:#166534;">✓ Verdadero</span>
+                    </label>
+                    <label style="flex:1;min-width:180px;display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid <?php echo $vf_correct_idx === 1 ? '#dc2626' : '#e2e8f0'; ?>;border-radius:10px;background:<?php echo $vf_correct_idx === 1 ? '#fef2f2' : '#fff'; ?>;cursor:pointer;">
+                        <input type="radio" name="gc_preguntas[<?php echo $qi; ?>][correcta]" value="1" <?php checked($vf_correct_idx, 1); ?> />
+                        <span style="font-weight:700;color:#991b1b;">✗ Falso</span>
+                    </label>
+                </div>
+                <!-- Las opciones se generan automáticamente al guardar como 'Verdadero' y 'Falso' -->
             <?php else: ?>
                 <p><strong>Opciones:</strong></p>
                 <?php for ($oi = 0; $oi < max(4, count($opciones)); $oi++):
@@ -507,8 +528,20 @@ function gc_render_prueba_metabox($post) {
                         + '<label style="white-space:nowrap;font-size:13px;"><input type="radio" name="gc_preguntas[' + idx + '][correcta]" value="' + i + '" /> Correcta</label>'
                         + '</div></div></div>';
                 }
+            } else if (tipoNow === 'vf') {
+                html += '<p><strong>¿Cuál es la respuesta correcta?</strong></p>'
+                    + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+                    +   '<label style="flex:1;min-width:180px;display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid #16a34a;border-radius:10px;background:#f0fdf4;cursor:pointer;">'
+                    +     '<input type="radio" name="gc_preguntas[' + idx + '][correcta]" value="0" checked />'
+                    +     '<span style="font-weight:700;color:#166534;">✓ Verdadero</span>'
+                    +   '</label>'
+                    +   '<label style="flex:1;min-width:180px;display:flex;align-items:center;gap:10px;padding:12px 14px;border:2px solid #e2e8f0;border-radius:10px;background:#fff;cursor:pointer;">'
+                    +     '<input type="radio" name="gc_preguntas[' + idx + '][correcta]" value="1" />'
+                    +     '<span style="font-weight:700;color:#991b1b;">✗ Falso</span>'
+                    +   '</label>'
+                    + '</div>';
             } else {
-                // multiple, vf
+                // multiple
                 html += '<p><strong>Opciones:</strong></p>';
                 for (var i = 0; i < 4; i++) {
                     html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">'
@@ -675,7 +708,13 @@ add_action('save_post', function ($post_id) {
                     }
                 }
             }
-            if ($enunciado === '' && $resp_text_raw === '' && $imagen_raw === '' && !$tiene_opciones) continue;
+            // En vf no se envían opciones desde el form (son fijas Verdadero/Falso):
+            // basta con que tenga enunciado o imagen para considerarla válida.
+            if ($p_tipo === 'vf') {
+                if ($enunciado === '' && $imagen_raw === '') continue;
+            } else {
+                if ($enunciado === '' && $resp_text_raw === '' && $imagen_raw === '' && !$tiene_opciones) continue;
+            }
 
             $pregunta = [
                 'tipo'      => $p_tipo,
@@ -722,6 +761,14 @@ add_action('save_post', function ($post_id) {
                     $pregunta['cols'] = $cols;
                     $pregunta['rows'] = $rows;
                 }
+            } elseif ($p_tipo === 'vf') {
+                // Opciones fijas: 0=Verdadero, 1=Falso. El admin solo elige cuál es correcta.
+                $vf_correct = ($correcta_idx === 1) ? 1 : 0;
+                $pregunta['opciones'] = [
+                    ['texto' => 'Verdadero', 'es_correcta' => $vf_correct === 0 ? 1 : 0],
+                    ['texto' => 'Falso',     'es_correcta' => $vf_correct === 1 ? 1 : 0],
+                ];
+                $pregunta['respuesta_texto_correcta'] = '';
             } elseif ($p_tipo === 'multiple_imagen') {
                 $opciones = [];
                 $raw_opts = $p['opciones'] ?? [];

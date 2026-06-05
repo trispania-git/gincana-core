@@ -1557,8 +1557,27 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                 <?php elseif ($p_tipo === 'texto'): ?>
                     <input type="text" name="gc_station_answer" id="gc_station_answer_text" autocomplete="off" autocapitalize="characters" style="width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;font-size:16px;text-transform:uppercase;" placeholder="Escribe tu respuesta…" />
 
+                <?php elseif ($p_tipo === 'vf'): ?>
+                    <?php // Verdadero / Falso: dos botones grandes, no editables ?>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;margin:14px 0;">
+                        <label class="gc-vf-option" style="flex:1;min-width:140px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 14px;border:2px solid #bbf7d0;border-radius:14px;background:#f0fdf4;cursor:pointer;transition:border-color 0.15s, box-shadow 0.15s, transform 0.1s;">
+                            <input type="radio" name="gc_station_answer" value="0" style="display:none;">
+                            <div style="font-size:36px;line-height:1;color:#16a34a;">✓</div>
+                            <div style="font-size:17px;font-weight:700;color:#166534;letter-spacing:0.5px;">Verdadero</div>
+                        </label>
+                        <label class="gc-vf-option" style="flex:1;min-width:140px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 14px;border:2px solid #fecaca;border-radius:14px;background:#fef2f2;cursor:pointer;transition:border-color 0.15s, box-shadow 0.15s, transform 0.1s;">
+                            <input type="radio" name="gc_station_answer" value="1" style="display:none;">
+                            <div style="font-size:36px;line-height:1;color:#dc2626;">✗</div>
+                            <div style="font-size:17px;font-weight:700;color:#991b1b;letter-spacing:0.5px;">Falso</div>
+                        </label>
+                    </div>
+                    <style>
+                        .gc-vf-option:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(15,23,42,0.08); }
+                        .gc-vf-option:has(input:checked) { border-width:3px; box-shadow:0 0 0 4px rgba(15,23,42,0.06); }
+                    </style>
+
                 <?php else: ?>
-                    <?php // multiple, vf: radios texto ?>
+                    <?php // multiple: radios texto ?>
                     <?php foreach ($opciones as $index => $opcion):
                         $texto = isset($opcion['texto']) ? $opcion['texto'] : '';
                         if ($texto === '') continue;
