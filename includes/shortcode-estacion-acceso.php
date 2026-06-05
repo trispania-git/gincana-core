@@ -2117,6 +2117,15 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                         }, 1800);
                     }
                     <?php endif; ?>
+
+                    // Bajar la pantalla hasta el mensaje de resultado para no
+                    // tener que hacer scroll a mano.
+                    try {
+                        var scrollTarget = (typeof wrap !== 'undefined' && wrap) ? wrap : msg;
+                        if (scrollTarget && scrollTarget.scrollIntoView) {
+                            scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                    } catch (e) {}
                 } else {
                     msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">La respuesta era correcta, pero no se pudo registrar el progreso.</div>';
                 }
