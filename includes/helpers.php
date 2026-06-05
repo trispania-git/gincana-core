@@ -776,10 +776,30 @@ if ( ! function_exists('gc_default_instrucciones') ) {
       'meta_query'     => [['key' => 'gc_escenario_ref', 'value' => $id]],
     ]);
     $num_est = (int) $q->post_count;
+    $est_ids = array_map('intval', (array) $q->posts);
     wp_reset_postdata();
 
     $title   = get_the_title($id);
     $portada = get_post_meta($id, 'gc_portada', true);
+
+    // Características reales del escenario para adaptar las instrucciones.
+    $es_libre   = function_exists('gc_orden_libre')   && gc_orden_libre($id);
+    $es_secreto = function_exists('gc_orden_secreto') && gc_orden_secreto($id);
+    if ($es_secreto) $es_libre = false; // mutuamente excluyentes
+
+    // ¿Alguna estación tiene ubicación/mapa? (dirección, enlace de maps o GPS)
+    $tiene_ubicacion = ($qr === 'validacion_gps');
+    if (!$tiene_ubicacion) {
+      foreach ($est_ids as $eid) {
+        if ( get_post_meta($eid, 'gc_maps_url', true)
+          || get_post_meta($eid, 'gc_direccion', true)
+          || ( get_post_meta($eid, 'gc_latitud', true) && get_post_meta($eid, 'gc_longitud', true) ) ) {
+          $tiene_ubicacion = true;
+          break;
+        }
+      }
+    }
+    $sin_qr = ($qr === 'solo_pregunta');
 
     // URL de puntuaciones para enlazar
     $punt_url = function_exists('gc_escenario_subpage_url') ? gc_escenario_subpage_url($id, 'puntuaciones') : '';
@@ -812,23 +832,54 @@ if ( ! function_exists('gc_default_instrucciones') ) {
         $valida_txt = "Sigue las indicaciones de cada {$label} para validarla.";
     }
 
+    // Frase de orden, según mecánica
+    if ($es_libre) {
+      $orden_frase = "que puedes completar en <strong>el orden que prefieras</strong>";
+    } elseif ($es_secreto) {
+      $orden_frase = "que irás descubriendo <strong>una a una</strong>";
+    } else {
+      $orden_frase = "que deberás completar <strong>en orden</strong>";
+    }
+
     // Cabecera
     $html  = "<h3 style=\"margin-bottom:6px;\">¿Cómo funciona?</h3>\n";
     $html .= "<p style=\"margin:0 0 22px;font-size:16px;line-height:1.6;\">Bienvenido a <strong>{$title}</strong>. ";
-    $html .= "El recorrido consta de <strong>{$num_est} {$plural}</strong> que deberás completar <strong>en orden</strong>.</p>\n";
+    $html .= "El recorrido consta de <strong>{$num_est} {$plural}</strong> {$orden_frase}.</p>\n";
 
-    // === Card 1: Cómo seguir la ruta ===
+    // === Card 1: Cómo jugar / seguir la ruta ===
+    $card1_titulo = $tiene_ubicacion ? '🧭 Cómo seguir la ruta de la gymkana' : '🧭 Cómo jugar';
     $html .= "<div style=\"margin:0 0 18px;padding:18px 20px;border-radius:14px;background:{$blueLt};border-left:4px solid {$blue};\">\n";
-    $html .= "  <h4 style=\"margin:0 0 12px;color:{$blueDk};font-size:18px;\">🧭 Cómo seguir la ruta de la gymkana</h4>\n";
-    $html .= "  <ul style=\"margin:0 0 14px;padding:0;list-style:none;\">\n";
-    $html .= "    <li style=\"margin-bottom:10px;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">📍</span> En cada prueba encontrarás una <strong>dirección</strong> acompañada de un icono de ubicación.</li>\n";
-    $html .= "    <li style=\"margin-bottom:10px;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">👉</span> Pulsa directamente sobre el icono de ubicación. Automáticamente se abrirá el mapa en tu móvil (<em>Google Maps</em>).</li>\n";
-    $html .= "    <li style=\"margin-bottom:10px;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">🔢</span> Sigue los números <strong>en orden</strong> (1, 2, 3, 4…). Cada uno te llevará al siguiente punto de la gymkana.</li>\n";
-    $html .= "    <li style=\"margin-bottom:0;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">🚫</span> <strong>No saltes ninguno</strong>: cada parada forma parte del recorrido y te guía correctamente hasta el final.</li>\n";
+    $html .= "  <h4 style=\"margin:0 0 12px;color:{$blueDk};font-size:18px;\">{$card1_titulo}</h4>\n";
+    $html .= "  <ul style=\"margin:0;padding:0;list-style:none;\">\n";
+
+    // Ubicación / mapa (solo si las estaciones tienen dirección o GPS)
+    if ($tiene_ubicacion) {
+      $html .= "    <li style=\"margin-bottom:10px;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">📍</span> En cada {$label} encontrarás una <strong>dirección</strong> acompañada de un icono de ubicación.</li>\n";
+      $html .= "    <li style=\"margin-bottom:10px;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">👉</span> Pulsa sobre el icono de ubicación para abrir el mapa en tu móvil y llegar al punto.</li>\n";
+    } elseif ($sin_qr) {
+      $html .= "    <li style=\"margin-bottom:10px;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">📋</span> Entra en cada {$label} desde la <strong>lista del escenario</strong>. No necesitas código QR ni desplazarte.</li>\n";
+    } else {
+      $html .= "    <li style=\"margin-bottom:10px;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">📷</span> Busca el <strong>código QR</strong> de cada {$label} y escanéalo con tu móvil para acceder a la prueba.</li>\n";
+    }
+
+    // Orden de juego
+    if ($es_libre) {
+      $html .= "    <li style=\"margin-bottom:0;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">🔀</span> Puedes hacer las pruebas en el <strong>orden que quieras</strong>: todas están disponibles desde el inicio.</li>\n";
+    } elseif ($es_secreto) {
+      $html .= "    <li style=\"margin-bottom:0;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">🎲</span> El orden es <strong>personalizado</strong>: al superar una prueba se te revelará la siguiente.</li>\n";
+    } else {
+      $html .= "    <li style=\"margin-bottom:10px;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">🔢</span> Sigue las pruebas <strong>en orden</strong> (1, 2, 3, 4…). Cada una te llevará a la siguiente.</li>\n";
+      $html .= "    <li style=\"margin-bottom:0;line-height:1.6;\"><span style=\"display:inline-block;width:24px;\">🚫</span> <strong>No saltes ninguna</strong>: cada parada forma parte del recorrido hasta el final.</li>\n";
+    }
+
     $html .= "  </ul>\n";
-    $html .= "  <div style=\"margin-top:14px;padding:10px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fcd34d;font-size:14px;color:#78350f;\">\n";
-    $html .= "    <strong>💡 Consejo:</strong> asegúrate de tener activada la ubicación de tu móvil para que el mapa te guíe correctamente.\n";
-    $html .= "  </div>\n";
+
+    // Consejo de GPS solo cuando hay ubicación
+    if ($tiene_ubicacion) {
+      $html .= "  <div style=\"margin-top:14px;padding:10px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fcd34d;font-size:14px;color:#78350f;\">\n";
+      $html .= "    <strong>💡 Consejo:</strong> activa la ubicación de tu móvil para que el mapa te guíe correctamente.\n";
+      $html .= "  </div>\n";
+    }
     $html .= "</div>\n";
 
     // === Card 2: Responde al desafío ===
