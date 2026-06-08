@@ -85,6 +85,24 @@ add_action('init', function () {
     }
 });
 
+/**
+ * ¿La petición actual es una página de la gymkana (escenario, estación,
+ * acceso por QR o subpágina virtual ranking/instrucciones/puntuaciones)?
+ * El aviso "solo móvil" únicamente se aplica a estas páginas; el resto del
+ * sitio (home, contacto, etc.) queda libre para escritorio.
+ */
+function gc_is_gincana_page() {
+    // CPTs de la gymkana
+    if (is_singular('escenario') || is_singular('estacion')) return true;
+    // Subpágina virtual (ranking / instrucciones / puntuaciones)
+    if (get_query_var('gc_subpage')) return true;
+    // Acceso por QR (?gc_station / ?gc_token) o la página de acceso
+    if (isset($_GET['gc_station']) || isset($_GET['gc_token'])) return true;
+    $uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+    if ($uri !== '' && strpos($uri, 'acceso-estacion') !== false) return true;
+    return false;
+}
+
 // === 2. Bloqueo en template_redirect (solo frontend) ===
 add_action('template_redirect', function () {
 
@@ -101,6 +119,9 @@ add_action('template_redirect', function () {
     if (defined('DOING_CRON') && DOING_CRON) return;
     if (defined('WP_CLI') && WP_CLI) return;
     if (is_feed()) return;
+
+    // El aviso solo aplica a páginas de la gymkana (no a home, contacto, etc.)
+    if (!gc_is_gincana_page()) return;
 
     // No bloquear login/registro (doble check por URI)
     global $pagenow;

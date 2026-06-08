@@ -9,7 +9,7 @@
 
 if ( ! defined('ABSPATH') ) exit;
 
-define('GINCANA_CORE_VERSION', '1.0.84');
+define('GINCANA_CORE_VERSION', '1.0.85');
 define('GINCANA_CORE_PATH', plugin_dir_path(__FILE__));
 define('GINCANA_CORE_URL', plugin_dir_url(__FILE__));
 
