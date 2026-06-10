@@ -2080,6 +2080,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                 });
 
                 const data2 = await res2.json();
+                try { console.log('[gincana] progress/complete →', JSON.stringify(data2)); } catch(e) { console.log('[gincana] progress/complete →', data2); }
 
                 if (data2 && data2.ok) {
                     const pts = data2.points_awarded || 0;

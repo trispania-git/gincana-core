@@ -229,13 +229,25 @@ add_action('rest_api_init', function(){
         if (!empty($pq)) $prueba_id = (int) $pq[0];
       }
 
-      // Nº de fallos previos en esta prueba+estación → el intento en que ha acertado.
-      $fail_count = 0;
+      // Nº de fallos en el intento ACTUAL → el intento en que ha acertado.
+      // Solo contamos los fallos posteriores al inicio de este intento
+      // (started_at). Así no arrastramos fallos de intentos previos, de otras
+      // pruebas, ni de sesiones de prueba anteriores. UNIX_TIMESTAMP normaliza
+      // created_at a Unix real (independiente de la zona horaria de MySQL).
+      $fail_count  = 0;
       if ($prueba_id) {
-        $fail_count = (int) $wpdb->get_var( $wpdb->prepare(
-          "SELECT COUNT(*) FROM {$wpdb->prefix}gincana_attempts WHERE user_id=%d AND prueba_id=%d AND estacion_id=%d AND result='fail'",
-          $user_id, $prueba_id, $estacion_id
-        ));
+        $run_started = (int) get_user_meta($user_id, 'gc_quiz_state_' . $prueba_id . '_' . $estacion_id . '_started', true);
+        if ($run_started > 0) {
+          $fail_count = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}gincana_attempts WHERE user_id=%d AND prueba_id=%d AND estacion_id=%d AND result='fail' AND UNIX_TIMESTAMP(created_at) >= %d",
+            $user_id, $prueba_id, $estacion_id, $run_started
+          ));
+        } else {
+          $fail_count = (int) $wpdb->get_var( $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}gincana_attempts WHERE user_id=%d AND prueba_id=%d AND estacion_id=%d AND result='fail'",
+            $user_id, $prueba_id, $estacion_id
+          ));
+        }
       }
       $had_fail   = $fail_count > 0;
       $attempt_no = $fail_count + 1; // intento en el que ha acertado (1 = a la primera)
@@ -274,7 +286,14 @@ add_action('rest_api_init', function(){
         'ok'             => true,
         'already_passed' => false,
         'points_awarded' => (int) $points_to_add,
-        'first_try'      => ! $had_fail
+        'first_try'      => ! $had_fail,
+        '_v'             => defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?',
+        '_dbg'           => [
+          'prueba_id'  => (int) $prueba_id,
+          'attempt_no' => (int) $attempt_no,
+          'fail_count' => (int) $fail_count,
+          'gamif'      => (bool) $gamificacion,
+        ],
       ], 200);
     }
   ]);
