@@ -1046,6 +1046,26 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
     // Determinar origen de la pregunta: por estación o pool
     $origen = function_exists('gc_get_origen_preguntas') ? gc_get_origen_preguntas($escenario_id) : 'por_estacion';
 
+    // Override por estación: si el escenario es POOL pero ESTA estación tiene su
+    // propia prueba vinculada (gc_estacion_ref), se usa esa en lugar del pool.
+    // Permite "pool para casi todas + una estación distinta" (p. ej. la acción
+    // final) sin tocar el resto. La prueba propia gana al pool solo en su estación.
+    if ($origen === 'pool') {
+        $pool_pid = (int) get_post_meta($escenario_id, 'gc_pool_prueba_ref', true);
+        $own = get_posts([
+            'post_type'      => 'prueba',
+            'post_status'    => 'publish',
+            'posts_per_page' => 1,
+            'meta_query'     => [['key' => 'gc_estacion_ref', 'value' => $station_id, 'compare' => '=']],
+            'post__not_in'   => $pool_pid ? [$pool_pid] : [],
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        ]);
+        if (!empty($own)) {
+            $origen = 'por_estacion'; // esta estación usa su prueba propia
+        }
+    }
+
     $test_id   = 0;
     $pregunta  = null;
     $q_index   = 0;
