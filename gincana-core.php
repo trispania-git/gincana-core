@@ -2,14 +2,14 @@
 /**
  * Plugin Name: Gincana Core
  * Description: Lógica de escenarios, estaciones, pruebas y gamificación ligera (puntos, intentos, ranking) para la gimcana digital.
- * Version: 1.0.88
+ * Version: 1.0.89
  * Author: Welow Marketing
  * Text Domain: gincana-core
  */
 
 if ( ! defined('ABSPATH') ) exit;
 
-define('GINCANA_CORE_VERSION', '1.0.88');
+define('GINCANA_CORE_VERSION', '1.0.89');
 define('GINCANA_CORE_PATH', plugin_dir_path(__FILE__));
 define('GINCANA_CORE_URL', plugin_dir_url(__FILE__));
 
@@ -51,4 +51,15 @@ add_action('wp_enqueue_scripts', function(){
   wp_register_script('gincana-inline', false);
   wp_enqueue_script('gincana-inline');
   wp_add_inline_script('gincana-inline', 'window.gincanaNonce = "'. esc_js( wp_create_nonce('wp_rest') ) .'";', 'before');
+});
+
+// Autovaciado de OPcache (caché de PHP, no un plugin) al cambiar de versión.
+// Cuando WP Pusher actualiza los archivos y PHP recarga gincana-core.php, esta
+// constante cambia; detectamos el cambio una sola vez y vaciamos OPcache para
+// que el resto de includes (helpers, rest-routes, etc.) se recompilen frescos.
+// Así un despliegue nuevo surte efecto sin tener que vaciar nada a mano.
+add_action('init', function(){
+  if ( get_option('gc_core_version_seen') === GINCANA_CORE_VERSION ) return;
+  if ( function_exists('opcache_reset') ) { @opcache_reset(); }
+  update_option('gc_core_version_seen', GINCANA_CORE_VERSION, false);
 });
