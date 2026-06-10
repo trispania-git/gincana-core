@@ -279,48 +279,59 @@ add_action('pre_get_posts', function($q){
   $sel_esc = isset($_GET['filter_escenario_pr']) ? (int) $_GET['filter_escenario_pr'] : 0;
   $sel_est = isset($_GET['filter_estacion_pr'])  ? (int) $_GET['filter_estacion_pr']  : 0;
 
-  // Caso A: filtramos por Estación concreta -> traer solo la Prueba referenciada por esa Estación
+  // Helper: pruebas que apuntan a una estación vía gc_estacion_ref (vínculo moderno)
+  $pruebas_de_estacion = function($est_id) {
+    $est_id = (int) $est_id;
+    if (!$est_id) return [];
+    $pq = get_posts([
+      'post_type'       => 'prueba',
+      'post_status'     => 'any',
+      'numberposts'     => -1,
+      'fields'          => 'ids',
+      'meta_query'      => [['key' => 'gc_estacion_ref', 'value' => $est_id, 'compare' => '=']],
+      'no_found_rows'   => true,
+      'suppress_filters'=> true,
+    ]);
+    return array_map('intval', (array) $pq);
+  };
+
+  // Caso A: filtramos por Estación concreta -> la prueba de esa estación
   if ($sel_est) {
-    $prueba_id = (int) get_post_meta($sel_est, 'gc_prueba_ref', true);
-    if ($prueba_id > 0) {
-      $q->set('post__in', [$prueba_id]);
-    } else {
-      // No hay prueba vinculada; devolvemos vacío
-      $q->set('post__in', [0]);
-    }
+    $ids = [];
+    $pid = (int) get_post_meta($sel_est, 'gc_prueba_ref', true); // legacy
+    if ($pid > 0) $ids[] = $pid;
+    $ids = array_merge($ids, $pruebas_de_estacion($sel_est)); // moderno
+    $ids = array_values(array_unique(array_filter($ids)));
+    $q->set('post__in', !empty($ids) ? $ids : [0]);
     return;
   }
 
-  // Caso B: filtramos por Escenario -> recopilar todas las Pruebas referenciadas por las Estaciones de ese Escenario
+  // Caso B: filtramos por Escenario -> pool del escenario + pruebas de sus estaciones
   if ($sel_esc) {
+    $ids = [];
+
+    // 1) Prueba usada como POOL por el escenario (vínculo escenario -> prueba)
+    $pool_pid = (int) get_post_meta($sel_esc, 'gc_pool_prueba_ref', true);
+    if ($pool_pid > 0) $ids[] = $pool_pid;
+
+    // 2) Pruebas de cada estación del escenario (legacy + moderno)
     $ests = get_posts([
       'post_type'       => 'estacion',
       'post_status'     => 'any',
       'numberposts'     => -1,
       'fields'          => 'ids',
-      'meta_query'      => [[
-        'key'     => 'gc_escenario_ref',
-        'value'   => $sel_esc,
-        'compare' => '=',
-      ]],
+      'meta_query'      => [['key' => 'gc_escenario_ref', 'value' => $sel_esc, 'compare' => '=']],
       'no_found_rows'   => true,
       'suppress_filters'=> true,
     ]);
-    if (!empty($ests)) {
-      $ids = [];
-      foreach ($ests as $e) {
-        $pid = (int) get_post_meta($e, 'gc_prueba_ref', true);
-        if ($pid > 0) $ids[] = $pid;
-      }
-      $ids = array_values(array_unique(array_filter($ids)));
-      if (!empty($ids)) {
-        $q->set('post__in', $ids);
-      } else {
-        $q->set('post__in', [0]); // sin resultados
-      }
-    } else {
-      $q->set('post__in', [0]);
+    foreach ((array) $ests as $e) {
+      $pid = (int) get_post_meta($e, 'gc_prueba_ref', true);
+      if ($pid > 0) $ids[] = $pid;
+      $ids = array_merge($ids, $pruebas_de_estacion($e));
     }
+
+    $ids = array_values(array_unique(array_filter($ids)));
+    $q->set('post__in', !empty($ids) ? $ids : [0]);
   }
 });
 
