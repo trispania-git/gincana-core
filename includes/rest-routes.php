@@ -229,12 +229,12 @@ add_action('rest_api_init', function(){
         if (!empty($pq)) $prueba_id = (int) $pq[0];
       }
 
-      // Nº de fallos previos en esta prueba → el intento en que ha acertado.
+      // Nº de fallos previos en esta prueba+estación → el intento en que ha acertado.
       $fail_count = 0;
       if ($prueba_id) {
         $fail_count = (int) $wpdb->get_var( $wpdb->prepare(
-          "SELECT COUNT(*) FROM {$wpdb->prefix}gincana_attempts WHERE user_id=%d AND prueba_id=%d AND result='fail'",
-          $user_id, $prueba_id
+          "SELECT COUNT(*) FROM {$wpdb->prefix}gincana_attempts WHERE user_id=%d AND prueba_id=%d AND estacion_id=%d AND result='fail'",
+          $user_id, $prueba_id, $estacion_id
         ));
       }
       $had_fail   = $fail_count > 0;
@@ -440,6 +440,7 @@ add_action('rest_api_init', function(){
       $time_ms   = (int) $req->get_param('time_ms');
       $q_index   = $req->get_param('q_index'); // null si no viene (modo normal)
       $q_mode    = sanitize_text_field((string) $req->get_param('q_mode')); // hint del front
+      $estacion_id_req = (int) $req->get_param('estacion_id'); // estación que se está jugando
 
       if (!$prueba_id) {
         return new WP_REST_Response(['ok'=>false,'error'=>'missing_prueba_id'], 400);
@@ -556,7 +557,11 @@ add_action('rest_api_init', function(){
 
       $attempts_table = $wpdb->prefix . 'gincana_attempts';
 
-      $estacion_id_from_prueba    = (int) get_post_meta($prueba_id, 'gc_estacion_ref', true);
+      // Estación que se está jugando: priorizar la que envía el front (coincide
+      // con la que se renderizó). Así el registro de intentos y el cálculo de
+      // estado usan SIEMPRE la misma (estación, prueba) que ve el jugador,
+      // evitando bucles cuando gc_estacion_ref apunta a otra (p. ej. en pool).
+      $estacion_id_from_prueba    = $estacion_id_req ?: (int) get_post_meta($prueba_id, 'gc_estacion_ref', true);
       $escenario_id_from_estacion = $estacion_id_from_prueba ? (int) get_post_meta($estacion_id_from_prueba, 'gc_escenario_ref', true) : 0;
 
       // Validar estado server-side: tiempo agotado o intentos agotados → fail forzado

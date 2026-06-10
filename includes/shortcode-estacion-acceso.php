@@ -967,6 +967,9 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
         delete_user_meta($user_id, 'gc_quiz_state_' . $test_id . '_' . $station_id . '_started');
         delete_user_meta($user_id, 'gc_ahorcado_revealed_' . $test_id . '_' . $station_id);
         delete_user_meta($user_id, 'gc_ahorcado_miss_' . $test_id . '_' . $station_id);
+        if (function_exists('gc_sopa_limpiar')) {
+            gc_sopa_limpiar($user_id, $test_id, $station_id);
+        }
         // Quitar el parámetro para no entrar en bucle
         $clean_url = remove_query_arg('gc_quiz_reset');
         if ( ! headers_sent() ) {
@@ -998,16 +1001,18 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
              time_max=<?php echo (int) $quiz_state['time_max_s']; ?>
              time_left=<?php echo (int) $quiz_state['time_left_s']; ?>
         -->
-        <div style="padding:24px 20px;border-radius:14px;background:#fef2f2;border:2px solid #dc2626;text-align:center;">
-            <div style="font-size:48px;margin-bottom:8px;"><?php echo $quiz_state['blocked_reason'] === 'time' ? '⏰' : '🚫'; ?></div>
-            <h2 style="margin:0 0 8px;color:#991b1b;">Desafío no superado</h2>
-            <p style="margin:0 0 16px;font-size:15px;color:#7f1d1d;"><?php echo esc_html($reason_msg); ?></p>
-            <p style="margin:0 0 16px;font-size:14px;color:#7f1d1d;">Intentos usados: <strong><?php echo (int) $quiz_state['failed_attempts']; ?> / <?php echo (int) $quiz_state['max_attempts']; ?></strong></p>
+        <div style="padding:24px 20px;border-radius:14px;background:#fffbeb;border:2px solid #f59e0b;text-align:center;">
+            <div style="font-size:48px;margin-bottom:8px;"><?php echo $quiz_state['blocked_reason'] === 'time' ? '⏰' : '🔄'; ?></div>
+            <h2 style="margin:0 0 8px;color:#92400e;">Tienes que repetir la prueba</h2>
+            <p style="margin:0 0 16px;font-size:15px;color:#78350f;"><?php echo esc_html($reason_msg); ?> Pulsa para intentarlo de nuevo.</p>
+            <?php if ((int) $quiz_state['max_attempts'] > 0): ?>
+            <p style="margin:0 0 16px;font-size:14px;color:#92400e;">Intentos usados: <strong><?php echo (int) $quiz_state['failed_attempts']; ?> / <?php echo (int) $quiz_state['max_attempts']; ?></strong></p>
+            <?php endif; ?>
             <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
-                <a href="<?php echo esc_url($escenario_url_b); ?>" style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>
-                <a href="<?php echo esc_url($reset_url); ?>" style="display:inline-block;padding:12px 24px;border:2px solid #dc2626;border-radius:10px;background:#fff;color:#dc2626;text-decoration:none;font-weight:600;">🔄 Reiniciar mi intento</a>
+                <a href="<?php echo esc_url($reset_url); ?>" style="display:inline-block;padding:14px 28px;border:0;border-radius:10px;background:#d97706;color:#fff;text-decoration:none;font-weight:700;font-size:16px;">🔄 Repetir la prueba</a>
+                <a href="<?php echo esc_url($escenario_url_b); ?>" style="display:inline-block;padding:14px 24px;border:2px solid #cbd5e1;border-radius:10px;background:#fff;color:#475569;text-decoration:none;font-weight:600;">Volver al escenario</a>
             </div>
-            <p style="margin:14px 0 0;font-size:12px;color:#94a3b8;">Si has acabado todos tus intentos puedes reiniciar para volver a probar este desafío.</p>
+            <p style="margin:14px 0 0;font-size:12px;color:#94a3b8;">Al repetir se reinician el tiempo y los intentos. Si hay varias preguntas, saldrá una distinta.</p>
         </div>
         <?php
         return ob_get_clean();
@@ -1967,6 +1972,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     credentials: 'same-origin',
                     body: JSON.stringify({
                         prueba_id: pruebaId,
+                        estacion_id: stationId,
                         answers: [payloadAnswer],
                         time_ms: timeMs,
                         q_index: qIndex,
