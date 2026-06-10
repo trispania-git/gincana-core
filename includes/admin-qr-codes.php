@@ -85,10 +85,21 @@ function gincana_core_render_qr_codes_page() {
         'no_found_rows'  => true,
       ]);
 
+      $es_solo = function_exists('gc_es_solo_pregunta') && gc_es_solo_pregunta($selected_esc);
+      // En "Sin QR · Solo pregunta" no hay QR por estación, EXCEPTO las de tipo
+      // "acción externa por QR" (penalti, etc.), que sí necesitan sus 2 QR.
+      if ($es_solo) {
+        $stations = array_values(array_filter($stations, function($sid){
+          return function_exists('gc_station_accion_prueba_id') && gc_station_accion_prueba_id((int)$sid);
+        }));
+      }
+
       if (empty($stations)):
-        echo '<div class="notice notice-warning"><p>Este escenario no tiene estaciones.</p></div>';
-      elseif (function_exists('gc_es_solo_pregunta') && gc_es_solo_pregunta($selected_esc)):
-        echo '<div class="notice notice-info" style="padding:14px 16px;"><p style="margin:0;"><strong>Este escenario no usa códigos QR.</strong> Su tipo de mecánica es <em>&quot;Sin QR · Solo pregunta&quot;</em>, así que los jugadores acceden a las estaciones desde la lista del escenario y las validan respondiendo a una pregunta.</p></div>';
+        if ($es_solo):
+          echo '<div class="notice notice-info" style="padding:14px 16px;"><p style="margin:0;"><strong>Este escenario no usa códigos QR.</strong> Su mecánica es <em>&quot;Sin QR · Solo pregunta&quot;</em>: los jugadores acceden desde la lista del escenario. Solo aparecerían aquí los QR de estaciones de tipo <em>&quot;Acción externa por QR&quot;</em>, y este escenario no tiene ninguna.</p></div>';
+        else:
+          echo '<div class="notice notice-warning"><p>Este escenario no tiene estaciones.</p></div>';
+        endif;
       else:
         $tipo_qr = function_exists('gc_get_tipo_qr') ? gc_get_tipo_qr($selected_esc) : 'enlace';
 
@@ -104,7 +115,10 @@ function gincana_core_render_qr_codes_page() {
           }
         }
 
-        $tipo_qr_label = ($tipo_qr === 'validacion') ? 'Validación (con token)' : 'Enlace directo';
+        $tipo_qr_label = ($tipo_qr === 'validacion') ? 'Validación (con token)' : ($es_solo ? 'Solo pregunta — solo estaciones de acción' : 'Enlace directo');
+        if ($es_solo):
+          echo '<div class="notice notice-info" style="margin:0 0 14px;padding:12px 16px;"><p style="margin:0;">Mecánica <em>&quot;Sin QR · Solo pregunta&quot;</em>: abajo solo se muestran los QR de las <strong>estaciones de acción</strong> (Acierto/Fallo). El resto de estaciones se juegan desde la lista del escenario.</p></div>';
+        endif;
     ?>
 
       <div class="gc-qr-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
