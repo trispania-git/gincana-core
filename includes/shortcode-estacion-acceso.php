@@ -853,6 +853,101 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
 }
 
 /**
+ * Botón + escáner de QR con cámara (jsQR / BarcodeDetector) reutilizable.
+ * Al detectar un QR del propio sitio, redirige a esa URL.
+ *
+ * @param string $suffix    sufijo único para los IDs (evita colisiones).
+ * @param string $btn_label texto del botón.
+ */
+function gc_render_qr_scanner($suffix = 'x', $btn_label = 'Escanear QR') {
+    $s = preg_replace('/[^a-z0-9_-]/i', '', (string) $suffix);
+    ob_start();
+    ?>
+    <div style="margin:16px 0;">
+      <button type="button" id="gc-qr-scan-btn-<?php echo $s; ?>" style="display:inline-flex;align-items:center;gap:10px;padding:14px 28px;border:0;border-radius:14px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,0.35);">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        <?php echo esc_html($btn_label); ?>
+      </button>
+    </div>
+    <div id="gc-qr-modal-<?php echo $s; ?>" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;">
+      <div style="position:relative;width:100%;max-width:480px;padding:16px;">
+        <div style="text-align:center;margin-bottom:12px;"><span style="color:#fff;font-size:18px;font-weight:700;">Escanea el código QR</span></div>
+        <div style="position:relative;border-radius:16px;overflow:hidden;background:#000;aspect-ratio:1/1;">
+          <video id="gc-qr-video-<?php echo $s; ?>" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;"></video>
+          <div style="position:absolute;inset:15%;border:3px solid rgba(255,255,255,0.7);border-radius:12px;pointer-events:none;"></div>
+        </div>
+        <canvas id="gc-qr-canvas-<?php echo $s; ?>" style="display:none;"></canvas>
+        <div id="gc-qr-status-<?php echo $s; ?>" style="text-align:center;margin-top:12px;color:#94a3b8;font-size:14px;">Apunta la cámara al código QR…</div>
+        <button type="button" id="gc-qr-close-<?php echo $s; ?>" style="display:block;margin:16px auto 0;padding:12px 32px;border:2px solid rgba(255,255,255,0.4);border-radius:12px;background:transparent;color:#fff;font-size:16px;font-weight:600;cursor:pointer;">Cerrar</button>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script>
+    (function(){
+      var s = <?php echo wp_json_encode($s); ?>;
+      var btn = document.getElementById('gc-qr-scan-btn-' + s);
+      var modal = document.getElementById('gc-qr-modal-' + s);
+      var video = document.getElementById('gc-qr-video-' + s);
+      var canvas = document.getElementById('gc-qr-canvas-' + s);
+      var status = document.getElementById('gc-qr-status-' + s);
+      var closeBtn = document.getElementById('gc-qr-close-' + s);
+      if (!btn || !modal || !video || !canvas) return;
+      var ctx = canvas.getContext('2d', {willReadFrequently: true});
+      var stream = null, scanning = false, scanInterval = null;
+      var siteUrl = <?php echo wp_json_encode(home_url('/')); ?>;
+
+      function stopCamera() {
+        scanning = false;
+        if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+        if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
+        video.srcObject = null;
+        modal.style.display = 'none';
+      }
+      function handleQR(url) {
+        if (url.indexOf(siteUrl) === 0 || url.indexOf(siteUrl.replace('https://','http://')) === 0) {
+          scanning = false;
+          if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+          if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
+          status.style.color = '#4ade80';
+          status.textContent = '¡QR detectado! Validando…';
+          setTimeout(function(){ window.location.href = url; }, 500);
+        }
+      }
+      function scanFrame() {
+        if (!scanning || video.readyState !== video.HAVE_ENOUGH_DATA) return;
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        if (window._gcUseBarcodeDetector && window._gcBarcodeDetector) {
+          window._gcBarcodeDetector.detect(canvas).then(function(b){ if (b.length>0) handleQR(b[0].rawValue); }).catch(function(){});
+          return;
+        }
+        if (typeof jsQR === 'function') {
+          var d = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          var code = jsQR(d.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' });
+          if (code && code.data) handleQR(code.data);
+        }
+      }
+      if ('BarcodeDetector' in window && !window._gcBarcodeDetector) {
+        BarcodeDetector.getSupportedFormats().then(function(f){
+          if (f.indexOf('qr_code') !== -1) { window._gcUseBarcodeDetector = true; window._gcBarcodeDetector = new BarcodeDetector({formats:['qr_code']}); }
+        }).catch(function(){});
+      }
+      btn.addEventListener('click', function(){
+        modal.style.display = 'flex';
+        status.style.color = '#94a3b8'; status.textContent = 'Iniciando cámara…';
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 720 }, height: { ideal: 720 } } })
+          .then(function(st){ stream = st; video.srcObject = st; video.play(); scanning = true; status.textContent = 'Apunta la cámara al código QR…'; scanInterval = setInterval(scanFrame, 250); })
+          .catch(function(err){ status.style.color = '#f87171'; status.textContent = (err.name === 'NotAllowedError') ? 'Permiso de cámara denegado. Actívalo e inténtalo de nuevo.' : ('No se pudo acceder a la cámara: ' + err.message); });
+      });
+      if (closeBtn) closeBtn.addEventListener('click', stopCamera);
+      document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && scanning) stopCamera(); });
+    })();
+    </script>
+    <?php
+    return ob_get_clean();
+}
+
+/**
  * Acción externa validada por QR (Acierto/Fallo).
  * - Sin ?gc_result: muestra la acción + instrucciones (esperar a escanear).
  * - Con ?gc_result=ok|ko: valida la estación y otorga los puntos del resultado.
@@ -938,6 +1033,8 @@ function gc_render_accion_qr($station_id, $title, $escenario_id, $prueba_id) {
     }
     echo '<div style="margin-top:6px;padding:12px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fcd34d;color:#78350f;font-size:14px;">'
        . '📲 Cuando termines, <strong>escanea el QR de Acierto o de Fallo</strong> que te mostrará el monitor según tu resultado.</div>';
+    // Botón para abrir la cámara y escanear directamente (mismo escáner que el resto)
+    echo gc_render_qr_scanner('accion', '📷 Escanear mi resultado');
     echo '</div>';
     return ob_get_clean();
 }
