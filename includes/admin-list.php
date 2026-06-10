@@ -74,6 +74,7 @@ add_filter('manage_edit-estacion_columns', function($cols){
     if ($key === 'title') {
       $new['gc_escenario'] = 'Escenario';
       $new['gc_orden']     = 'Orden';
+      $new['gc_prueba']    = 'Prueba';
       $new['gc_estado']    = 'Estado';
     }
   }
@@ -113,6 +114,52 @@ add_action('manage_estacion_posts_custom_column', function($col, $post_id){
   if ($col === 'gc_orden') {
     $orden = get_post_meta($post_id, 'gc_orden', true);
     echo $orden !== '' ? (int)$orden : '<span style="color:#999">—</span>';
+  }
+
+  if ($col === 'gc_prueba') {
+    // Prueba propia vinculada: legacy gc_prueba_ref o prueba con gc_estacion_ref = estación
+    $pid = (int) get_post_meta($post_id, 'gc_prueba_ref', true);
+    if (!$pid) {
+      $pq = get_posts([
+        'post_type'      => 'prueba',
+        'post_status'    => 'any',
+        'posts_per_page' => 1,
+        'meta_query'     => [['key' => 'gc_estacion_ref', 'value' => $post_id, 'compare' => '=']],
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+      ]);
+      if (!empty($pq)) $pid = (int) $pq[0];
+    }
+    if ($pid) {
+      $labels = [
+        'multiple'        => 'Opción múltiple',
+        'multiple_imagen' => 'Opción múltiple (imágenes)',
+        'vf'              => 'Verdadero / Falso',
+        'texto'           => 'Respuesta de texto',
+        'cifrado_cesar'   => 'Cifrado César',
+        'anagrama'        => 'Anagrama',
+        'ahorcado'        => 'Ahorcado',
+        'ahorcado_light'  => 'Ahorcado light',
+        'sopa_letras'     => 'Sopa de letras',
+        'jeroglifico'     => 'Jeroglífico',
+        'lista_libre'     => 'Lista libre',
+        'accion_qr'       => 'Acción externa por QR',
+      ];
+      $tipo  = (string) get_post_meta($pid, 'gc_tipo', true);
+      $tlbl  = isset($labels[$tipo]) ? $labels[$tipo] : ($tipo ?: '');
+      $t     = get_the_title($pid) ?: ('Prueba #' . $pid);
+      $link  = get_edit_post_link($pid);
+      echo $link ? '<a href="' . esc_url($link) . '">' . esc_html($t) . '</a>' : esc_html($t);
+      if ($tlbl) echo '<br><span style="display:inline-block;margin-top:2px;padding:1px 7px;border-radius:999px;background:#eef2ff;color:#3730a3;font-size:11px;font-weight:600;">' . esc_html($tlbl) . '</span>';
+    } else {
+      $esc_id = (int) get_post_meta($post_id, 'gc_escenario_ref', true);
+      $origen = ($esc_id && function_exists('gc_get_origen_preguntas')) ? gc_get_origen_preguntas($esc_id) : '';
+      if ($origen === 'pool') {
+        echo '<span style="display:inline-block;padding:1px 7px;border-radius:999px;background:#f5f3ff;color:#7c3aed;font-size:11px;font-weight:600;">Pool aleatorio</span>';
+      } else {
+        echo '<span style="color:#999">—</span>';
+      }
+    }
   }
 
   if ($col === 'gc_estado') {
