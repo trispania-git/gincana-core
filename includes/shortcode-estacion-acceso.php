@@ -2253,6 +2253,10 @@ add_shortcode('gincana_estacion_contenido', function($atts){
 
     $render_content();
 
+    // Tipo de QR del escenario: determina si hay un QR físico que buscar.
+    $tipo_qr_cfg = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';
+    $qr_fisico   = in_array($tipo_qr_cfg, ['validacion_boton', 'validacion_boton_quiz', 'validacion_quiz', 'validacion', 'enlace'], true);
+
     // Si no esta logueado
     if (!$is_logged) {
         // Si el escenario obliga a empezar por la portada, no se ofrece el
@@ -2261,8 +2265,9 @@ add_shortcode('gincana_estacion_contenido', function($atts){
             $lbl_est = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
             echo gc_render_forzar_portada_card($escenario_id, $title, $lbl_est);
         } else {
-            // Infantil: mostrar pista + CTA login
-            if ($tipo_escenario === 'infantil') {
+            // Infantil: mostrar la pista "Busca el QR" SOLO si el modo usa un
+            // QR físico. En "solo pregunta" (sin QR) no debe aparecer.
+            if ($tipo_escenario === 'infantil' && $qr_fisico) {
                 echo gc_render_infantil_station_pista($station_id, $title, $escenario_id);
             }
             echo gc_render_login_o_guest($escenario_id, '¿Quieres participar en la gimkana?', 'Escribe tu nombre y empieza a jugar.');
