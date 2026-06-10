@@ -48,38 +48,145 @@ if ( ! function_exists('gincana_is_divi_builder') ) {
 }
 
 /**
- * Regla vigente de puntos:
- * - Puntos por tiempo (intervalos de 5 s, hasta 30 s)
- * - +10 SOLO si es primer intento.
- * - CAP a 100.
+ * === Puntuación configurable por prueba ===
+ *
+ * Cada prueba define:
+ *  - gc_puntos_acierto_max     (def. 10) puntos por acertar a la 1ª.
+ *  - gc_puntos_intento         (opcional) lista "10,5,1" de puntos por intento.
+ *  - gc_puntos_tiempo_max      (def. 10) puntos máximos por rapidez.
+ *  - gc_puntos_tiempo_rangos   (def. 6)  nº de rangos en que se reparte el tiempo.
+ *
+ * Total de la prueba = puntos por acierto (según el intento) + puntos por tiempo.
  */
-if ( ! function_exists('gincana_points_calculate') ) {
-  function gincana_points_calculate($user_id, $escenario_id, $estacion_id, $time_ms, $is_first_try) {
 
-    $t = max(0, (int) $time_ms);
-    $time_rules = apply_filters('gincana_time_bonus_rules', [
-      ['lte_ms' =>  4999, 'add' => 90],
-      ['lte_ms' =>  9999, 'add' => 75],
-      ['lte_ms' => 14999, 'add' => 60],
-      ['lte_ms' => 19999, 'add' => 45],
-      ['lte_ms' => 24999, 'add' => 30],
-      ['lte_ms' => 30000, 'add' => 15],
-    ]);
+/**
+ * Reparte el tiempo máximo en N rangos con puntos decrecientes.
+ * Devuelve bandas de la MÁS RÁPIDA a la MÁS LENTA:
+ *   ['pts', 'elapsed_from', 'elapsed_to', 'rem_from', 'rem_to'] (segundos)
+ * La banda más lenta dentro de tiempo siempre da >=1; agotar el tiempo = 0.
+ */
+if ( ! function_exists('gc_calc_rangos_tiempo') ) {
+  function gc_calc_rangos_tiempo($tiempo_max_s, $rangos, $puntos_max) {
+    $tiempo_max_s = max(1, (int) $tiempo_max_s);
+    $rangos       = max(1, min(20, (int) $rangos));
+    $puntos_max   = max(0, (int) $puntos_max);
 
-    $points_time = 0;
-    foreach ($time_rules as $rule) {
-      if ($t <= (int) $rule['lte_ms']) { $points_time = (int) $rule['add']; break; }
+    $bands = [];
+    for ($k = 0; $k < $rangos; $k++) {
+      if ($rangos === 1) {
+        $pts = $puntos_max;
+      } else {
+        $pts = (int) round($puntos_max * ($rangos - 1 - $k) / ($rangos - 1));
+        // La banda más lenta dentro de tiempo siempre suma al menos 1.
+        if ($k === $rangos - 1 && $pts === 0 && $puntos_max > 0) $pts = 1;
+      }
+      $from_elapsed = (int) floor($k * $tiempo_max_s / $rangos);
+      $to_elapsed   = ($k === $rangos - 1)
+        ? ($tiempo_max_s - 1)
+        : ((int) floor(($k + 1) * $tiempo_max_s / $rangos) - 1);
+      $bands[] = [
+        'pts'          => $pts,
+        'elapsed_from' => $from_elapsed,
+        'elapsed_to'   => $to_elapsed,
+        'rem_from'     => $tiempo_max_s - $from_elapsed,
+        'rem_to'       => $tiempo_max_s - $to_elapsed,
+      ];
+    }
+    return $bands;
+  }
+}
+
+/**
+ * Puntos por tiempo según los ms empleados en responder.
+ */
+if ( ! function_exists('gc_puntos_tiempo_por_ms') ) {
+  function gc_puntos_tiempo_por_ms($prueba_id, $time_ms) {
+    $prueba_id    = (int) $prueba_id;
+    $tiempo_max_s = (int) get_post_meta($prueba_id, 'gc_tiempo_max_s', true);
+    if ($tiempo_max_s <= 0) return 0; // sin cronómetro → no hay puntos por tiempo
+
+    $pmax = get_post_meta($prueba_id, 'gc_puntos_tiempo_max', true);
+    $pmax = ($pmax === '' || $pmax === null) ? 10 : (int) $pmax;
+    if ($pmax <= 0) return 0;
+
+    $rangos = (int) get_post_meta($prueba_id, 'gc_puntos_tiempo_rangos', true);
+    if ($rangos <= 0) $rangos = 6;
+
+    $elapsed_s = (int) floor(max(0, (int) $time_ms) / 1000);
+    if ($elapsed_s >= $tiempo_max_s) return 0; // se agotó el tiempo
+
+    foreach (gc_calc_rangos_tiempo($tiempo_max_s, $rangos, $pmax) as $b) {
+      if ($elapsed_s >= $b['elapsed_from'] && $elapsed_s <= $b['elapsed_to']) {
+        return (int) $b['pts'];
+      }
+    }
+    return 0;
+  }
+}
+
+/**
+ * Devuelve la lista de puntos por intento (array indexado desde 0 = 1er intento).
+ * Si no hay lista explícita, la genera de forma decreciente desde el máximo.
+ */
+if ( ! function_exists('gc_puntos_intento_lista') ) {
+  function gc_puntos_intento_lista($prueba_id) {
+    $prueba_id = (int) $prueba_id;
+    $max = get_post_meta($prueba_id, 'gc_puntos_acierto_max', true);
+    $max = ($max === '' || $max === null) ? 10 : (int) $max;
+
+    $raw = (string) get_post_meta($prueba_id, 'gc_puntos_intento', true);
+    if (trim($raw) !== '') {
+      $arr = array_map(function($v){ return max(0, (int) trim($v)); }, explode(',', $raw));
+      $arr = array_values(array_filter($arr, function($v){ return $v !== null; }));
+      if (!empty($arr)) return $arr;
     }
 
-    $bonus_try = $is_first_try ? 10 : 0;
-    $total = min(100, max(0, $points_time + $bonus_try));
+    // Auto: 1er intento = max; decreciente lineal a 0 según nº de intentos.
+    $intentos = (int) get_post_meta($prueba_id, 'gc_intentos_max', true);
+    if ($intentos <= 1) return [$max]; // sin límite o 1 intento → solo 1er valor
+    $lista = [];
+    for ($i = 1; $i <= $intentos; $i++) {
+      $lista[] = max(0, (int) round($max * ($intentos - $i) / ($intentos - 1)));
+    }
+    // El último (si quedó 0) lo dejamos en 0: acierto in extremis vale 0 por acierto
+    // pero aún puede sumar por tiempo. Para que el 1er valor sea el máximo:
+    $lista[0] = $max;
+    return $lista;
+  }
+}
+
+/**
+ * Puntos por acierto según en qué intento (1-based) se acertó.
+ */
+if ( ! function_exists('gc_puntos_acierto_por_intento') ) {
+  function gc_puntos_acierto_por_intento($prueba_id, $attempt_no) {
+    $attempt_no = max(1, (int) $attempt_no);
+    $lista = gc_puntos_intento_lista($prueba_id);
+    if (empty($lista)) return 0;
+    if (isset($lista[$attempt_no - 1])) return max(0, (int) $lista[$attempt_no - 1]);
+    return max(0, (int) end($lista)); // más allá del último configurado → último valor
+  }
+}
+
+/**
+ * Puntos totales de una prueba: por acierto (según intento) + por tiempo.
+ */
+if ( ! function_exists('gincana_points_calculate') ) {
+  function gincana_points_calculate($user_id, $escenario_id, $estacion_id, $time_ms, $attempt_no = 1, $prueba_id = 0) {
+    $prueba_id = (int) $prueba_id;
+    if (!$prueba_id) $prueba_id = (int) get_post_meta($estacion_id, 'gc_prueba_ref', true);
+
+    $bonus_try  = $prueba_id ? gc_puntos_acierto_por_intento($prueba_id, $attempt_no) : ((int)$attempt_no === 1 ? 10 : 0);
+    $points_time = $prueba_id ? gc_puntos_tiempo_por_ms($prueba_id, $time_ms) : 0;
+    $total = max(0, $bonus_try + $points_time);
 
     return (int) apply_filters('gincana_points_total', $total, [
       'user_id'      => $user_id,
       'escenario_id' => $escenario_id,
       'estacion_id'  => $estacion_id,
-      'time_ms'      => $t,
-      'is_first_try' => (bool) $is_first_try,
+      'prueba_id'    => $prueba_id,
+      'time_ms'      => max(0, (int) $time_ms),
+      'attempt_no'   => (int) $attempt_no,
       'bonus_time'   => $points_time,
       'bonus_try'    => $bonus_try,
     ]);

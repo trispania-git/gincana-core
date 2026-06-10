@@ -29,6 +29,14 @@ function gc_render_prueba_metabox($post) {
     $tiempo_max_s = ($tiempo_raw === '' || $tiempo_raw === null) ? '' : (int) $tiempo_raw;
     $intentos_raw = get_post_meta($post->ID, 'gc_intentos_max', true);
     $intentos_max = ($intentos_raw === '' || $intentos_raw === null) ? '' : (int) $intentos_raw;
+    // Puntuación configurable
+    $pa_max_raw   = get_post_meta($post->ID, 'gc_puntos_acierto_max', true);
+    $pa_max       = ($pa_max_raw === '' || $pa_max_raw === null) ? 10 : (int) $pa_max_raw;
+    $pa_intento   = (string) get_post_meta($post->ID, 'gc_puntos_intento', true);
+    $pt_max_raw   = get_post_meta($post->ID, 'gc_puntos_tiempo_max', true);
+    $pt_max       = ($pt_max_raw === '' || $pt_max_raw === null) ? 10 : (int) $pt_max_raw;
+    $pt_rangos_raw = get_post_meta($post->ID, 'gc_puntos_tiempo_rangos', true);
+    $pt_rangos    = ($pt_rangos_raw === '' || $pt_rangos_raw === null) ? 6 : (int) $pt_rangos_raw;
     $preguntas    = get_post_meta($post->ID, 'gc_preguntas', true);
     $estacion_ref = get_post_meta($post->ID, 'gc_estacion_ref', true);
 
@@ -151,6 +159,52 @@ function gc_render_prueba_metabox($post) {
             <td>
                 <input type="number" name="gc_intentos_max" id="gc_intentos_max" value="<?php echo esc_attr($intentos_max); ?>" min="0" max="50" placeholder="Sin límite" style="width:130px;" />
                 <p class="description">Déjalo vacío o en 0 para que el jugador pueda intentarlo tantas veces como quiera.</p>
+            </td>
+        </tr>
+    </table>
+
+    <h3 style="margin-top:20px;">Puntuación <span style="font-weight:400;font-size:13px;color:#94a3b8;">(solo cuenta si el escenario tiene los puntos activados)</span></h3>
+    <table class="form-table">
+        <tr>
+            <th><label for="gc_puntos_acierto_max">Puntos por acierto</label></th>
+            <td>
+                <input type="number" name="gc_puntos_acierto_max" id="gc_puntos_acierto_max" value="<?php echo esc_attr($pa_max); ?>" min="0" max="100" style="width:90px;" />
+                <span style="color:#64748b;font-size:12px;margin-left:6px;">máximo (acierto a la 1ª).</span>
+                <p style="margin:8px 0 0;">
+                    <label for="gc_puntos_intento" style="font-weight:600;">Puntos por intento (opcional):</label><br>
+                    <input type="text" name="gc_puntos_intento" id="gc_puntos_intento" value="<?php echo esc_attr($pa_intento); ?>" placeholder="Ej: 10,5,1" style="width:220px;" />
+                    <span style="color:#64748b;font-size:12px;margin-left:6px;">lista del 1º al último intento, separada por comas. Si lo dejas vacío, se reparte automáticamente desde el máximo hacia 0. Sin acertar = 0.</span>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="gc_puntos_tiempo_max">Puntos por tiempo</label></th>
+            <td>
+                <input type="number" name="gc_puntos_tiempo_max" id="gc_puntos_tiempo_max" value="<?php echo esc_attr($pt_max); ?>" min="0" max="100" style="width:90px;" />
+                <span style="color:#64748b;font-size:12px;margin-left:6px;">máximo (respuesta más rápida).</span>
+                <span style="margin-left:14px;">Rangos: <input type="number" name="gc_puntos_tiempo_rangos" id="gc_puntos_tiempo_rangos" value="<?php echo esc_attr($pt_rangos); ?>" min="1" max="20" style="width:70px;" /></span>
+                <p class="description" style="margin-top:6px;">Requiere un <strong>tiempo máximo</strong> configurado arriba. El tiempo se reparte en ese número de rangos y los puntos bajan automáticamente. Agotar el tiempo = 0 puntos por tiempo.</p>
+                <?php
+                if (is_numeric($tiempo_max_s) && (int) $tiempo_max_s > 0 && function_exists('gc_calc_rangos_tiempo')) {
+                    $bands = gc_calc_rangos_tiempo((int) $tiempo_max_s, $pt_rangos, $pt_max);
+                    echo '<div style="margin-top:8px;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;max-width:420px;">';
+                    echo '<div style="font-size:12px;font-weight:600;color:#334155;margin-bottom:6px;">Vista previa del reparto por tiempo:</div>';
+                    echo '<table style="width:100%;font-size:12px;border-collapse:collapse;">';
+                    echo '<tr style="color:#64748b;"><td style="padding:2px 6px;">Responde en…</td><td style="padding:2px 6px;text-align:right;">Puntos</td></tr>';
+                    foreach ($bands as $b) {
+                        $hasta = $b['elapsed_to'] + 1; // segundos transcurridos (límite superior, exclusivo)
+                        $desde = $b['elapsed_from'];
+                        echo '<tr><td style="padding:2px 6px;border-top:1px solid #eef2f7;">' . (int)$desde . '–' . (int)$hasta . ' s</td><td style="padding:2px 6px;text-align:right;border-top:1px solid #eef2f7;font-weight:700;color:#16a34a;">' . (int)$b['pts'] . '</td></tr>';
+                    }
+                    echo '<tr><td style="padding:2px 6px;border-top:1px solid #eef2f7;color:#991b1b;">Se agota el tiempo</td><td style="padding:2px 6px;text-align:right;border-top:1px solid #eef2f7;font-weight:700;color:#991b1b;">0</td></tr>';
+                    echo '</table>';
+                    echo '<div style="font-size:11px;color:#94a3b8;margin-top:6px;">Se actualiza al guardar la prueba.</div>';
+                    echo '</div>';
+                } else {
+                    echo '<p style="font-size:12px;color:#94a3b8;margin-top:4px;">Configura un tiempo máximo arriba y guarda para ver la tabla de reparto.</p>';
+                }
+                ?>
+                <p style="margin-top:10px;font-size:13px;color:#475569;"><strong>Total de la prueba</strong> = puntos por acierto + puntos por tiempo.</p>
             </td>
         </tr>
     </table>
@@ -694,6 +748,23 @@ add_action('save_post', function ($post_id) {
     } else {
         update_post_meta($post_id, 'gc_intentos_max', min(50, max(1, (int) $intentos_post)));
     }
+
+    // Puntuación configurable
+    $pa_max_post = isset($_POST['gc_puntos_acierto_max']) ? (int) $_POST['gc_puntos_acierto_max'] : 10;
+    update_post_meta($post_id, 'gc_puntos_acierto_max', min(100, max(0, $pa_max_post)));
+    // Lista de puntos por intento: normalizar a "10,5,1" (solo enteros >=0)
+    $pi_raw = isset($_POST['gc_puntos_intento']) ? (string) $_POST['gc_puntos_intento'] : '';
+    if (trim($pi_raw) === '') {
+        delete_post_meta($post_id, 'gc_puntos_intento');
+    } else {
+        $piece = array_filter(array_map('trim', explode(',', $pi_raw)), function($v){ return $v !== '' && is_numeric($v); });
+        $piece = array_map(function($v){ return (string) max(0, (int) $v); }, $piece);
+        update_post_meta($post_id, 'gc_puntos_intento', implode(',', $piece));
+    }
+    $pt_max_post = isset($_POST['gc_puntos_tiempo_max']) ? (int) $_POST['gc_puntos_tiempo_max'] : 10;
+    update_post_meta($post_id, 'gc_puntos_tiempo_max', min(100, max(0, $pt_max_post)));
+    $pt_rangos_post = isset($_POST['gc_puntos_tiempo_rangos']) ? (int) $_POST['gc_puntos_tiempo_rangos'] : 6;
+    update_post_meta($post_id, 'gc_puntos_tiempo_rangos', min(20, max(1, $pt_rangos_post)));
 
     // Solo permitimos modificar gc_estacion_ref si la prueba NO es pool
     $is_pool_now = get_posts([

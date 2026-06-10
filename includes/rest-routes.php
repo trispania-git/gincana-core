@@ -216,14 +216,29 @@ add_action('rest_api_init', function(){
       ", $user_id, $escenario_id, $estacion_id, $time_ms, $time_ms, $time_ms ) );
 
       $prueba_id = (int) get_post_meta($estacion_id, 'gc_prueba_ref', true);
+      // Fallback: si no hay ref legacy en la estación, buscar la prueba por gc_estacion_ref
+      if (!$prueba_id) {
+        $pq = get_posts([
+          'post_type'      => 'prueba',
+          'post_status'    => 'publish',
+          'posts_per_page' => 1,
+          'meta_query'     => [['key' => 'gc_estacion_ref', 'value' => $estacion_id, 'compare' => '=']],
+          'fields'         => 'ids',
+          'no_found_rows'  => true,
+        ]);
+        if (!empty($pq)) $prueba_id = (int) $pq[0];
+      }
 
-      $had_fail = false;
+      // Nº de fallos previos en esta prueba → el intento en que ha acertado.
+      $fail_count = 0;
       if ($prueba_id) {
-        $had_fail = (bool) $wpdb->get_var( $wpdb->prepare(
-          "SELECT 1 FROM {$wpdb->prefix}gincana_attempts WHERE user_id=%d AND prueba_id=%d AND result='fail' LIMIT 1",
+        $fail_count = (int) $wpdb->get_var( $wpdb->prepare(
+          "SELECT COUNT(*) FROM {$wpdb->prefix}gincana_attempts WHERE user_id=%d AND prueba_id=%d AND result='fail'",
           $user_id, $prueba_id
         ));
       }
+      $had_fail   = $fail_count > 0;
+      $attempt_no = $fail_count + 1; // intento en el que ha acertado (1 = a la primera)
 
       // Si el escenario tiene la gamificación desactivada, no calcular ni añadir
       // puntos. Solo se registra la estación como passed (sin entradas en el
@@ -231,7 +246,7 @@ add_action('rest_api_init', function(){
       $gamificacion = function_exists('gc_show_points') ? gc_show_points($escenario_id) : true;
 
       $points_to_add = ($gamificacion && function_exists('gincana_points_calculate'))
-        ? gincana_points_calculate($user_id, $escenario_id, $estacion_id, $time_ms, ! $had_fail)
+        ? gincana_points_calculate($user_id, $escenario_id, $estacion_id, $time_ms, $attempt_no, $prueba_id)
         : 0;
 
       if ($gamificacion) {
@@ -239,8 +254,9 @@ add_action('rest_api_init', function(){
           return new WP_REST_Response(['ok'=>false,'error'=>'points_add_missing'], 500);
         }
         gincana_points_add($user_id, $escenario_id, $points_to_add, 'passed', $estacion_id, [
-          'time_ms'   => $time_ms,
-          'first_try' => ! $had_fail
+          'time_ms'    => $time_ms,
+          'first_try'  => ! $had_fail,
+          'attempt_no' => $attempt_no
         ]);
       }
 
