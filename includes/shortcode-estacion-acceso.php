@@ -157,6 +157,20 @@ function gc_shortcode_estacion_acceso() {
         return ob_get_clean();
     }
 
+    // Acción externa por QR: se enruta directamente (independiente del tipo de
+    // QR del escenario), porque la valida el QR de resultado, no un quiz.
+    $accion_pid = function_exists('gc_station_accion_prueba_id') ? gc_station_accion_prueba_id($station_id) : 0;
+    if ($accion_pid) {
+        echo gc_render_accion_qr($station_id, $title, $escenario_id, $accion_pid);
+        if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id);
+        echo '</div>';
+        // Itinerario + espaciador como en el resto de la función
+        echo '<div style="position:fixed;bottom:0;left:0;right:0;z-index:999;background:#fff;border-top:1px solid #e2e8f0;padding:6px 8px;box-shadow:0 -2px 8px rgba(0,0,0,0.08);">';
+        echo do_shortcode('[gincana_itinerario escenario="' . (int) $escenario_id . '" estacion="' . (int) $station_id . '"]');
+        echo '</div><div style="height:60px;"></div>';
+        return ob_get_clean();
+    }
+
     if ($tipo_escenario === 'infantil') {
         if (!$is_logged) {
             echo gc_render_infantil_station_qr_no_login($station_id, $title, $escenario_id);
@@ -838,6 +852,96 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
     return ob_get_clean();
 }
 
+/**
+ * Acción externa validada por QR (Acierto/Fallo).
+ * - Sin ?gc_result: muestra la acción + instrucciones (esperar a escanear).
+ * - Con ?gc_result=ok|ko: valida la estación y otorga los puntos del resultado.
+ */
+function gc_render_accion_qr($station_id, $title, $escenario_id, $prueba_id) {
+    $user_id       = get_current_user_id();
+    $label         = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
+    $escenario_url = get_permalink($escenario_id) ?: home_url('/');
+    $accion_texto  = (string) get_post_meta($prueba_id, 'gc_accion_texto', true);
+    $pts_ok_raw    = get_post_meta($prueba_id, 'gc_accion_puntos_ok', true);
+    $pts_ok        = ($pts_ok_raw === '' || $pts_ok_raw === null) ? 10 : (int) $pts_ok_raw;
+    $pts_ko_raw    = get_post_meta($prueba_id, 'gc_accion_puntos_ko', true);
+    $pts_ko        = ($pts_ko_raw === '' || $pts_ko_raw === null) ? 0 : (int) $pts_ko_raw;
+    $gamif         = function_exists('gc_show_points') ? gc_show_points($escenario_id) : true;
+    $result        = isset($_GET['gc_result']) ? sanitize_text_field(wp_unslash($_GET['gc_result'])) : '';
+
+    // Hay que estar identificado para registrar el resultado en la sesión.
+    if (!$user_id) {
+        ob_start();
+        echo '<div style="padding:20px;border-radius:14px;background:#eff6ff;border:2px solid #2563eb;text-align:center;margin-bottom:8px;">';
+        echo '<h2 style="margin:0 0 8px;color:#1e40af;">' . esc_html($title) . '</h2>';
+        if ($accion_texto !== '') echo '<p style="margin:0;font-size:15px;color:#334155;">' . wp_kses_post(wpautop($accion_texto)) . '</p>';
+        echo '</div>';
+        echo gc_render_login_o_guest($escenario_id, 'Escribe tu nombre para jugar', 'Identifícate para registrar tu resultado.');
+        return ob_get_clean();
+    }
+
+    $ya_pasada = function_exists('gincana_user_passed') && gincana_user_passed($user_id, $station_id);
+
+    // Si llega un resultado por QR y la estación aún no estaba superada → validar.
+    $just_points = null;
+    $just_result = '';
+    if (!$ya_pasada && ($result === 'ok' || $result === 'ko')) {
+        $points = ($result === 'ok') ? $pts_ok : $pts_ko;
+        if (function_exists('gc_complete_station')) {
+            gc_complete_station($user_id, $escenario_id, $station_id, $points, $gamif, [
+                'tipo'   => 'accion_qr',
+                'result' => $result,
+            ]);
+        }
+        $ya_pasada   = true;
+        $just_points = $points;
+        $just_result = $result;
+    }
+
+    ob_start();
+
+    if ($ya_pasada) {
+        $es_ok = ($just_result === 'ok');
+        $bg    = $es_ok ? '#f0fdf4' : '#fffbeb';
+        $bd    = $es_ok ? '#16a34a' : '#f59e0b';
+        $col   = $es_ok ? '#166534' : '#92400e';
+        echo '<div style="padding:24px 20px;border-radius:14px;background:' . $bg . ';border:2px solid ' . $bd . ';text-align:center;">';
+        if ($just_result === 'ok') {
+            echo '<div style="font-size:48px;margin-bottom:6px;">🎉</div><h2 style="margin:0 0 8px;color:' . $col . ';">¡Acierto!</h2>';
+        } elseif ($just_result === 'ko') {
+            echo '<div style="font-size:48px;margin-bottom:6px;">💪</div><h2 style="margin:0 0 8px;color:' . $col . ';">¡Buen intento!</h2>';
+        } else {
+            echo '<div style="font-size:48px;margin-bottom:6px;">✅</div><h2 style="margin:0 0 8px;color:#166534;">¡' . esc_html(ucfirst($label)) . ' completada!</h2>';
+        }
+        if ($gamif && $just_points !== null) {
+            echo '<p style="margin:0 0 12px;font-size:16px;color:' . $col . ';">' . ($just_points > 0 ? 'Has conseguido <strong>' . (int) $just_points . ' puntos</strong>.' : 'Sin puntos esta vez, ¡pero sigues en juego!') . '</p>';
+        }
+        // Moraleja (si el escenario la usa)
+        $moraleja_show = function_exists('gc_moraleja_activa') && gc_moraleja_activa($escenario_id);
+        $moraleja      = $moraleja_show ? get_post_meta($station_id, 'gc_moraleja', true) : '';
+        if ($moraleja) {
+            echo '<div style="margin:14px 0 4px;padding:14px 16px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;text-align:left;">'
+               . '<div style="font-size:13px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">💡 La moraleja</div>'
+               . '<div style="font-size:15px;color:#451a03;line-height:1.5;">' . wp_kses_post(wpautop($moraleja)) . '</div></div>';
+        }
+        echo '<a href="' . esc_url($escenario_url) . '" style="display:inline-block;margin-top:12px;padding:14px 28px;border:0;border-radius:12px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:16px;">👉 Continuar</a>';
+        echo '</div>';
+        return ob_get_clean();
+    }
+
+    // Sin resultado todavía: mostrar la acción + instrucciones de escaneo.
+    echo '<div style="padding:24px 20px;border-radius:14px;background:#eff6ff;border:2px solid #2563eb;text-align:center;">';
+    echo '<div style="display:inline-block;margin-bottom:10px;padding:6px 14px;border-radius:999px;background:#dbeafe;color:#1e40af;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;">⚽ Prueba de acción</div>';
+    echo '<h2 style="margin:0 0 10px;color:#1e40af;">' . esc_html($title) . '</h2>';
+    if ($accion_texto !== '') {
+        echo '<div style="font-size:16px;color:#334155;line-height:1.6;margin:0 0 14px;">' . wp_kses_post(wpautop($accion_texto)) . '</div>';
+    }
+    echo '<div style="margin-top:6px;padding:12px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fcd34d;color:#78350f;font-size:14px;">'
+       . '📲 Cuando termines, <strong>escanea el QR de Acierto o de Fallo</strong> que te mostrará el monitor según tu resultado.</div>';
+    echo '</div>';
+    return ob_get_clean();
+}
+
 function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opts = null) {
     $label   = function_exists('gc_get_label_estacion') ? gc_get_label_estacion($escenario_id) : 'estación';
     $user_id = get_current_user_id();
@@ -913,6 +1017,12 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                 }
             }
         }
+    }
+
+    // === Acción externa validada por QR (Acierto/Fallo) ===
+    // No usa preguntas: la valida un QR de resultado que escanea el jugador.
+    if ($test_id && get_post_meta($test_id, 'gc_tipo', true) === 'accion_qr') {
+        return gc_render_accion_qr($station_id, $title, $escenario_id, $test_id);
     }
 
     if (!$test_id || !$pregunta) {
@@ -2285,6 +2395,15 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     echo '<div class="gc-station-content gc-tema-esc-' . (int) $escenario_id . '" style="width:100%;max-width:100%;padding:16px 0;box-sizing:border-box;">';
 
     $render_content();
+
+    // Acción externa por QR: enrutar directamente.
+    $accion_pid_c = function_exists('gc_station_accion_prueba_id') ? gc_station_accion_prueba_id($station_id) : 0;
+    if ($accion_pid_c) {
+        echo gc_render_accion_qr($station_id, $title, $escenario_id, $accion_pid_c);
+        if (function_exists('gc_render_footer_logos')) echo gc_render_footer_logos($escenario_id);
+        echo '</div>';
+        return ob_get_clean();
+    }
 
     // Tipo de QR del escenario: determina si hay un QR físico que buscar.
     $tipo_qr_cfg = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';

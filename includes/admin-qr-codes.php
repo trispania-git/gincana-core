@@ -145,6 +145,50 @@ function gincana_core_render_qr_codes_page() {
           $title = get_the_title($sid) ?: ($label . ' ' . $order);
           $qr_url = function_exists('gc_get_qr_url') ? gc_get_qr_url($sid, $selected_esc) : get_permalink($sid);
           $pista  = get_post_meta($sid, 'gc_pista_busqueda', true);
+
+          // ¿La estación tiene una prueba de "acción externa por QR"? Si es así,
+          // generamos DOS QR (Acierto/Fallo) con el parámetro gc_result.
+          $accion_prueba = get_posts([
+            'post_type'      => 'prueba',
+            'post_status'    => 'publish',
+            'posts_per_page' => 1,
+            'meta_query'     => [
+              'relation' => 'AND',
+              ['key' => 'gc_estacion_ref', 'value' => $sid, 'compare' => '='],
+              ['key' => 'gc_tipo', 'value' => 'accion_qr', 'compare' => '='],
+            ],
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+          ]);
+          if (!empty($accion_prueba)):
+            $url_ok = add_query_arg('gc_result', 'ok', $qr_url);
+            $url_ko = add_query_arg('gc_result', 'ko', $qr_url);
+            $img_ok = 'https://api.qrserver.com/v1/create-qr-code/?size=' . $qr_size . 'x' . $qr_size . '&data=' . urlencode($url_ok) . '&format=png&margin=8';
+            $img_ko = 'https://api.qrserver.com/v1/create-qr-code/?size=' . $qr_size . 'x' . $qr_size . '&data=' . urlencode($url_ko) . '&format=png&margin=8';
+        ?>
+          <div class="gc-qr-card" style="border-color:#16a34a;">
+            <div class="gc-qr-card-header">
+              <span class="gc-qr-order"><?php echo (int)$order; ?></span>
+              <span class="gc-qr-title"><?php echo esc_html($title); ?> — ✅ Acierto</span>
+            </div>
+            <div class="gc-qr-img">
+              <img src="<?php echo esc_url($img_ok); ?>" alt="QR Acierto <?php echo esc_attr($title); ?>" width="<?php echo (int)$qr_size; ?>" height="<?php echo (int)$qr_size; ?>" />
+            </div>
+            <div class="gc-qr-pista" style="background:#f0fdf4;border-color:#86efac;color:#166534;">✅ Escanéalo si el jugador ACIERTA.</div>
+            <div class="gc-qr-url"><?php echo esc_html($url_ok); ?></div>
+          </div>
+          <div class="gc-qr-card" style="border-color:#f59e0b;">
+            <div class="gc-qr-card-header">
+              <span class="gc-qr-order"><?php echo (int)$order; ?></span>
+              <span class="gc-qr-title"><?php echo esc_html($title); ?> — ❌ Fallo</span>
+            </div>
+            <div class="gc-qr-img">
+              <img src="<?php echo esc_url($img_ko); ?>" alt="QR Fallo <?php echo esc_attr($title); ?>" width="<?php echo (int)$qr_size; ?>" height="<?php echo (int)$qr_size; ?>" />
+            </div>
+            <div class="gc-qr-pista" style="background:#fffbeb;border-color:#fcd34d;color:#92400e;">❌ Escanéalo si el jugador FALLA.</div>
+            <div class="gc-qr-url"><?php echo esc_html($url_ko); ?></div>
+          </div>
+        <?php else:
           // QR Server API (gratuita, sin dependencias)
           $qr_img = 'https://api.qrserver.com/v1/create-qr-code/?size=' . $qr_size . 'x' . $qr_size . '&data=' . urlencode($qr_url) . '&format=png&margin=8';
         ?>
@@ -161,6 +205,7 @@ function gincana_core_render_qr_codes_page() {
             <?php endif; ?>
             <div class="gc-qr-url"><?php echo esc_html($qr_url); ?></div>
           </div>
+        <?php endif; ?>
         <?php endforeach; ?>
       </div>
 

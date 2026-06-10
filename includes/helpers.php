@@ -225,6 +225,70 @@ if ( ! function_exists('gincana_points_add') ) {
   }
 }
 
+/**
+ * Marca una estación como superada y otorga puntos fijos. Reutilizable por
+ * mecánicas que validan sin quiz (p. ej. "acción externa por QR").
+ * Idempotente: si ya estaba superada, no vuelve a sumar.
+ *
+ * @return bool true si se acaba de completar; false si ya estaba superada.
+ */
+if ( ! function_exists('gc_complete_station') ) {
+  function gc_complete_station($user_id, $escenario_id, $estacion_id, $points, $gamif = true, $meta = []) {
+    global $wpdb;
+    $user_id      = (int) $user_id;
+    $escenario_id = (int) $escenario_id;
+    $estacion_id  = (int) $estacion_id;
+    $points       = max(0, (int) $points);
+    if (!$user_id || !$escenario_id || !$estacion_id) return false;
+
+    $pt = $wpdb->prefix . 'gincana_user_progress';
+    $status = $wpdb->get_var( $wpdb->prepare(
+      "SELECT status FROM $pt WHERE user_id=%d AND escenario_id=%d AND estacion_id=%d",
+      $user_id, $escenario_id, $estacion_id
+    ));
+    if ($status === 'passed') return false; // ya superada → no duplicar
+
+    $wpdb->query( $wpdb->prepare("
+      INSERT INTO $pt (user_id, escenario_id, estacion_id, status, attempts, best_time_ms)
+      VALUES (%d,%d,%d,'passed',1,0)
+      ON DUPLICATE KEY UPDATE status='passed'
+    ", $user_id, $escenario_id, $estacion_id ) );
+
+    if ($gamif && function_exists('gincana_points_add')) {
+      gincana_points_add($user_id, $escenario_id, $points, 'passed', $estacion_id, $meta);
+    }
+    return true;
+  }
+}
+
+/**
+ * Si la estación tiene una prueba de tipo "acción externa por QR", devuelve
+ * el ID de esa prueba; si no, 0.
+ */
+if ( ! function_exists('gc_station_accion_prueba_id') ) {
+  function gc_station_accion_prueba_id($station_id) {
+    $station_id = (int) $station_id;
+    if (!$station_id) return 0;
+    // Compat: ref legacy en la estación
+    $pid = (int) get_post_meta($station_id, 'gc_prueba_ref', true);
+    if ($pid && get_post_meta($pid, 'gc_tipo', true) === 'accion_qr') return $pid;
+    // Fuente de verdad: prueba con gc_estacion_ref = estación y tipo accion_qr
+    $q = get_posts([
+      'post_type'      => 'prueba',
+      'post_status'    => 'publish',
+      'posts_per_page' => 1,
+      'meta_query'     => [
+        'relation' => 'AND',
+        ['key' => 'gc_estacion_ref', 'value' => $station_id, 'compare' => '='],
+        ['key' => 'gc_tipo', 'value' => 'accion_qr', 'compare' => '='],
+      ],
+      'fields'         => 'ids',
+      'no_found_rows'  => true,
+    ]);
+    return !empty($q) ? (int) $q[0] : 0;
+  }
+}
+
 // === Helpers de progreso / orden ===
 
 if ( ! function_exists('gincana_user_passed') ) {

@@ -135,6 +135,7 @@ function gc_render_prueba_metabox($post) {
                     <option value="lista_libre" <?php selected($tipo, 'lista_libre'); ?>>Lista libre (sin validación, recoger respuestas) 📝</option>
                     <option value="sopa_letras" <?php selected($tipo, 'sopa_letras'); ?>>Sopa de letras (encontrar la palabra) 🔡</option>
                     <option value="jeroglifico" <?php selected($tipo, 'jeroglifico'); ?>>Jeroglífico (2 imágenes → 1 palabra) 🧩</option>
+                    <option value="accion_qr" <?php selected($tipo, 'accion_qr'); ?>>Acción externa validada por QR (Acierto/Fallo) ⚽</option>
                 </select>
                 <p class="description" style="margin-top:6px;">
                     <strong>Multiple imágenes:</strong> el jugador elige la imagen correcta entre 4 opciones.
@@ -144,7 +145,31 @@ function gc_render_prueba_metabox($post) {
                     <strong>Sopa de letras:</strong> una palabra escondida en un grid. El jugador la encuentra arrastrando o tocando primera/última letra.
                     <strong>Jeroglífico:</strong> dos imágenes que combinadas forman una palabra. Ej: rascar + cielo = RASCACIELOS.
                     <strong>Lista libre:</strong> el jugador rellena entre 1 y 10 cajas de texto. No se valida nada; sirve para recoger respuestas abiertas (ej: "Cita 5 deportes").
+                    <strong>Acción externa por QR:</strong> el jugador hace una acción física (ej: tirar un penalti) y escanea uno de 2 QR según el resultado (Acierto/Fallo). Cada QR valida la estación y otorga sus puntos.
                 </p>
+            </td>
+        </tr>
+        <?php
+            $accion_texto    = get_post_meta($post->ID, 'gc_accion_texto', true);
+            $accion_pts_ok_r = get_post_meta($post->ID, 'gc_accion_puntos_ok', true);
+            $accion_pts_ok   = ($accion_pts_ok_r === '' || $accion_pts_ok_r === null) ? 10 : (int) $accion_pts_ok_r;
+            $accion_pts_ko_r = get_post_meta($post->ID, 'gc_accion_puntos_ko', true);
+            $accion_pts_ko   = ($accion_pts_ko_r === '' || $accion_pts_ko_r === null) ? 0 : (int) $accion_pts_ko_r;
+        ?>
+        <tr class="gc-accion-row" style="<?php echo $tipo === 'accion_qr' ? '' : 'display:none;'; ?>">
+            <th><label for="gc_accion_texto">Acción externa (QR)</label></th>
+            <td>
+                <p style="margin:0 0 6px;">
+                    <label for="gc_accion_texto" style="font-weight:600;">Texto de la acción:</label><br>
+                    <textarea name="gc_accion_texto" id="gc_accion_texto" rows="2" style="width:100%;" placeholder="Ej: Tira un penalti. El monitor te mostrará los QR de Acierto y Fallo."><?php echo esc_textarea($accion_texto); ?></textarea>
+                </p>
+                <p style="margin:8px 0 0;">
+                    <label style="font-weight:600;">✅ Puntos Acierto:</label>
+                    <input type="number" name="gc_accion_puntos_ok" value="<?php echo esc_attr($accion_pts_ok); ?>" min="0" max="100" style="width:80px;" />
+                    <span style="margin-left:16px;font-weight:600;">❌ Puntos Fallo:</span>
+                    <input type="number" name="gc_accion_puntos_ko" value="<?php echo esc_attr($accion_pts_ko); ?>" min="0" max="100" style="width:80px;" />
+                </p>
+                <p class="description" style="margin-top:6px;">Se generan 2 códigos QR (Acierto y Fallo) en <strong>Códigos QR</strong>. El jugador escanea el que corresponda a su resultado: ambos validan la estación; el de Fallo otorga los "Puntos Fallo" (por defecto 0) y se continúa igual.</p>
             </td>
         </tr>
         <tr>
@@ -512,6 +537,9 @@ function gc_render_prueba_metabox($post) {
                     existing.forEach(function (b) { b.remove(); });
                 }
                 prevTipo = newTipo;
+                // Mostrar/ocultar la configuración de "Acción externa por QR"
+                var accionRow = document.querySelector('.gc-accion-row');
+                if (accionRow) accionRow.style.display = (newTipo === 'accion_qr') ? '' : 'none';
             });
         }
 
@@ -766,6 +794,13 @@ add_action('save_post', function ($post_id) {
     $pt_rangos_post = isset($_POST['gc_puntos_tiempo_rangos']) ? (int) $_POST['gc_puntos_tiempo_rangos'] : 6;
     update_post_meta($post_id, 'gc_puntos_tiempo_rangos', min(20, max(1, $pt_rangos_post)));
 
+    // Acción externa por QR (Acierto/Fallo)
+    update_post_meta($post_id, 'gc_accion_texto', sanitize_textarea_field($_POST['gc_accion_texto'] ?? ''));
+    $accion_ok_post = isset($_POST['gc_accion_puntos_ok']) ? (int) $_POST['gc_accion_puntos_ok'] : 10;
+    update_post_meta($post_id, 'gc_accion_puntos_ok', min(100, max(0, $accion_ok_post)));
+    $accion_ko_post = isset($_POST['gc_accion_puntos_ko']) ? (int) $_POST['gc_accion_puntos_ko'] : 0;
+    update_post_meta($post_id, 'gc_accion_puntos_ko', min(100, max(0, $accion_ko_post)));
+
     // Solo permitimos modificar gc_estacion_ref si la prueba NO es pool
     $is_pool_now = get_posts([
         'post_type'      => 'escenario',
@@ -793,7 +828,7 @@ add_action('save_post', function ($post_id) {
             $enunciado = sanitize_textarea_field($p['enunciado'] ?? '');
 
             $p_tipo = sanitize_text_field($p['tipo'] ?? 'multiple');
-            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama','ahorcado','ahorcado_light','sopa_letras','jeroglifico','lista_libre'], true) ) {
+            if ( ! in_array($p_tipo, ['multiple','multiple_imagen','vf','texto','cifrado_cesar','anagrama','ahorcado','ahorcado_light','sopa_letras','jeroglifico','lista_libre','accion_qr'], true) ) {
                 $p_tipo = 'multiple';
             }
             $correcta_idx = isset($p['correcta']) ? (int)$p['correcta'] : -1;
