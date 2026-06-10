@@ -895,9 +895,21 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                 }
                 if (!empty($valid)) {
                     $keys = array_keys($valid);
+                    // Evitar repetir la última pregunta mostrada (sobre todo al
+                    // repetir tras fallar). Si hay 2+ preguntas válidas, se
+                    // excluye la última vista antes de barajar.
+                    $last_key   = 'gc_last_q_' . $test_id . '_' . $station_id;
+                    $last_shown = $user_id ? get_user_meta($user_id, $last_key, true) : '';
+                    if ($last_shown !== '' && count($keys) > 1) {
+                        $keys = array_values(array_filter($keys, function($k) use ($last_shown){
+                            return (string) $k !== (string) $last_shown;
+                        }));
+                    }
                     shuffle($keys);
                     $q_index  = $keys[0];
                     $pregunta = $valid[$q_index];
+                    // Recordar la elegida para la próxima vez.
+                    if ($user_id) update_user_meta($user_id, $last_key, (string) $q_index);
                 }
             }
         }
@@ -970,6 +982,20 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
         if (function_exists('gc_sopa_limpiar')) {
             gc_sopa_limpiar($user_id, $test_id, $station_id);
         }
+        // En modo pool: liberar la pregunta asignada a esta estación para que al
+        // repetir salga otra distinta (recordando la anterior para no repetirla).
+        if ($origen === 'pool') {
+            $pool_meta = 'gc_pool_assigned_' . (int) $escenario_id;
+            $assigned  = get_user_meta($user_id, $pool_meta, true);
+            $skey      = (string) (int) $station_id;
+            if (is_array($assigned) && isset($assigned[$skey])) {
+                update_user_meta($user_id, 'gc_pool_avoid_' . (int) $escenario_id . '_' . (int) $station_id, (int) $assigned[$skey]);
+                unset($assigned[$skey]);
+                update_user_meta($user_id, $pool_meta, $assigned);
+            }
+        }
+        // (En modo por estación NO borramos 'gc_last_q_': así el anti-repetición
+        // excluye precisamente la pregunta recién fallada al repetir.)
         // Quitar el parámetro para no entrar en bucle
         $clean_url = remove_query_arg('gc_quiz_reset');
         if ( ! headers_sent() ) {

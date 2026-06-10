@@ -1157,6 +1157,16 @@ if ( ! function_exists('gc_get_pool_question') ) {
       $available = array_keys($preguntas);
     }
 
+    // Evitar repetir la pregunta que se acaba de liberar al repetir la prueba.
+    $avoid_key = 'gc_pool_avoid_' . (int) $escenario_id . '_' . (int) $station_id;
+    $avoid_raw = get_user_meta($user_id, $avoid_key, true);
+    if ($avoid_raw !== '' && count($available) > 1) {
+      $avoid = (int) $avoid_raw;
+      $filtered = array_values(array_filter($available, function($i) use ($avoid){ return (int)$i !== $avoid; }));
+      if (!empty($filtered)) $available = $filtered;
+    }
+    delete_user_meta($user_id, $avoid_key); // solo se evita una vez
+
     // Elegir al azar con shuffle para mejor distribución
     shuffle($available);
     $rand_idx = $available[0];
