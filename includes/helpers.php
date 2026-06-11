@@ -141,16 +141,17 @@ if ( ! function_exists('gc_puntos_intento_lista') ) {
       if (!empty($arr)) return $arr;
     }
 
-    // Auto: 1er intento = max; decreciente lineal a 0 según nº de intentos.
+    // Auto: cada intento vale la mitad que el anterior (1ª=max, 2ª=max/2…).
+    // Es lo más intuitivo (ej: máx 10 → 10, 5, 3, 1). Para un reparto exacto,
+    // usa el campo "Puntos por intento".
     $intentos = (int) get_post_meta($prueba_id, 'gc_intentos_max', true);
-    if ($intentos <= 1) return [$max]; // sin límite o 1 intento → solo 1er valor
+    if ($intentos < 1) $intentos = 1; // sin límite → un único valor (= max)
     $lista = [];
-    for ($i = 1; $i <= $intentos; $i++) {
-      $lista[] = max(0, (int) round($max * ($intentos - $i) / ($intentos - 1)));
+    $v = (float) $max;
+    for ($i = 0; $i < $intentos; $i++) {
+      $lista[] = max(0, (int) round($v));
+      $v = $v / 2;
     }
-    // El último (si quedó 0) lo dejamos en 0: acierto in extremis vale 0 por acierto
-    // pero aún puede sumar por tiempo. Para que el 1er valor sea el máximo:
-    $lista[0] = $max;
     return $lista;
   }
 }

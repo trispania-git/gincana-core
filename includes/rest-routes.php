@@ -215,8 +215,15 @@ add_action('rest_api_init', function(){
           best_time_ms = LEAST(COALESCE(best_time_ms, %d), %d)
       ", $user_id, $escenario_id, $estacion_id, $time_ms, $time_ms, $time_ms ) );
 
-      $prueba_id = (int) get_post_meta($estacion_id, 'gc_prueba_ref', true);
-      // Fallback: si no hay ref legacy en la estación, buscar la prueba por gc_estacion_ref
+      // Prioridad: la prueba que REALMENTE se jugó (la que envía el front, que
+      // es la misma que se renderizó y validó en /quiz/submit). Así se lee la
+      // config de puntuación correcta también en modo pool y se ignoran refs
+      // legacy obsoletas (gc_prueba_ref antiguo).
+      $prueba_id = (int) $req->get_param('prueba_id');
+      if ($prueba_id && get_post_type($prueba_id) !== 'prueba') $prueba_id = 0;
+
+      // Fallbacks si el front no lo mandó: ref legacy, gc_estacion_ref, o pool.
+      if (!$prueba_id) $prueba_id = (int) get_post_meta($estacion_id, 'gc_prueba_ref', true);
       if (!$prueba_id) {
         $pq = get_posts([
           'post_type'      => 'prueba',
@@ -227,6 +234,10 @@ add_action('rest_api_init', function(){
           'no_found_rows'  => true,
         ]);
         if (!empty($pq)) $prueba_id = (int) $pq[0];
+      }
+      if (!$prueba_id) {
+        $pool_pid = (int) get_post_meta($escenario_id, 'gc_pool_prueba_ref', true);
+        if ($pool_pid) $prueba_id = $pool_pid;
       }
 
       // Nº de fallos en el intento ACTUAL → el intento en que ha acertado.

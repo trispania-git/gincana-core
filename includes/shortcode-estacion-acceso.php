@@ -2301,6 +2301,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     },
                     credentials: 'same-origin',
                     body: JSON.stringify({
+                        prueba_id: pruebaId,
                         estacion_id: stationId,
                         time_ms: timeMs
                     })
