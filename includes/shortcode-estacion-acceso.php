@@ -2364,18 +2364,11 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                             + '</div>';
                     }
                     <?php else: ?>
-                    if (extraInfoHtml) {
-                        // Con razón VF o moraleja: mostrar texto + botón de continuar; NO redirect automático
-                        msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;"><?php echo $acierto_html ? addslashes($acierto_html) : ''; ?>✅ Respuesta correcta.' + ptsTxt + '</div>'
-                            + extraInfoHtml
-                            + '<div style="text-align:center;margin-top:16px;"><a href="<?php echo esc_url($escenario_url_js); ?>" style="display:inline-block;padding:14px 28px;border:0;border-radius:12px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:16px;">👉 Continuar</a></div>';
-                    } else {
-                        // Sin razón ni moraleja: auto-redirect rápido como antes
-                        msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;"><?php echo $acierto_html ? addslashes($acierto_html) : ''; ?>✅ Respuesta correcta.' + ptsTxt + '</div>';
-                        setTimeout(function(){
-                            window.location.href = <?php echo json_encode($escenario_url_js); ?>;
-                        }, 1800);
-                    }
+                    // Siempre mostramos el resultado + botón "Continuar" (sin redirect
+                    // automático), para que dé tiempo a leer el mensaje y los puntos.
+                    msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#ecfdf3;border:1px solid #b7ebc6;color:#146c2e;"><?php echo $acierto_html ? addslashes($acierto_html) : ''; ?>✅ Respuesta correcta.' + ptsTxt + '</div>'
+                        + extraInfoHtml
+                        + '<div style="text-align:center;margin-top:16px;"><a href="<?php echo esc_url($escenario_url_js); ?>" style="display:inline-block;padding:14px 28px;border:0;border-radius:12px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:16px;">👉 Continuar</a></div>';
                     <?php endif; ?>
 
                     // Bajar la pantalla hasta el mensaje de resultado para no
