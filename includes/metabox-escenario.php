@@ -732,10 +732,12 @@ function gc_render_escenario_metabox($post) {
                     if (ta) ta.value = html;
                 }
 
-                document.getElementById('gc-gen-instrucciones').addEventListener('click', function(){
+                var btnInstr = document.getElementById('gc-gen-instrucciones');
+                if (btnInstr) btnInstr.addEventListener('click', function(){
                     setEditorContent('gc_esc_instrucciones', defInstr);
                 });
-                document.getElementById('gc-gen-puntuaciones').addEventListener('click', function(){
+                var btnPunt = document.getElementById('gc-gen-puntuaciones');
+                if (btnPunt) btnPunt.addEventListener('click', function(){
                     setEditorContent('gc_esc_puntuaciones', defPunt);
                 });
             })();
