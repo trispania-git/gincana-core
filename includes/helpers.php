@@ -839,6 +839,8 @@ if ( ! function_exists('gc_render_estacion_fuera_de_orden_card') ) {
   function gc_render_estacion_fuera_de_orden_card($escenario_id, $station_title = '') {
     $escenario_url = get_permalink((int) $escenario_id) ?: home_url('/');
     $esc_title     = get_the_title((int) $escenario_id);
+    // Plural con artículo configurado (p. ej. "los partidos"), neutro en género.
+    $plural = function_exists('gc_get_label_estacion_plural') ? gc_get_label_estacion_plural($escenario_id) : 'las estaciones';
     ob_start();
     ?>
     <div style="margin:18px 0;padding:22px 22px 20px;border-radius:14px;background:#fffbeb;border:1px solid #fcd34d;text-align:center;">
@@ -847,10 +849,10 @@ if ( ! function_exists('gc_render_estacion_fuera_de_orden_card') ) {
         <span>Aviso</span>
       </div>
       <h3 style="margin:0 0 6px;color:#78350f;font-size:18px;line-height:1.4;font-weight:700;">
-        Esta no es tu estación actual
+        Todavía no te toca aquí
       </h3>
       <p style="margin:0 0 16px;color:#92400e;font-size:14px;line-height:1.5;">
-        Sigue el orden que te ha tocado. Vuelve a la portada para ver cuál te toca ahora.
+        Sigue el orden de <?php echo esc_html($plural); ?>. Vuelve a la portada para ver qué te toca ahora.
       </p>
       <a href="<?php echo esc_url($escenario_url); ?>"
          style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#d97706;color:#fff;text-decoration:none;font-weight:700;font-size:15px;">

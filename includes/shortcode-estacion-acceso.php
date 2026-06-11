@@ -265,7 +265,7 @@ function gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id)
         ?>
         <div style="padding:24px 20px;border-radius:14px;background:#f7fff7;border:2px solid #16a34a;text-align:center;">
             <div style="font-size:48px;margin-bottom:8px;">✅</div>
-            <h2 style="margin:0 0 8px;color:#146c2e;">¡Ya completaste esta <?php echo esc_html($label); ?>!</h2>
+            <h2 style="margin:0 0 8px;color:#146c2e;">¡Ya completaste esta prueba!</h2>
             <?php
                 $moraleja_show2 = function_exists('gc_moraleja_activa') && gc_moraleja_activa($escenario_id);
                 $moraleja_visto = $moraleja_show2 ? get_post_meta($station_id, 'gc_moraleja', true) : '';
@@ -292,7 +292,7 @@ function gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id)
         <div style="margin-bottom:8px;"><?php echo gc_get_img_encontrada($escenario_id); ?></div>
         <h2 style="margin:0 0 8px;color:#1e40af;">¡Has llegado a <?php echo esc_html($title); ?>!</h2>
         <p style="margin:0 0 16px;font-size:15px;color:#334155;">
-            Pulsa el botón para validar esta <?php echo esc_html($label); ?>.
+            Pulsa el botón para validar.
         </p>
         <button type="button" id="gc-adulto-complete-btn"
                 style="width:100%;max-width:320px;padding:16px 24px;border:0;border-radius:12px;background:#2563eb;color:#fff;font-size:17px;font-weight:700;cursor:pointer;transition:transform 0.1s;">
@@ -324,7 +324,7 @@ function gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id)
                 const data = await res.json();
                 if (data && data.ok) {
                     btn.style.display = 'none';
-                    msg.innerHTML = '<div style="padding:16px;border-radius:12px;background:#dcfce7;border:1px solid #16a34a;color:#146c2e;font-size:16px;font-weight:600;">✅ ¡<?php echo esc_html($label_uc); ?> validada!</div>'
+                    msg.innerHTML = '<div style="padding:16px;border-radius:12px;background:#dcfce7;border:1px solid #16a34a;color:#146c2e;font-size:16px;font-weight:600;">✅ ¡Prueba validada!</div>'
                         + '<a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:14px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
                 } else {
                     msg.innerHTML = '<div style="padding:14px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">No se pudo validar. Inténtalo de nuevo.</div>';
@@ -379,7 +379,7 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
         ?>
         <div style="padding:24px 20px;border-radius:14px;background:#f7fff7;border:2px solid #16a34a;text-align:center;">
             <div style="font-size:48px;margin-bottom:8px;">✅</div>
-            <h2 style="margin:0 0 8px;color:#146c2e;">¡Ya completaste esta <?php echo esc_html($label); ?>!</h2>
+            <h2 style="margin:0 0 8px;color:#146c2e;">¡Ya completaste esta prueba!</h2>
             <?php
                 $moraleja_show2 = function_exists('gc_moraleja_activa') && gc_moraleja_activa($escenario_id);
                 $moraleja_visto = $moraleja_show2 ? get_post_meta($station_id, 'gc_moraleja', true) : '';
@@ -451,7 +451,7 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
                     const data = await res.json();
                     if (data && data.ok) {
                         btn.style.display = 'none';
-                        msg.innerHTML = '<div style="padding:16px;border-radius:12px;background:#dcfce7;border:1px solid #16a34a;color:#146c2e;font-size:16px;font-weight:600;">✅ ¡<?php echo esc_html(mb_strtoupper(mb_substr($label, 0, 1)) . mb_substr($label, 1)); ?> completada!</div>'
+                        msg.innerHTML = '<div style="padding:16px;border-radius:12px;background:#dcfce7;border:1px solid #16a34a;color:#146c2e;font-size:16px;font-weight:600;">✅ ¡Prueba superada!</div>'
                             + '<a href="<?php echo esc_url($escenario_url); ?>" style="display:inline-block;margin-top:14px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
                     } else {
                         msg.innerHTML = '<div style="padding:14px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">No se pudo validar. Inténtalo de nuevo.</div>';
@@ -494,7 +494,7 @@ function gc_render_infantil_station_pista($station_id, $title, $escenario_id) {
         <?php endif; ?>
         <h3 style="margin:0 0 8px;color:#92400e;">¡Busca el código QR!</h3>
         <p style="margin:0 0 12px;font-size:15px;color:#78350f;">
-            Para validar esta <?php echo esc_html($label); ?>, necesitas encontrar y escanear el código QR en el lugar.
+            Para validar, necesitas encontrar y escanear el código QR en el lugar.
         </p>
 
         <!-- Botón escanear QR con cámara -->
@@ -742,7 +742,7 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
         <div style="font-size:48px;margin-bottom:8px;">📍</div>
         <h3 style="margin:0 0 8px;color:#991b1b;">Verifica tu ubicacion</h3>
         <p style="margin:0 0 16px;font-size:15px;color:#7f1d1d;">
-            Comprueba que estas cerca de <strong><?php echo esc_html($title); ?></strong> para validar esta <?php echo esc_html($label); ?>.
+            Comprueba que estas cerca de <strong><?php echo esc_html($title); ?></strong> para validar.
         </p>
         <button type="button" id="gc-geo-verify-btn" style="display:inline-flex;align-items:center;gap:10px;padding:14px 28px;border:0;border-radius:14px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(220,38,38,0.35);transition:transform 0.2s;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -789,7 +789,7 @@ function gc_render_station_gps($station_id, $title, $escenario_id) {
             wrap.style.borderColor = '#16a34a';
             wrap.innerHTML = imgAciertoHtml
               + '<p style="margin:0 0 8px;font-size:18px;color:#146c2e;font-weight:600;">✅ Ubicación verificada</p>'
-              + '<p style="margin:0 0 8px;font-size:15px;color:#166534;">Estabas a <strong>' + distRound + 'm</strong>. ¡' + <?php echo wp_json_encode($label_uc); ?> + ' validada!</p>'
+              + '<p style="margin:0 0 8px;font-size:15px;color:#166534;">Estabas a <strong>' + distRound + 'm</strong>. ¡Prueba validada!</p>'
               + '<a href="' + escenarioUrl + '" style="display:inline-block;margin-top:12px;padding:12px 24px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:600;">Volver al escenario</a>';
           } else {
             msg.style.color = '#dc2626';
@@ -1006,7 +1006,7 @@ function gc_render_accion_qr($station_id, $title, $escenario_id, $prueba_id) {
         } elseif ($just_result === 'ko') {
             echo '<div style="font-size:48px;margin-bottom:6px;">💪</div><h2 style="margin:0 0 8px;color:' . $col . ';">¡Buen intento!</h2>';
         } else {
-            echo '<div style="font-size:48px;margin-bottom:6px;">✅</div><h2 style="margin:0 0 8px;color:#166534;">¡' . esc_html(ucfirst($label)) . ' completada!</h2>';
+            echo '<div style="font-size:48px;margin-bottom:6px;">✅</div><h2 style="margin:0 0 8px;color:#166534;">¡Prueba superada!</h2>';
         }
         if ($gamif && $just_points !== null) {
             echo '<p style="margin:0 0 12px;font-size:16px;color:' . $col . ';">' . ($just_points > 0 ? 'Has conseguido <strong>' . (int) $just_points . ' puntos</strong>.' : 'Sin puntos esta vez, ¡pero sigues en juego!') . '</p>';
