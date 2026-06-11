@@ -117,19 +117,34 @@ add_action('manage_estacion_posts_custom_column', function($col, $post_id){
   }
 
   if ($col === 'gc_prueba') {
-    // Prueba propia vinculada: legacy gc_prueba_ref o prueba con gc_estacion_ref = estación
-    $pid = (int) get_post_meta($post_id, 'gc_prueba_ref', true);
-    if (!$pid) {
-      $pq = get_posts([
-        'post_type'      => 'prueba',
-        'post_status'    => 'any',
-        'posts_per_page' => 1,
-        'meta_query'     => [['key' => 'gc_estacion_ref', 'value' => $post_id, 'compare' => '=']],
-        'fields'         => 'ids',
-        'no_found_rows'  => true,
-      ]);
-      if (!empty($pq)) $pid = (int) $pq[0];
+    // Reflejar lo que REALMENTE se usa en el juego:
+    // - El vínculo válido hoy es gc_estacion_ref (prueba -> estación).
+    // - En modo POOL, la estación usa el pool salvo que tenga una prueba propia
+    //   por gc_estacion_ref (distinta de la prueba-pool). El gc_prueba_ref legacy
+    //   queda ignorado (puede ser una referencia antigua y confusa).
+    $esc_id   = (int) get_post_meta($post_id, 'gc_escenario_ref', true);
+    $origen   = ($esc_id && function_exists('gc_get_origen_preguntas')) ? gc_get_origen_preguntas($esc_id) : 'por_estacion';
+    $pool_pid = $esc_id ? (int) get_post_meta($esc_id, 'gc_pool_prueba_ref', true) : 0;
+
+    // Prueba propia vinculada por gc_estacion_ref (excluyendo la prueba-pool)
+    $pid = 0;
+    $pq = get_posts([
+      'post_type'      => 'prueba',
+      'post_status'    => 'any',
+      'posts_per_page' => 1,
+      'meta_query'     => [['key' => 'gc_estacion_ref', 'value' => $post_id, 'compare' => '=']],
+      'post__not_in'   => $pool_pid ? [$pool_pid] : [],
+      'fields'         => 'ids',
+      'no_found_rows'  => true,
+    ]);
+    if (!empty($pq)) $pid = (int) $pq[0];
+
+    // Solo en modo por_estacion aceptamos el vínculo legacy gc_prueba_ref.
+    if (!$pid && $origen !== 'pool') {
+      $legacy = (int) get_post_meta($post_id, 'gc_prueba_ref', true);
+      if ($legacy && get_post_status($legacy)) $pid = $legacy;
     }
+
     if ($pid) {
       $labels = [
         'multiple'        => 'Opción múltiple',
