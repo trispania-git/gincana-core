@@ -327,6 +327,7 @@ function gc_render_escenario_metabox($post) {
                     $orden_libre = get_post_meta($post->ID, 'gc_orden_aleatorio', true) === '1';
                 }
                 $orden_secreto  = get_post_meta($post->ID, 'gc_orden_secreto', true) === '1';
+                $orden_estricto = get_post_meta($post->ID, 'gc_orden_estricto', true) === '1';
             ?>
             <label class="gc-wiz-toggle">
                 <input type="checkbox" name="gc_orden_libre" value="1" id="gc_orden_libre" <?php checked($orden_libre, true); ?> />
@@ -346,18 +347,24 @@ function gc_render_escenario_metabox($post) {
                 </div>
             </label>
 
+            <label class="gc-wiz-toggle" id="gc-orden-estricto-row" style="<?php echo $orden_libre ? 'display:none;' : ''; ?>">
+                <input type="checkbox" name="gc_orden_estricto" value="1" id="gc_orden_estricto" <?php checked($orden_estricto, true); ?> />
+                <span class="gc-switch"></span>
+                <div>
+                    <div class="gc-toggle-label">Obligar a seguir el orden 🔒</div>
+                    <div class="gc-toggle-desc">Si un jugador abre el QR de una estación que no le toca (p. ej. está en la 2 y escanea la 5), se le avisa y NO se le deja responder hasta que llegue a esa estación por orden. (No aplica en "Orden libre".)</div>
+                </div>
+            </label>
+
             <script>
             (function(){
-                // Mutuamente excluyentes
+                // Mutuamente excluyentes: libre vs secreto
                 var libre = document.getElementById('gc_orden_libre');
                 var secret = document.getElementById('gc_orden_secreto');
-                if (!libre || !secret) return;
-                libre.addEventListener('change', function(){
-                    if (libre.checked) secret.checked = false;
-                });
-                secret.addEventListener('change', function(){
-                    if (secret.checked) libre.checked = false;
-                });
+                var estrictoRow = document.getElementById('gc-orden-estricto-row');
+                function syncEstricto(){ if (estrictoRow) estrictoRow.style.display = (libre && libre.checked) ? 'none' : ''; }
+                if (libre) libre.addEventListener('change', function(){ if (libre.checked && secret) secret.checked = false; syncEstricto(); });
+                if (secret) secret.addEventListener('change', function(){ if (secret.checked && libre) libre.checked = false; syncEstricto(); });
             })();
             </script>
 
@@ -1092,7 +1099,9 @@ function gc_render_escenario_metabox($post) {
                 var moraleja = ch('gc_moraleja_activa');
                 var ordenLibre   = ch('gc_orden_libre');
                 var ordenSecreto = ch('gc_orden_secreto');
+                var ordenEstricto = ch('gc_orden_estricto');
                 var ordenTxt = ordenSecreto ? 'Aleatorio (secreto)' : (ordenLibre ? 'Libre' : 'Secuencial');
+                if (!ordenLibre && ordenEstricto) ordenTxt += ' · orden obligatorio';
                 var mecRows = [
                     ['Tipo de QR', lb('tipo_qr', tipoQr)],
                     ['Prueba/quiz', prueba ? si : no],
@@ -1187,6 +1196,8 @@ add_action('save_post', function ($post_id) {
     }
     update_post_meta($post_id, 'gc_orden_libre', $is_libre);
     update_post_meta($post_id, 'gc_orden_secreto', $is_secreto);
+    // Obligar a seguir el orden (no aplica en orden libre)
+    update_post_meta($post_id, 'gc_orden_estricto', ($is_libre !== '1' && isset($_POST['gc_orden_estricto'])) ? '1' : '0');
     // Limpiar el meta antiguo (v1.0.37) si existía
     delete_post_meta($post_id, 'gc_orden_aleatorio');
     $geo_radio = isset($_POST['gc_geo_radio']) ? max(0, (int) $_POST['gc_geo_radio']) : 0;

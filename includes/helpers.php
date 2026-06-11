@@ -460,6 +460,17 @@ if ( ! function_exists('gc_orden_secreto') ) {
 }
 
 /**
+ * ¿El escenario obliga a seguir el orden de las estaciones? Si es true, un QR
+ * de una estación que no toca se bloquea con aviso. No aplica en orden libre.
+ */
+if ( ! function_exists('gc_orden_estricto') ) {
+  function gc_orden_estricto($escenario_id) {
+    if (function_exists('gc_orden_libre') && gc_orden_libre($escenario_id)) return false;
+    return get_post_meta((int)$escenario_id, 'gc_orden_estricto', true) === '1';
+  }
+}
+
+/**
  * Compatibilidad: alias al helper antiguo (v1.0.37). Se mantiene para que
  * el código que ya leía 'orden aleatorio' siga compilando, pero conceptualmente
  * equivale ahora a 'orden libre'.
@@ -753,9 +764,12 @@ if ( ! function_exists('gc_user_can_access_station') ) {
     $station_id   = (int) $station_id;
     if (!$escenario_id || !$station_id) return true;
 
-    // Si el escenario no obliga a empezar por la portada, no aplicamos
-    // ningún gating de orden — el QR aleatorio sigue siendo libre.
-    if (!function_exists('gc_forzar_portada') || !gc_forzar_portada($escenario_id)) {
+    // El gating de orden se aplica si el escenario obliga a empezar por la
+    // portada O si tiene activado "Obligar a seguir el orden". Si ninguno está
+    // activo, el acceso por QR es libre (comportamiento clásico).
+    $forzar   = function_exists('gc_forzar_portada') && gc_forzar_portada($escenario_id);
+    $estricto = function_exists('gc_orden_estricto') && gc_orden_estricto($escenario_id);
+    if (!$forzar && !$estricto) {
       return true;
     }
 
