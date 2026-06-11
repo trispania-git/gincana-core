@@ -757,6 +757,68 @@ if ( ! function_exists('gc_requiere_prueba') ) {
  *
  * Devuelve true si está permitido, false en caso contrario.
  */
+/**
+ * Devuelve las estaciones ACTIVAS del escenario ordenadas:
+ * por gc_orden (ordenado en PHP para evitar ambigüedades de meta_query) o,
+ * en modo secreto, por el orden personal aleatorio del usuario.
+ * Excluye deshabilitadas y las que no tengan gc_orden.
+ */
+if ( ! function_exists('gc_user_ordered_active_stations') ) {
+  function gc_user_ordered_active_stations($user_id, $escenario_id) {
+    $escenario_id = (int) $escenario_id;
+    $q = new WP_Query([
+      'post_type'      => 'estacion',
+      'post_status'    => 'publish',
+      'posts_per_page' => -1,
+      'meta_query'     => [
+        'relation' => 'AND',
+        ['key'=>'gc_escenario_ref','value'=>$escenario_id,'compare'=>'='],
+        ['key'=>'gc_orden','compare'=>'EXISTS'],
+      ],
+      'fields'         => 'ids',
+      'no_found_rows'  => true,
+    ]);
+    $ids = $q->have_posts() ? array_map('intval', $q->posts) : [];
+    wp_reset_postdata();
+    if (empty($ids)) return [];
+
+    // Ordenar por gc_orden en PHP (robusto, sin depender del orderby de WP).
+    usort($ids, function($a, $b){
+      $oa = (int) get_post_meta($a, 'gc_orden', true);
+      $ob = (int) get_post_meta($b, 'gc_orden', true);
+      if ($oa === $ob) return $a - $b;
+      return $oa - $ob;
+    });
+
+    // Excluir deshabilitadas
+    $active = array_values(array_filter($ids, function($e){
+      return get_post_meta($e, 'gc_deshabilitada', true) !== '1';
+    }));
+
+    // Orden secreto: orden personal aleatorio
+    if (function_exists('gc_orden_secreto') && gc_orden_secreto($escenario_id)
+        && function_exists('gc_get_user_random_order')) {
+      $active = gc_get_user_random_order($user_id, $escenario_id, $active);
+    }
+    return array_map('intval', (array) $active);
+  }
+}
+
+/**
+ * Estación "actual" del usuario: la primera no superada según el orden.
+ * 0 si ya las superó todas (o no hay).
+ */
+if ( ! function_exists('gc_user_current_station_id') ) {
+  function gc_user_current_station_id($user_id, $escenario_id) {
+    foreach (gc_user_ordered_active_stations($user_id, $escenario_id) as $eid) {
+      if (!(function_exists('gincana_user_passed') && gincana_user_passed($user_id, $eid))) {
+        return (int) $eid;
+      }
+    }
+    return 0;
+  }
+}
+
 if ( ! function_exists('gc_user_can_access_station') ) {
   function gc_user_can_access_station($user_id, $escenario_id, $station_id) {
     $user_id      = (int) $user_id;
@@ -783,49 +845,20 @@ if ( ! function_exists('gc_user_can_access_station') ) {
       return true;
     }
 
-    // Obtener todas las estaciones publicadas del escenario, ordenadas por gc_orden.
-    $q = new WP_Query([
-      'post_type'      => 'estacion',
-      'post_status'    => 'publish',
-      'posts_per_page' => -1,
-      'orderby'        => 'meta_value_num',
-      'order'          => 'ASC',
-      'meta_query'     => [
-        'relation' => 'AND',
-        ['key'=>'gc_escenario_ref','value'=>$escenario_id,'compare'=>'='],
-        ['key'=>'gc_orden','compare'=>'EXISTS'],
-      ],
-      'meta_key'       => 'gc_orden',
-      'fields'         => 'ids',
-      'no_found_rows'  => true,
-    ]);
-    $est_ids = $q->have_posts() ? array_map('intval', $q->posts) : [];
-    wp_reset_postdata();
-    if (empty($est_ids)) return true;
-
-    // Excluir deshabilitadas
-    $active = [];
-    foreach ($est_ids as $eid) {
-      if (get_post_meta($eid, 'gc_deshabilitada', true) !== '1') $active[] = (int) $eid;
-    }
+    $active = gc_user_ordered_active_stations($user_id, $escenario_id);
     if (empty($active)) return true;
 
-    // En orden secreto, sustituir por el orden personal aleatorio del usuario.
-    if (function_exists('gc_orden_secreto') && gc_orden_secreto($escenario_id)
-        && function_exists('gc_get_user_random_order')) {
-      $active = gc_get_user_random_order($user_id, $escenario_id, $active);
-    }
+    // Si la estación solicitada no está en la secuencia (sin gc_orden, etc.),
+    // no la bloqueamos.
+    $pos = array_search($station_id, $active, true);
+    if ($pos === false) return true;
 
-    // Buscar la primera estación no pasada → esa es la "actual" para este usuario.
-    foreach ($active as $eid) {
-      if ($user_id && function_exists('gincana_user_passed') && gincana_user_passed($user_id, (int) $eid)) {
-        continue;
+    // Se permite si TODAS las estaciones anteriores en el orden están superadas.
+    for ($i = 0; $i < $pos; $i++) {
+      if (!(function_exists('gincana_user_passed') && gincana_user_passed($user_id, $active[$i]))) {
+        return false;
       }
-      // Primera no pasada → comparamos con la estación solicitada.
-      return ((int) $eid === $station_id);
     }
-
-    // Todas pasadas → ya completó la gincana; permitir.
     return true;
   }
 }
@@ -851,8 +884,13 @@ if ( ! function_exists('gc_render_estacion_fuera_de_orden_card') ) {
       <h3 style="margin:0 0 6px;color:#78350f;font-size:18px;line-height:1.4;font-weight:700;">
         Todavía no te toca aquí
       </h3>
+      <?php
+        $cur_id    = function_exists('gc_user_current_station_id') ? gc_user_current_station_id(get_current_user_id(), $escenario_id) : 0;
+        $cur_title = $cur_id ? get_the_title($cur_id) : '';
+      ?>
       <p style="margin:0 0 16px;color:#92400e;font-size:14px;line-height:1.5;">
-        Sigue el orden de <?php echo esc_html($plural); ?>. Vuelve a la portada para ver qué te toca ahora.
+        Sigue el orden de <?php echo esc_html($plural); ?>.
+        <?php if ($cur_title !== ''): ?>Ahora te toca: <strong><?php echo esc_html($cur_title); ?></strong>.<?php else: ?>Vuelve a la portada para ver qué te toca ahora.<?php endif; ?>
       </p>
       <a href="<?php echo esc_url($escenario_url); ?>"
          style="display:inline-block;padding:12px 24px;border:0;border-radius:10px;background:#d97706;color:#fff;text-decoration:none;font-weight:700;font-size:15px;">
