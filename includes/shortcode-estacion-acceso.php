@@ -249,9 +249,9 @@ function gc_render_adulto_station_sin_prueba($station_id, $title, $escenario_id)
         ?>
         <div style="padding:24px 20px;border-radius:14px;background:#eff6ff;border:2px solid #2563eb;text-align:center;">
             <div style="margin-bottom:8px;"><?php echo gc_get_img_encontrada($escenario_id); ?></div>
-            <h2 style="margin:0 0 8px;color:#1e40af;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
+            <h2 style="margin:0 0 8px;color:#1e40af;"><?php echo esc_html(gc_get_msg_encontrada($escenario_id)); ?></h2>
             <p style="margin:0 0 16px;font-size:15px;color:#334155;">
-                Has llegado a <strong><?php echo esc_html($title); ?></strong>. Identifícate para validarla.
+                Has llegado a <strong><?php echo esc_html($title); ?></strong>. Identifícate para validar.
             </p>
         </div>
         <?php echo gc_render_login_o_guest($escenario_id, 'Empieza a jugar', 'Escribe tu nombre para validar esta ' . esc_html($label) . '.'); ?>
@@ -353,9 +353,9 @@ function gc_render_infantil_station_qr_no_login($station_id, $title, $escenario_
     ?>
     <div style="padding:24px 20px;border-radius:14px;background:#ecfdf3;border:2px solid #16a34a;text-align:center;">
         <div style="margin-bottom:8px;"><?php echo gc_get_img_encontrada($escenario_id); ?></div>
-        <h2 style="margin:0 0 8px;color:#146c2e;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
+        <h2 style="margin:0 0 8px;color:#146c2e;"><?php echo esc_html(gc_get_msg_encontrada($escenario_id)); ?></h2>
         <p style="margin:0 0 16px;font-size:15px;color:#334155;">
-            Has encontrado <strong><?php echo esc_html($title); ?></strong>. Identifícate para validarla y acumular puntos.
+            Has llegado a <strong><?php echo esc_html($title); ?></strong>. Identifícate para validar y acumular puntos.
         </p>
     </div>
     <?php echo gc_render_login_o_guest($escenario_id, 'Empieza a jugar', 'Escribe tu nombre y suma tu primer punto.'); ?>
@@ -403,9 +403,9 @@ function gc_render_infantil_station_qr($station_id, $title, $escenario_id) {
     ?>
     <div style="padding:24px 20px;border-radius:14px;background:#ecfdf3;border:2px solid #16a34a;text-align:center;margin-bottom:<?php echo $con_prueba ? '16' : '0'; ?>px;">
         <div style="margin-bottom:8px;"><?php echo gc_get_img_encontrada($escenario_id); ?></div>
-        <h2 style="margin:0 0 8px;color:#146c2e;">¡<?php echo esc_html($label_uc); ?> encontrada!</h2>
+        <h2 style="margin:0 0 8px;color:#146c2e;"><?php echo esc_html(gc_get_msg_encontrada($escenario_id)); ?></h2>
         <p style="margin:0;font-size:15px;color:#334155;">
-            Has encontrado <strong><?php echo esc_html($title); ?></strong>.
+            Has llegado a <strong><?php echo esc_html($title); ?></strong>.
         </p>
     </div>
 

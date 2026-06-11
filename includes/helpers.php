@@ -912,6 +912,25 @@ if ( ! function_exists('gc_get_label_estacion_plural') ) {
 }
 
 /**
+ * Devuelve el encabezado "al llegar a una parada" del escenario.
+ * Personalizable con gc_msg_encontrada (admite {parada} / {Parada}).
+ * Si no se configura, usa el clásico "¡{Parada} encontrada!".
+ */
+if ( ! function_exists('gc_get_msg_encontrada') ) {
+  function gc_get_msg_encontrada($escenario_id) {
+    $label    = gc_get_label_estacion($escenario_id);
+    $label_uc = function_exists('mb_strtoupper')
+      ? (mb_strtoupper(mb_substr($label, 0, 1)) . mb_substr($label, 1))
+      : (ucfirst($label));
+    $custom = (string) get_post_meta((int)$escenario_id, 'gc_msg_encontrada', true);
+    if (trim($custom) !== '') {
+      return str_replace(['{parada}', '{Parada}'], [$label, $label_uc], $custom);
+    }
+    return '¡' . $label_uc . ' encontrada!';
+  }
+}
+
+/**
  * Devuelve el texto CTA de un escenario.
  */
 if ( ! function_exists('gc_get_cta_texto') ) {

@@ -552,6 +552,14 @@ function gc_render_escenario_metabox($post) {
                 <div class="gc-hint">Ejemplos: "las estaciones", "las puertas", "los pasos"</div>
             </div>
 
+            <?php $msg_encontrada = get_post_meta($post->ID, 'gc_msg_encontrada', true); ?>
+            <div class="gc-wiz-field">
+                <label for="gc_msg_encontrada">Mensaje al llegar a una parada</label>
+                <input type="text" name="gc_msg_encontrada" id="gc_msg_encontrada"
+                       value="<?php echo esc_attr($msg_encontrada); ?>" placeholder="¡Estación encontrada!" />
+                <div class="gc-hint">Encabezado al acceder a una parada. Si lo dejas vacío se usa "¡{Parada} encontrada!". Puedes usar <code>{parada}</code> (minúscula) o <code>{Parada}</code> (con mayúscula). Ejemplos: "¡Has llegado al {parada}!", "¡{Parada} a la vista!".</div>
+            </div>
+
             <div class="gc-wiz-field">
                 <label for="gc_cta_texto">Texto motivacional (CTA)</label>
                 <input type="text" name="gc_cta_texto" id="gc_cta_texto"
@@ -1206,6 +1214,7 @@ add_action('save_post', function ($post_id) {
 
     update_post_meta($post_id, 'gc_label_estacion', sanitize_text_field($_POST['gc_label_estacion'] ?? ''));
     update_post_meta($post_id, 'gc_label_estacion_plural', sanitize_text_field($_POST['gc_label_estacion_plural'] ?? ''));
+    update_post_meta($post_id, 'gc_msg_encontrada', sanitize_text_field($_POST['gc_msg_encontrada'] ?? ''));
     update_post_meta($post_id, 'gc_cta_texto', sanitize_text_field($_POST['gc_cta_texto'] ?? ''));
     // Instrucciones y puntuaciones: auto-rellenar SOLO en la primera publicación
     $instr_val = wp_kses_post($_POST['gc_instrucciones'] ?? '');
