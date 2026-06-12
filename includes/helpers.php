@@ -1221,17 +1221,79 @@ if ( ! function_exists('gc_default_puntuaciones') ) {
     $html  = "<h3>¿Cómo se puntúa?</h3>\n";
     $html .= "<p style=\"margin-bottom:16px;\">En cada {$label} sumas puntos por <strong>dos cosas</strong>: por acertar y por tu rapidez.</p>\n";
 
+    // Prueba representativa de la que sacar las tablas concretas: la del pool,
+    // o la primera prueba enlazada a una estación del escenario.
+    $rep_pid = 0;
+    if (function_exists('gc_get_origen_preguntas') && gc_get_origen_preguntas($id) === 'pool') {
+      $rep_pid = (int) get_post_meta($id, 'gc_pool_prueba_ref', true);
+    }
+    if (!$rep_pid) {
+      $ests = get_posts([
+        'post_type'=>'estacion','post_status'=>'publish','numberposts'=>-1,
+        'orderby'=>'meta_value_num','meta_key'=>'gc_orden','order'=>'ASC',
+        'meta_query'=>[['key'=>'gc_escenario_ref','value'=>$id,'compare'=>'=']],
+        'fields'=>'ids','no_found_rows'=>true,
+      ]);
+      foreach ((array) $ests as $e) {
+        $pq = get_posts(['post_type'=>'prueba','post_status'=>'any','numberposts'=>1,
+          'meta_query'=>[['key'=>'gc_estacion_ref','value'=>$e,'compare'=>'=']],
+          'fields'=>'ids','no_found_rows'=>true]);
+        if (!empty($pq)) { $rep_pid = (int) $pq[0]; break; }
+        $legacy = (int) get_post_meta($e, 'gc_prueba_ref', true);
+        if ($legacy && get_post_status($legacy)) { $rep_pid = $legacy; break; }
+      }
+    }
+
+    // === Bloque acierto ===
     $html .= "<div style=\"margin:0 0 14px;padding:14px 16px;border-radius:12px;background:#ecfdf5;border-left:4px solid {$green};\">\n";
-    $html .= "  <h4 style=\"margin:0 0 6px;color:#166534;\">🎯 Puntos por acertar</h4>\n";
-    $html .= "  <p style=\"margin:0;line-height:1.6;\">Cuanto <strong>antes aciertes</strong>, más puntos. Acertar <strong>a la primera</strong> da el máximo; cada intento extra resta. Si no aciertas, 0 puntos por este factor.</p>\n";
+    $html .= "  <h4 style=\"margin:0 0 8px;color:#166534;\">🎯 Puntos por acertar</h4>\n";
+    $html .= "  <p style=\"margin:0 0 10px;line-height:1.6;\">Cuanto <strong>antes aciertes</strong>, más puntos. Cada intento de más resta; si no aciertas, 0.</p>\n";
+    if ($rep_pid && function_exists('gc_puntos_acierto_por_intento')) {
+      $rows = '';
+      $prev = null;
+      for ($a = 1; $a <= 10; $a++) {
+        $p = (int) gc_puntos_acierto_por_intento($rep_pid, $a);
+        if ($a > 1 && $p === $prev) break; // el valor ya no cambia → cortar
+        $etq = ($a === 1) ? 'A la 1ª (a la primera)' : ('Al ' . $a . 'º intento');
+        $rows .= "<tr><td style=\"padding:6px 8px;border-top:1px solid #d1fae5;\">{$etq}</td><td style=\"padding:6px 8px;border-top:1px solid #d1fae5;text-align:right;font-weight:700;color:#166534;\">{$p}</td></tr>\n";
+        if ($p === 0) break; // llegó a 0 → cortar
+        $prev = $p;
+      }
+      $html .= "  <table style=\"width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:8px;overflow:hidden;\">\n";
+      $html .= "    <tr style=\"color:#166534;\"><th style=\"text-align:left;padding:6px 8px;\">Si aciertas…</th><th style=\"text-align:right;padding:6px 8px;\">Puntos</th></tr>\n";
+      $html .= $rows;
+      $html .= "  </table>\n";
+    }
     $html .= "</div>\n";
 
+    // === Bloque rapidez ===
+    $tiempo_max = $rep_pid ? (int) get_post_meta($rep_pid, 'gc_tiempo_max_s', true) : 0;
     $html .= "<div style=\"margin:0 0 14px;padding:14px 16px;border-radius:12px;background:#eff6ff;border-left:4px solid {$blue};\">\n";
-    $html .= "  <h4 style=\"margin:0 0 6px;color:#1e40af;\">⏱️ Puntos por rapidez</h4>\n";
-    $html .= "  <p style=\"margin:0;line-height:1.6;\">Cuanto <strong>más rápido</strong> respondas dentro del tiempo, más puntos. Si se agota el tiempo, 0 puntos por rapidez.</p>\n";
+    $html .= "  <h4 style=\"margin:0 0 8px;color:#1e40af;\">⏱️ Puntos por rapidez</h4>\n";
+    if ($tiempo_max > 0 && function_exists('gc_calc_rangos_tiempo')) {
+      $pt_max  = get_post_meta($rep_pid, 'gc_puntos_tiempo_max', true);
+      $pt_max  = ($pt_max === '' || $pt_max === null) ? 10 : (int) $pt_max;
+      $rangos  = (int) get_post_meta($rep_pid, 'gc_puntos_tiempo_rangos', true);
+      if ($rangos <= 0) $rangos = 6;
+      $html .= "  <p style=\"margin:0 0 10px;line-height:1.6;\">Cuanto <strong>más rápido</strong> respondas, más puntos (tienes hasta <strong>{$tiempo_max} s</strong>). Si se agota el tiempo, 0.</p>\n";
+      $html .= "  <table style=\"width:100%;border-collapse:collapse;font-size:14px;background:#fff;border-radius:8px;overflow:hidden;\">\n";
+      $html .= "    <tr style=\"color:#1e40af;\"><th style=\"text-align:left;padding:6px 8px;\">Si respondes en…</th><th style=\"text-align:right;padding:6px 8px;\">Puntos</th></tr>\n";
+      foreach (gc_calc_rangos_tiempo($tiempo_max, $rangos, $pt_max) as $b) {
+        $desde = (int) $b['elapsed_from'];
+        $hasta = (int) $b['elapsed_to'] + 1;
+        $html .= "<tr><td style=\"padding:6px 8px;border-top:1px solid #dbeafe;\">{$desde}–{$hasta} s</td><td style=\"padding:6px 8px;border-top:1px solid #dbeafe;text-align:right;font-weight:700;color:#1e40af;\">" . (int) $b['pts'] . "</td></tr>\n";
+      }
+      $html .= "<tr><td style=\"padding:6px 8px;border-top:1px solid #dbeafe;color:#991b1b;\">Se agota el tiempo</td><td style=\"padding:6px 8px;border-top:1px solid #dbeafe;text-align:right;font-weight:700;color:#991b1b;\">0</td></tr>\n";
+      $html .= "  </table>\n";
+    } else {
+      $html .= "  <p style=\"margin:0;line-height:1.6;\">Cuanto <strong>más rápido</strong> respondas dentro del tiempo, más puntos. Si se agota el tiempo, 0.</p>\n";
+    }
     $html .= "</div>\n";
 
-    $html .= "<p style=\"margin-top:16px;\">La puntuación máxima de cada {$label} depende de su configuración (puntos por acierto + puntos por tiempo). <strong>¡Sé rápido y acierta a la primera</strong> para conseguir el máximo! 🏆</p>\n";
+    $html .= "<p style=\"margin-top:16px;\">El total de cada {$label} = puntos por acertar + puntos por rapidez. <strong>¡Sé rápido y acierta a la primera</strong> para el máximo! 🏆</p>\n";
+    if ($rep_pid && function_exists('gc_get_origen_preguntas') && gc_get_origen_preguntas($id) !== 'pool') {
+      $html .= "<p style=\"font-size:12px;color:#94a3b8;\">Los valores mostrados son los de una prueba de ejemplo; pueden variar en cada {$label}.</p>\n";
+    }
 
     return $html;
   }
