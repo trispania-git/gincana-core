@@ -158,14 +158,33 @@ if ( ! function_exists('gc_puntos_intento_lista') ) {
 
 /**
  * Puntos por acierto según en qué intento (1-based) se acertó.
+ * - Con lista explícita ("Puntos por intento"): el valor del intento, o el
+ *   último si se sobrepasa.
+ * - Sin lista (auto): se reduce a la mitad por intento SIN tope por el nº de
+ *   intentos, para que repetir y volver a fallar siga restando (intento 4 con
+ *   máximo 10 → 10/8 ≈ 1).
  */
 if ( ! function_exists('gc_puntos_acierto_por_intento') ) {
   function gc_puntos_acierto_por_intento($prueba_id, $attempt_no) {
+    $prueba_id  = (int) $prueba_id;
     $attempt_no = max(1, (int) $attempt_no);
-    $lista = gc_puntos_intento_lista($prueba_id);
-    if (empty($lista)) return 0;
-    if (isset($lista[$attempt_no - 1])) return max(0, (int) $lista[$attempt_no - 1]);
-    return max(0, (int) end($lista)); // más allá del último configurado → último valor
+
+    $max = get_post_meta($prueba_id, 'gc_puntos_acierto_max', true);
+    $max = ($max === '' || $max === null) ? 10 : (int) $max;
+    if ($max <= 0) return 0;
+
+    $raw = (string) get_post_meta($prueba_id, 'gc_puntos_intento', true);
+    if (trim($raw) !== '') {
+      $arr = array_values(array_filter(array_map('trim', explode(',', $raw)), function($v){ return $v !== '' && is_numeric($v); }));
+      if (!empty($arr)) {
+        $arr = array_map(function($v){ return max(0, (int) $v); }, $arr);
+        if (isset($arr[$attempt_no - 1])) return $arr[$attempt_no - 1];
+        return (int) end($arr); // más allá del último configurado → último valor
+      }
+    }
+
+    // Auto: mitad por intento (10, 5, 3, 1, 1…), sin tope por nº de intentos.
+    return max(0, (int) round($max / pow(2, $attempt_no - 1)));
   }
 }
 
