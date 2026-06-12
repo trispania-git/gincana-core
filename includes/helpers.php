@@ -160,9 +160,8 @@ if ( ! function_exists('gc_puntos_intento_lista') ) {
  * Puntos por acierto según en qué intento (1-based) se acertó.
  * - Con lista explícita ("Puntos por intento"): el valor del intento, o el
  *   último si se sobrepasa.
- * - Sin lista (auto): se reduce a la mitad por intento SIN tope por el nº de
- *   intentos, para que repetir y volver a fallar siga restando (intento 4 con
- *   máximo 10 → 10/8 ≈ 1).
+ * - Sin lista (auto): baja en 5 pasos iguales hasta 0 (máx 10 → 10, 8, 6, 4,
+ *   2, 0; máx 20 → 20, 16, 12, 8, 4, 0). A partir de ahí, 0.
  */
 if ( ! function_exists('gc_puntos_acierto_por_intento') ) {
   function gc_puntos_acierto_por_intento($prueba_id, $attempt_no) {
@@ -183,8 +182,9 @@ if ( ! function_exists('gc_puntos_acierto_por_intento') ) {
       }
     }
 
-    // Auto: mitad por intento (10, 5, 3, 1, 1…), sin tope por nº de intentos.
-    return max(0, (int) round($max / pow(2, $attempt_no - 1)));
+    // Auto: descenso lineal en 5 pasos iguales hasta 0 (de 2 en 2 para máx 10).
+    $step = $max / 5;
+    return max(0, (int) round($max - ($attempt_no - 1) * $step));
   }
 }
 
