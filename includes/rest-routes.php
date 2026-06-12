@@ -240,26 +240,10 @@ add_action('rest_api_init', function(){
         if ($pool_pid) $prueba_id = $pool_pid;
       }
 
-      // Nº de fallos en el intento ACTUAL → el intento en que ha acertado.
-      // Solo contamos los fallos posteriores al inicio de este intento
-      // (started_at). Así no arrastramos fallos de intentos previos, de otras
-      // pruebas, ni de sesiones de prueba anteriores. UNIX_TIMESTAMP normaliza
-      // created_at a Unix real (independiente de la zona horaria de MySQL).
-      $fail_count  = 0;
-      if ($prueba_id) {
-        $run_started = (int) get_user_meta($user_id, 'gc_quiz_state_' . $prueba_id . '_' . $estacion_id . '_started', true);
-        if ($run_started > 0) {
-          $fail_count = (int) $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}gincana_attempts WHERE user_id=%d AND prueba_id=%d AND estacion_id=%d AND result='fail' AND UNIX_TIMESTAMP(created_at) >= %d",
-            $user_id, $prueba_id, $estacion_id, $run_started
-          ));
-        } else {
-          $fail_count = (int) $wpdb->get_var( $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}gincana_attempts WHERE user_id=%d AND prueba_id=%d AND estacion_id=%d AND result='fail'",
-            $user_id, $prueba_id, $estacion_id
-          ));
-        }
-      }
+      // Nº de fallos hasta superar esta estación (contador persistente que NO se
+      // reinicia al repetir la prueba). Determina el intento para los puntos.
+      $sf_key     = $prueba_id ? ('gc_score_fails_' . (int) $prueba_id . '_' . (int) $estacion_id) : '';
+      $fail_count = $sf_key ? (int) get_user_meta($user_id, $sf_key, true) : 0;
       $had_fail   = $fail_count > 0;
       $attempt_no = $fail_count + 1; // intento en el que ha acertado (1 = a la primera)
 
@@ -293,6 +277,7 @@ add_action('rest_api_init', function(){
         delete_user_meta($user_id, 'gc_quiz_state_' . $prueba_id . '_' . $estacion_id . '_started');
         delete_user_meta($user_id, 'gc_ahorcado_revealed_' . $prueba_id . '_' . $estacion_id);
         delete_user_meta($user_id, 'gc_ahorcado_miss_' . $prueba_id . '_' . $estacion_id);
+        delete_user_meta($user_id, 'gc_score_fails_' . $prueba_id . '_' . $estacion_id); // ya superada
         if (function_exists('gc_sopa_limpiar')) {
           gc_sopa_limpiar($user_id, $prueba_id, $estacion_id);
         }
@@ -625,6 +610,15 @@ add_action('rest_api_init', function(){
         'ip_hash'      => null,
         'ua_hash'      => null,
       ], ['%d','%d','%d','%d','%s','%d','%s','%s','%s']);
+
+      // Contador de fallos PERSISTENTE para puntuación: cuenta todos los fallos
+      // de esta estación hasta superarla, INCLUIDOS los de ciclos anteriores
+      // (repetir la prueba NO lo reinicia). Determina el "intento" para los
+      // puntos por acierto. Se borra al superar la estación (/progress/complete).
+      if (!$all_ok && $prueba_id && $estacion_id_from_prueba) {
+        $sf_key = 'gc_score_fails_' . (int) $prueba_id . '_' . (int) $estacion_id_from_prueba;
+        update_user_meta($current_uid, $sf_key, ((int) get_user_meta($current_uid, $sf_key, true)) + 1);
+      }
 
       // Estado tras este intento (para que el front actualice contadores)
       $state_post = gc_quiz_user_state($current_uid, $prueba_id, $estacion_id_from_prueba);
