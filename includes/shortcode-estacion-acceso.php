@@ -2247,7 +2247,6 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                 });
 
                 const data1 = await res1.json();
-                try { console.log('[gincana] quiz/submit →', JSON.stringify(data1)); } catch(e) { console.log('[gincana] quiz/submit →', data1); }
 
                 // Si el server devolvió 'blocked', recargamos para mostrar la pantalla de bloqueo
                 if (data1 && data1.blocked) {
@@ -2262,23 +2261,9 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                 }
 
                 if (!data1 || !data1.ok) {
-                    // Diagnóstico visible: versión del plugin que respondió + motivo.
-                    var dbgTxt = '';
-                    if (data1) {
-                        var bits = [];
-                        if (data1._v) bits.push('v' + data1._v);
-                        if (data1.error) bits.push('error=' + data1.error);
-                        if (data1._debug) {
-                            bits.push('tipo_global=' + data1._debug.tipo_global);
-                            bits.push('q_mode=' + data1._debug.q_mode);
-                            bits.push('skip=' + data1._debug.skip);
-                            bits.push('tipos=' + JSON.stringify(data1._debug.tipos));
-                        }
-                        if (bits.length) dbgTxt = '<div style="margin-top:8px;font-size:11px;color:#94a3b8;font-family:monospace;word-break:break-all;">' + bits.join(' · ') + '</div>';
-                    }
                     // Sin límite de intentos: solo mensaje y a seguir intentando
                     if (intentosMax <= 0) {
-                        msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">❌ Respuesta incorrecta. Vuelve a intentarlo.' + dbgTxt + '</div>';
+                        msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">❌ Respuesta incorrecta. Vuelve a intentarlo.</div>';
                         try { msg.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
                         return;
                     }
@@ -2324,7 +2309,6 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                 });
 
                 const data2 = await res2.json();
-                try { console.log('[gincana] progress/complete →', JSON.stringify(data2)); } catch(e) { console.log('[gincana] progress/complete →', data2); }
 
                 if (data2 && data2.ok) {
                     const pts = data2.points_awarded || 0;

@@ -1191,13 +1191,6 @@ if ( ! function_exists('gc_default_instrucciones') ) {
     // Cierre motivador
     $html .= "<p style=\"margin:24px 0 0;text-align:center;font-size:18px;font-weight:700;color:{$blueDk};\">¡Buena suerte y disfruta del recorrido! 🚀</p>\n";
 
-    // Marca de versión (comentario HTML, no se ve en la página) para poder
-    // verificar qué versión generó el texto desde el modo "Texto/HTML".
-    $vmark = defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?';
-    $ub    = $tiene_ubicacion ? '1' : '0';
-    $om    = $es_libre ? 'libre' : ($es_secreto ? 'secreto' : 'fijo');
-    $html .= "<!-- gc_instr v{$vmark} ubic={$ub} orden={$om} -->\n";
-
     // Portada del escenario al final
     if ($portada) {
       $html .= "<div style=\"text-align:center;margin-top:24px;\">";
