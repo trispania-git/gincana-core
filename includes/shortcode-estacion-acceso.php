@@ -2256,6 +2256,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                         ? '⌛ Se acabó el tiempo. Esta pregunta ya no se puede responder.'
                         : '🚫 Has agotado los intentos disponibles.';
                     lockForm(reasonMsg);
+                    try { msg.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
                     setTimeout(function(){ location.reload(); }, 1500);
                     return;
                 }
@@ -2278,6 +2279,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                     // Sin límite de intentos: solo mensaje y a seguir intentando
                     if (intentosMax <= 0) {
                         msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">❌ Respuesta incorrecta. Vuelve a intentarlo.' + dbgTxt + '</div>';
+                        try { msg.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
                         return;
                     }
                     // Sincronizar contador de intentos con server (fuente única de verdad)
@@ -2299,6 +2301,7 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
                         setTimeout(function(){ location.reload(); }, 1500);
                     } else {
                         msg.innerHTML = '<div style="padding:14px 16px;border-radius:12px;background:#fff2f0;border:1px solid #ffccc7;color:#a8071a;">❌ Respuesta incorrecta. Te quedan <strong>' + intentosRestantes + '</strong> intento' + (intentosRestantes === 1 ? '' : 's') + '.</div>';
+                        try { msg.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch(e) {}
                     }
                     return;
                 }
