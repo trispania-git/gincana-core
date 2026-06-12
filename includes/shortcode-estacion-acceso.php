@@ -1937,6 +1937,19 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
         const panel = wrap.querySelector('#gc-quiz-panel');
         const startBtn = wrap.querySelector('#gc-start-challenge');
 
+        // Al cargar la estación, bajar directamente al CTA del desafío
+        // ("¿Preparado para el desafío?") para no quedarse en la cabecera.
+        if (cta) {
+            setTimeout(function(){
+                try {
+                    var top = cta.getBoundingClientRect().top + window.pageYOffset - 12;
+                    window.scrollTo({ top: top, behavior: 'smooth' });
+                } catch (e) {
+                    try { cta.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (e2) {}
+                }
+            }, 300);
+        }
+
         // === Contadores de intentos y tiempo (server-side) ===
         const formForMeta  = wrap.querySelector('#gc-adult-station-form');
         const intentosMax  = formForMeta ? parseInt(formForMeta.dataset.intentosMax  || '2', 10) : 2;
