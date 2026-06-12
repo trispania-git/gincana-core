@@ -252,11 +252,17 @@ add_action('rest_api_init', function(){
       // log de puntos y sin valor que devolver al frontend).
       $gamificacion = function_exists('gc_show_points') ? gc_show_points($escenario_id) : true;
 
+      // Tiempo para la RAPIDEZ: total real desde el primer inicio de la estación
+      // (persistente, sobrevive a las repeticiones). Si no existe la marca, se
+      // usa el time_ms que envía el front (un solo intento).
+      $first_start = $prueba_id ? (int) get_user_meta($user_id, 'gc_quiz_first_' . $prueba_id . '_' . $estacion_id, true) : 0;
+      $time_ms_total = ($first_start > 0) ? max(0, (time() - $first_start) * 1000) : $time_ms;
+
       // Desglose: puntos por acierto (según intento) + puntos por rapidez.
       $acierto_pts = ($gamificacion && $prueba_id && function_exists('gc_puntos_acierto_por_intento'))
         ? (int) gc_puntos_acierto_por_intento($prueba_id, $attempt_no) : 0;
       $time_pts    = ($gamificacion && $prueba_id && function_exists('gc_puntos_tiempo_por_ms'))
-        ? (int) gc_puntos_tiempo_por_ms($prueba_id, $time_ms) : 0;
+        ? (int) gc_puntos_tiempo_por_ms($prueba_id, $time_ms_total) : 0;
       $points_to_add = $gamificacion ? max(0, $acierto_pts + $time_pts) : 0;
 
       if ($gamificacion) {
@@ -278,6 +284,7 @@ add_action('rest_api_init', function(){
         delete_user_meta($user_id, 'gc_ahorcado_revealed_' . $prueba_id . '_' . $estacion_id);
         delete_user_meta($user_id, 'gc_ahorcado_miss_' . $prueba_id . '_' . $estacion_id);
         delete_user_meta($user_id, 'gc_score_fails_' . $prueba_id . '_' . $estacion_id); // ya superada
+        delete_user_meta($user_id, 'gc_quiz_first_' . $prueba_id . '_' . $estacion_id);  // cronómetro de rapidez
         if (function_exists('gc_sopa_limpiar')) {
           gc_sopa_limpiar($user_id, $prueba_id, $estacion_id);
         }
@@ -443,6 +450,13 @@ add_action('rest_api_init', function(){
         update_user_meta($user_id, $state['state_key'] . '_started', time());
         // Recalcular para devolver el estado real
         $state = gc_quiz_user_state($user_id, $prueba_id, $estacion_id);
+      }
+      // Marca de "primer inicio" PERSISTENTE: el cronómetro para los puntos de
+      // rapidez cuenta desde aquí y NO se reinicia al repetir (se borra al
+      // superar la estación). Así la rapidez refleja el tiempo total real.
+      $fs_key = 'gc_quiz_first_' . $prueba_id . '_' . $estacion_id;
+      if (!get_user_meta($user_id, $fs_key, true)) {
+        update_user_meta($user_id, $fs_key, time());
       }
       return new WP_REST_Response(['ok'=>true, 'state'=>$state], 200);
     }
