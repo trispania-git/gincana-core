@@ -268,18 +268,23 @@ add_action('rest_api_init', function(){
       // log de puntos y sin valor que devolver al frontend).
       $gamificacion = function_exists('gc_show_points') ? gc_show_points($escenario_id) : true;
 
-      $points_to_add = ($gamificacion && function_exists('gincana_points_calculate'))
-        ? gincana_points_calculate($user_id, $escenario_id, $estacion_id, $time_ms, $attempt_no, $prueba_id)
-        : 0;
+      // Desglose: puntos por acierto (según intento) + puntos por rapidez.
+      $acierto_pts = ($gamificacion && $prueba_id && function_exists('gc_puntos_acierto_por_intento'))
+        ? (int) gc_puntos_acierto_por_intento($prueba_id, $attempt_no) : 0;
+      $time_pts    = ($gamificacion && $prueba_id && function_exists('gc_puntos_tiempo_por_ms'))
+        ? (int) gc_puntos_tiempo_por_ms($prueba_id, $time_ms) : 0;
+      $points_to_add = $gamificacion ? max(0, $acierto_pts + $time_pts) : 0;
 
       if ($gamificacion) {
         if (!function_exists('gincana_points_add')) {
           return new WP_REST_Response(['ok'=>false,'error'=>'points_add_missing'], 500);
         }
         gincana_points_add($user_id, $escenario_id, $points_to_add, 'passed', $estacion_id, [
-          'time_ms'    => $time_ms,
-          'first_try'  => ! $had_fail,
-          'attempt_no' => $attempt_no
+          'time_ms'     => $time_ms,
+          'first_try'   => ! $had_fail,
+          'attempt_no'  => $attempt_no,
+          'acierto_pts' => $acierto_pts,
+          'time_pts'    => $time_pts,
         ]);
       }
 
@@ -297,6 +302,9 @@ add_action('rest_api_init', function(){
         'ok'             => true,
         'already_passed' => false,
         'points_awarded' => (int) $points_to_add,
+        'acierto_points' => (int) $acierto_pts,
+        'time_points'    => (int) $time_pts,
+        'attempt_no'     => (int) $attempt_no,
         'first_try'      => ! $had_fail,
         '_v'             => defined('GINCANA_CORE_VERSION') ? GINCANA_CORE_VERSION : '?',
         '_dbg'           => [

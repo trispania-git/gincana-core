@@ -2328,8 +2328,18 @@ function gc_render_adulto_station($station_id, $title, $escenario_id, $intro_opt
 
                 if (data2 && data2.ok) {
                     const pts = data2.points_awarded || 0;
+                    // Desglose: acierto + rapidez (si viene del servidor).
+                    var aPts = (typeof data2.acierto_points === 'number') ? data2.acierto_points : null;
+                    var tPts = (typeof data2.time_points === 'number') ? data2.time_points : null;
+                    var nIntento = (typeof data2.attempt_no === 'number') ? data2.attempt_no : null;
+                    var desglose = '';
+                    if (pts > 0 && aPts !== null && tPts !== null) {
+                        desglose = '<div style="margin-top:6px;font-size:13px;color:#166534;">'
+                            + '🎯 ' + aPts + ' por acierto' + (nIntento ? ' (intento ' + nIntento + ')' : '')
+                            + ' &nbsp;·&nbsp; ⏱️ ' + tPts + ' por rapidez</div>';
+                    }
                     // Si la gamificación está desactivada (pts === 0), no mostrar referencia a puntos.
-                    const ptsTxt = pts > 0 ? (' Has conseguido <strong>' + pts + ' puntos</strong>.') : '';
+                    const ptsTxt = pts > 0 ? (' Has conseguido <strong>' + pts + ' puntos</strong>.' + desglose) : '';
                     const ptsTxtGps = pts > 0 ? (' — ' + pts + ' puntos') : '';
                     <?php
                     $tipo_qr_redirect = get_post_meta($escenario_id, 'gc_tipo_qr', true) ?: 'enlace';
