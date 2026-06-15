@@ -76,6 +76,11 @@ function gc_shortcode_estacion_acceso() {
         return gc_station_wrap_message('La estación no tiene escenario enlazado.', 'error');
     }
 
+    // Gymkana fuera de periodo: aviso (los administradores la siguen viendo).
+    if ( function_exists('gc_escenario_inactivo') && gc_escenario_inactivo($escenario_id) && ! current_user_can('manage_options') ) {
+        return gc_render_escenario_inactivo($escenario_id);
+    }
+
     $tipo_escenario = get_post_meta($escenario_id, 'gc_tipo_escenario', true);
     if (empty($tipo_escenario)) {
         $tipo_escenario = 'adulto';
@@ -2437,6 +2442,11 @@ add_shortcode('gincana_estacion_contenido', function($atts){
     $escenario_id = (int) get_post_meta($station_id, 'gc_escenario_ref', true);
     if ($escenario_id <= 0) {
         return gc_station_wrap_message('La estacion no tiene escenario enlazado.', 'error');
+    }
+
+    // Gymkana fuera de periodo: aviso (los administradores la siguen viendo).
+    if ( function_exists('gc_escenario_inactivo') && gc_escenario_inactivo($escenario_id) && ! current_user_can('manage_options') ) {
+        return gc_render_escenario_inactivo($escenario_id);
     }
 
     $tipo_escenario = get_post_meta($escenario_id, 'gc_tipo_escenario', true) ?: 'adulto';

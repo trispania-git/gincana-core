@@ -384,6 +384,42 @@ if ( ! function_exists('gincana_next_estacion_id') ) {
 }
 
 /**
+ * ¿La gymkana (escenario) está marcada como NO activa (fuera de periodo)?
+ */
+if ( ! function_exists('gc_escenario_inactivo') ) {
+  function gc_escenario_inactivo($escenario_id) {
+    return get_post_meta((int)$escenario_id, 'gc_inactiva', true) === '1';
+  }
+}
+
+/**
+ * Pantalla de "gymkana no activa". Se muestra al acceder al escenario o a una
+ * estación cuando el escenario está marcado como inactivo.
+ */
+if ( ! function_exists('gc_render_escenario_inactivo') ) {
+  function gc_render_escenario_inactivo($escenario_id) {
+    $title = get_the_title((int)$escenario_id);
+    $msg   = (string) get_post_meta((int)$escenario_id, 'gc_inactiva_msg', true);
+    if (trim($msg) === '') {
+      $msg = 'Visita <a href="https://gymkanaonline.com/" style="color:#2563eb;font-weight:600;text-decoration:underline;">gymkanaonline.com</a> y disfruta de más gymkanas.';
+    } else {
+      // Convertir URLs sueltas del mensaje personalizado en enlaces.
+      $msg = make_clickable(esc_html($msg));
+    }
+    ob_start();
+    ?>
+    <div style="max-width:560px;margin:24px auto;padding:32px 24px;border-radius:16px;background:#fff;border:2px solid #e2e8f0;text-align:center;box-shadow:0 4px 18px rgba(15,23,42,0.06);">
+      <div style="font-size:52px;margin-bottom:10px;">⏳</div>
+      <h2 style="margin:0 0 10px;color:#1e293b;font-size:22px;">La gymkana «<?php echo esc_html($title); ?>» ya no está activa</h2>
+      <p style="margin:0 0 20px;font-size:16px;color:#475569;line-height:1.6;"><?php echo wp_kses_post($msg); ?></p>
+      <a href="https://gymkanaonline.com/" style="display:inline-block;padding:13px 26px;border:0;border-radius:10px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;font-size:15px;">Descubre más gymkanas</a>
+    </div>
+    <?php
+    return ob_get_clean();
+  }
+}
+
+/**
  * ¿Debe mostrarse la puntuación en este escenario?
  */
 if ( ! function_exists('gc_show_points') ) {

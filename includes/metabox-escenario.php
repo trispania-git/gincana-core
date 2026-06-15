@@ -198,6 +198,27 @@ function gc_render_escenario_metabox($post) {
             </div>
             <input type="hidden" name="gc_tipo_escenario" id="gc_tipo_escenario" value="<?php echo esc_attr($tipo); ?>" />
 
+            <!-- Estado de la gymkana (activa / no activa) -->
+            <?php
+                $inactiva     = get_post_meta($post->ID, 'gc_inactiva', true) === '1';
+                $inactiva_msg = (string) get_post_meta($post->ID, 'gc_inactiva_msg', true);
+            ?>
+            <div style="margin-top:8px;padding:14px 16px;border-radius:10px;background:<?php echo $inactiva ? '#fef2f2' : '#f0fdf4'; ?>;border:1px solid <?php echo $inactiva ? '#fecaca' : '#bbf7d0'; ?>;">
+                <label class="gc-wiz-toggle" style="margin:0;">
+                    <input type="checkbox" name="gc_inactiva" value="1" id="gc_inactiva" <?php checked($inactiva, true); ?> />
+                    <span class="gc-switch"></span>
+                    <div>
+                        <div class="gc-toggle-label">Gymkana NO activa ⛔</div>
+                        <div class="gc-toggle-desc">Actívalo cuando la gymkana haya terminado (fuera de su periodo). No se borra nada: al acceder al escenario o a sus estaciones se mostrará un aviso de "ya no está activa". Los administradores siguen viéndola para configurarla.</div>
+                    </div>
+                </label>
+                <div class="gc-wiz-field" style="margin:12px 0 0;">
+                    <label for="gc_inactiva_msg" style="font-size:13px;">Mensaje al estar inactiva (opcional)</label>
+                    <input type="text" name="gc_inactiva_msg" id="gc_inactiva_msg" value="<?php echo esc_attr($inactiva_msg); ?>" placeholder="Visita https://gymkanaonline.com/ y disfruta de más gymkanas" style="width:100%;" />
+                    <div class="gc-hint">Si lo dejas vacío se usa un texto por defecto con el enlace a gymkanaonline.com.</div>
+                </div>
+            </div>
+
             <!-- Acceso: con registro o sin registro (invitado) -->
             <?php
                 $permitir_guest = get_post_meta($post->ID, 'gc_permitir_guest', true) === '1';
@@ -1179,6 +1200,8 @@ add_action('save_post', function ($post_id) {
     update_post_meta($post_id, 'gc_tipo_escenario', $tipo);
     update_post_meta($post_id, 'gc_permitir_guest', isset($_POST['gc_permitir_guest']) ? '1' : '0');
     update_post_meta($post_id, 'gc_forzar_portada', isset($_POST['gc_forzar_portada']) ? '1' : '0');
+    update_post_meta($post_id, 'gc_inactiva', isset($_POST['gc_inactiva']) ? '1' : '0');
+    update_post_meta($post_id, 'gc_inactiva_msg', sanitize_text_field($_POST['gc_inactiva_msg'] ?? ''));
     $tipo_qr = sanitize_text_field($_POST['gc_tipo_qr'] ?? 'enlace');
     if ( ! in_array($tipo_qr, ['enlace', 'validacion_boton', 'validacion_boton_quiz', 'validacion_quiz', 'validacion_gps', 'solo_pregunta'], true) ) $tipo_qr = 'enlace';
     update_post_meta($post_id, 'gc_tipo_qr', $tipo_qr);

@@ -111,6 +111,11 @@ add_shortcode('gincana_estaciones_lista', function($atts){
     return '<p>No se pudo determinar el escenario.</p>';
   }
 
+  // Gymkana fuera de periodo: mostrar aviso (los administradores la siguen viendo).
+  if ( function_exists('gc_escenario_inactivo') && gc_escenario_inactivo($escenario_id) && ! current_user_can('manage_options') ) {
+    return gc_render_escenario_inactivo($escenario_id);
+  }
+
   $tipo_escenario       = get_post_meta($escenario_id, 'gc_tipo_escenario', true) ?: 'adulto';
   $label_estacion       = gc_get_label_estacion($escenario_id);
   $label_estacion_plural = gc_get_label_estacion_plural($escenario_id);
