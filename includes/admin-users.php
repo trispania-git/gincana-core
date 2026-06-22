@@ -6,7 +6,80 @@ if ( ! defined('ABSPATH') ) exit;
  * - Filtro por Escenario
  * - Tabla de usuarios con: total puntos, estaciones completadas, mejor tiempo medio
  * - Detalle por usuario (click) con log de puntos y progreso por estación
+ * - Exportación CSV del ranking filtrado
  */
+
+/**
+ * Descarga CSV del ranking (escenario filtrado o global). Se engancha temprano
+ * para poder enviar cabeceras antes de cualquier salida HTML.
+ */
+add_action('admin_init', function () {
+  if ( ($_GET['page'] ?? '') !== 'gincana-users' ) return;
+  if ( ($_GET['gc_export'] ?? '') !== 'csv' ) return;
+  if ( ! current_user_can('manage_options') ) return;
+  check_admin_referer('gc_users_export');
+
+  global $wpdb;
+  $tbl_points = $wpdb->prefix . 'gincana_points_log';
+  $tbl_prog   = $wpdb->prefix . 'gincana_user_progress';
+  $escenario_id = isset($_GET['esc']) ? (int) $_GET['esc'] : 0;
+
+  $where_esc = $escenario_id ? $wpdb->prepare("WHERE escenario_id=%d", $escenario_id) : '';
+  $rows = $wpdb->get_results("
+    SELECT user_id, SUM(points) AS total_points
+    FROM $tbl_points
+    $where_esc
+    GROUP BY user_id
+    HAVING total_points > 0
+    ORDER BY total_points DESC
+  ");
+
+  // Progreso (estaciones completadas + mejor tiempo medio) por usuario
+  $map_prog = [];
+  if (!empty($rows)) {
+    $in_users   = implode(',', array_map('intval', wp_list_pluck($rows, 'user_id')));
+    $where_esc2 = $escenario_id ? $wpdb->prepare("AND escenario_id=%d", $escenario_id) : '';
+    $prog_rows = $wpdb->get_results("
+      SELECT user_id, COUNT(*) AS passed_count, AVG(NULLIF(best_time_ms,0)) AS avg_best_ms
+      FROM $tbl_prog
+      WHERE status='passed' $where_esc2 AND user_id IN ($in_users)
+      GROUP BY user_id
+    ");
+    foreach ($prog_rows as $p) {
+      $map_prog[(int)$p->user_id] = [
+        'passed' => (int) $p->passed_count,
+        'avg_ms' => is_null($p->avg_best_ms) ? null : (int) $p->avg_best_ms,
+      ];
+    }
+  }
+
+  $esc_name = $escenario_id ? (get_the_title($escenario_id) ?: ('Escenario #'.$escenario_id)) : 'Global';
+  $slug = sanitize_title($esc_name) ?: 'global';
+  $filename = 'gincana-ranking-' . $slug . '.csv';
+
+  nocache_headers();
+  header('Content-Type: text/csv; charset=utf-8');
+  header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+  $out = fopen('php://output', 'w');
+  fwrite($out, "\xEF\xBB\xBF"); // BOM UTF-8 (para que Excel respete acentos)
+  fputcsv($out, ['Posición', 'Usuario', 'ID', 'Email', 'Puntos', 'Estaciones completadas', 'Mejor tiempo medio (s)', 'Escenario']);
+
+  $pos = 1;
+  foreach ((array) $rows as $r) {
+    $uid   = (int) $r->user_id;
+    $user  = get_user_by('id', $uid);
+    $name  = $user ? ($user->display_name ?: $user->user_login) : ('Usuario #'.$uid);
+    $email = $user ? $user->user_email : '';
+    $passed = isset($map_prog[$uid]['passed']) ? $map_prog[$uid]['passed'] : 0;
+    $avgms  = isset($map_prog[$uid]['avg_ms']) ? $map_prog[$uid]['avg_ms'] : null;
+    $avg_s  = is_null($avgms) ? '' : floor($avgms / 1000);
+    fputcsv($out, [$pos, $name, $uid, $email, (int) $r->total_points, $passed, $avg_s, $esc_name]);
+    $pos++;
+  }
+  fclose($out);
+  exit;
+});
 
 function gincana_core_users_cb(){
   if ( ! current_user_can('manage_options') ) {
@@ -344,7 +417,13 @@ function gincana_core_users_cb(){
     ];
   }
 
-  echo '<h2>Ranking '.($escenario_id ? 'del escenario: '.esc_html(get_the_title($escenario_id)) : 'global').'</h2>';
+  echo '<h2 style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">Ranking '.($escenario_id ? 'del escenario: '.esc_html(get_the_title($escenario_id)) : 'global');
+  $export_url = wp_nonce_url(
+    admin_url('admin.php?page=gincana-users&gc_export=csv'.($escenario_id ? '&esc='.$escenario_id : '')),
+    'gc_users_export'
+  );
+  echo ' <a class="button button-primary" style="font-size:13px;" href="'.esc_url($export_url).'">⬇️ Exportar a CSV</a>';
+  echo '</h2>';
   echo '<table class="widefat striped"><thead><tr>
           <th style="width:60px;">#</th>
           <th>Usuario</th>
