@@ -426,7 +426,7 @@ add_action('wp_footer', function () {
         . " logos_configurados={$logo_count}"
         . " is_singular_escenario=" . (is_singular('escenario') ? '1' : '0')
         . " is_singular_estacion=" . (is_singular('estacion') ? '1' : '0')
-        . " gc_subpage=" . (get_query_var('gc_subpage') ?: '-')
+        . " gc_subpage=" . esc_html( get_query_var('gc_subpage') ?: '-' )
         . " gc_station=" . (isset($_GET['gc_station']) ? (int)$_GET['gc_station'] : '-')
         . " -->\n";
 
