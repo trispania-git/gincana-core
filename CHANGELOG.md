@@ -5,6 +5,15 @@ Para el histórico anterior a la v1.0.117, consulta `git log`.
 
 ---
 
+## 1.0.119 — 2026-07-09 — Fix inyección de fórmulas en el CSV de ranking
+
+- **`admin-users.php`**: la exportación del ranking a CSV neutraliza la inyección
+  de fórmulas. El nombre de jugador y el email los controla un usuario de perfil
+  bajo (al registrarse o entrar como invitado); `sanitize_text_field` no elimina
+  `= + - @`, así que un nombre como `=HYPERLINK(...)` se ejecutaba al abrir el CSV
+  en Excel/LibreOffice. Ahora cada celda que empieza por un carácter peligroso se
+  prefija con comilla simple (helper `gincana_core_csv_safe`).
+
 ## 1.0.118 — 2026-07-09 — Integridad de la puntuación en el servidor (anti-trampas)
 
 Refuerzo de seguridad. La concesión de puntos y el marcado de estaciones como

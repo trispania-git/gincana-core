@@ -10,6 +10,22 @@ if ( ! defined('ABSPATH') ) exit;
  */
 
 /**
+ * Neutraliza la inyección de fórmulas (CSV injection) en celdas de texto que un
+ * jugador de perfil bajo puede controlar (su nombre de jugador o su email).
+ * Excel/LibreOffice ejecutan como fórmula cualquier celda que empiece por
+ * = + - @ (o TAB/CR). Prefijando una comilla simple, la celda se lee como texto.
+ */
+if ( ! function_exists('gincana_core_csv_safe') ) {
+  function gincana_core_csv_safe($value) {
+    $value = (string) $value;
+    if ($value !== '' && in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+      $value = "'" . $value;
+    }
+    return $value;
+  }
+}
+
+/**
  * Descarga CSV del ranking (escenario filtrado o global). Se engancha temprano
  * para poder enviar cabeceras antes de cualquier salida HTML.
  */
@@ -74,7 +90,7 @@ add_action('admin_init', function () {
     $passed = isset($map_prog[$uid]['passed']) ? $map_prog[$uid]['passed'] : 0;
     $avgms  = isset($map_prog[$uid]['avg_ms']) ? $map_prog[$uid]['avg_ms'] : null;
     $avg_s  = is_null($avgms) ? '' : floor($avgms / 1000);
-    fputcsv($out, [$pos, $name, $uid, $email, (int) $r->total_points, $passed, $avg_s, $esc_name]);
+    fputcsv($out, array_map('gincana_core_csv_safe', [$pos, $name, $uid, $email, (int) $r->total_points, $passed, $avg_s, $esc_name]));
     $pos++;
   }
   fclose($out);
