@@ -399,6 +399,13 @@ add_action('save_post_estacion', function ($post_id, $post) {
     if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return;
     if ($post->post_status === 'auto-draft') return;
 
+    // Solo auto-sincronizar el slug MIENTRAS la estación no está publicada. Una vez
+    // publicada, el slug queda fijo (como en WordPress estándar): así, si se corrige
+    // el título después de imprimir los QR —cuyo permalink apunta a la estación en
+    // modo 'enlace'—, los QR impresos siguen funcionando. El slug se puede seguir
+    // cambiando a mano desde el editor de permalink si hiciera falta.
+    if ($post->post_status === 'publish') return;
+
     $new_slug = sanitize_title($post->post_title);
     if ($new_slug && $new_slug !== $post->post_name) {
         global $wpdb;

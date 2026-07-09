@@ -5,6 +5,17 @@ Para el histórico anterior a la v1.0.117, consulta `git log`.
 
 ---
 
+## 1.0.122 — 2026-07-09 — El slug de estación queda fijo tras publicar (no rompe QRs impresos)
+
+- **`metabox-estacion.php`**: el hook que auto-sincronizaba el slug de la estación
+  con su título lo regeneraba en **cada guardado**, incluso después de publicar. En
+  modo QR 'enlace' (el QR apunta al permalink de la estación), corregir una errata
+  del título tras imprimir los QR cambiaba el slug y **todos los QR impresos daban
+  404** (el `UPDATE` directo en BD además se salta las redirecciones de slug antiguo
+  de WordPress). También machacaba cualquier slug editado a mano. Ahora el slug solo
+  se auto-genera mientras la estación no está publicada; una vez publicada queda fijo
+  (comportamiento estándar de WordPress) y editable a mano si se necesita.
+
 ## 1.0.121 — 2026-07-09 — Fix colisión de slugs de prueba entre escenarios (importación CSV)
 
 - **`admin-import-csv.php`**: la importación buscaba la prueba a crear/actualizar
