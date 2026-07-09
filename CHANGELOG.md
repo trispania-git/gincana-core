@@ -5,6 +5,38 @@ Para el histórico anterior a la v1.0.117, consulta `git log`.
 
 ---
 
+## 1.0.118 — 2026-07-09 — Integridad de la puntuación en el servidor (anti-trampas)
+
+Refuerzo de seguridad. La concesión de puntos y el marcado de estaciones como
+"superadas" dejan de fiarse del cliente. Antes, un jugador con la sesión iniciada
+podía completar la gymkana entera y lograr la puntuación máxima **sin resolver
+ninguna prueba**, llamando directamente a los endpoints REST (posee el nonce).
+
+- **`/progress/complete`**: ahora exige un intento **acertado real** registrado en
+  el servidor (`gincana_attempts.result='success'`) para esa (usuario, estación)
+  antes de marcarla superada y puntuar. Si no existe, responde `403 no_success_attempt`.
+  La prueba de la que se leen los puntos se toma de ese intento, no del dato que
+  envía el navegador.
+- **`/quiz/submit`**: se elimina el override del cliente `q_mode='lista_libre'`, que
+  permitía anular toda la validación y "acertar" cualquier prueba. El modo "lista
+  libre" se decide solo por el meta de servidor de la prueba.
+- **`/quiz/submit`**: la heurística "parece lista libre" (respuesta con forma de
+  array JSON plano) ya no salta la validación en preguntas con tipo validable; así
+  no se puede acertar una pregunta de opción múltiple/texto enviando `["x"]`. Se
+  mantiene como salvaguarda solo para preguntas sin tipo definido.
+- **`/progress/complete` y `/progress/skip`**: se aplica el orden obligatorio también
+  en el servidor (`gc_user_can_access_station`), no solo al pintar la pantalla. Si el
+  escenario no fuerza orden, el comportamiento no cambia.
+
+Pendiente (siguiente iteración de este bloque de seguridad):
+
+- El tiempo de rapidez todavía admite el `time_ms` del cliente como fallback cuando
+  no hay cronómetro de servidor (solo afecta al bonus de rapidez de quien ya ha
+  acertado; ya no permite puntuar sin resolver).
+- La solución del ahorcado sigue viajando en el DOM (`data-letter`/`data-original`).
+- `?gc_quiz_reset=1` sigue siendo GET sin nonce.
+- Verificación de GPS en el servidor (hoy la distancia se calcula solo en el navegador).
+
 ## 1.0.117 — 2026-07-09 — Fix XSS reflejado en el pie (gc_subpage)
 
 - **`theme.php`**: se escapa con `esc_html()` el valor de la query var pública

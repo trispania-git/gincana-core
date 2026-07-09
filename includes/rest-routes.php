@@ -207,6 +207,30 @@ add_action('rest_api_init', function(){
         ], 200);
       }
 
+      // ── Candado server-side (anti-trampas) ─────────────────────────────────
+      // Solo se marca la estación como superada (y se puntúa) si existe un intento
+      // ACERTADO real, registrado por /quiz/submit, para esta (usuario, estación).
+      // Antes este endpoint confiaba en el cliente: un jugador podía llamarlo
+      // directamente y quedar "superado" con la puntuación máxima sin resolver
+      // nada. La prueba de la que se leen los puntos se toma de ese intento.
+      $attempts_table  = $wpdb->prefix . 'gincana_attempts';
+      $success_attempt = $wpdb->get_row( $wpdb->prepare(
+        "SELECT prueba_id FROM $attempts_table
+           WHERE user_id=%d AND estacion_id=%d AND result='success'
+           ORDER BY id DESC LIMIT 1",
+        $user_id, $estacion_id
+      ));
+      if (!$success_attempt) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'no_success_attempt'], 403);
+      }
+
+      // Respeta el orden obligatorio también aquí (no solo al pintar la pantalla).
+      // Si el escenario no fuerza orden, gc_user_can_access_station() da true.
+      if (function_exists('gc_user_can_access_station')
+          && !gc_user_can_access_station($user_id, $escenario_id, $estacion_id)) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'out_of_order'], 403);
+      }
+
       $wpdb->query( $wpdb->prepare("
         INSERT INTO $progress_table (user_id, escenario_id, estacion_id, status, attempts, best_time_ms)
         VALUES (%d,%d,%d,'passed',1,%d)
@@ -215,12 +239,14 @@ add_action('rest_api_init', function(){
           best_time_ms = LEAST(COALESCE(best_time_ms, %d), %d)
       ", $user_id, $escenario_id, $estacion_id, $time_ms, $time_ms, $time_ms ) );
 
-      // Prioridad: la prueba que REALMENTE se jugó (la que envía el front, que
-      // es la misma que se renderizó y validó en /quiz/submit). Así se lee la
-      // config de puntuación correcta también en modo pool y se ignoran refs
-      // legacy obsoletas (gc_prueba_ref antiguo).
-      $prueba_id = (int) $req->get_param('prueba_id');
-      if ($prueba_id && get_post_type($prueba_id) !== 'prueba') $prueba_id = 0;
+      // La prueba autoritativa es la del intento acertado (server-side). Solo si
+      // por algún motivo no tuviera prueba_id, se cae a los fallbacks históricos
+      // (ref del front validada, gc_prueba_ref legacy, gc_estacion_ref, pool).
+      $prueba_id = (int) $success_attempt->prueba_id;
+      if (!$prueba_id) {
+        $prueba_id = (int) $req->get_param('prueba_id');
+        if ($prueba_id && get_post_type($prueba_id) !== 'prueba') $prueba_id = 0;
+      }
 
       // Fallbacks si el front no lo mandó: ref legacy, gc_estacion_ref, o pool.
       if (!$prueba_id) $prueba_id = (int) get_post_meta($estacion_id, 'gc_prueba_ref', true);
@@ -522,10 +548,12 @@ add_action('rest_api_init', function(){
       $all_ok = true;
 
       // === SHORT-CIRCUIT: prueba de tipo "Lista libre" ===
-      // Skip si el desplegable principal de la prueba es lista_libre, o si el
-      // frontend manda explícitamente q_mode='lista_libre' (hint del data-mode
-      // del formulario). Esto cubre cualquier desfase en el meta.
-      $skip_validation = ($tipo_global === 'lista_libre' || $q_mode === 'lista_libre');
+      // IMPORTANTE (seguridad): el modo "lista libre" (saltarse la validación) se
+      // decide SOLO por el meta de servidor de la prueba, nunca por el hint
+      // 'q_mode' del cliente. Antes, enviar q_mode='lista_libre' en CUALQUIER
+      // prueba anulaba toda la corrección y devolvía ok:true. Ese override del
+      // navegador se elimina; $q_mode se mantiene solo con fines informativos.
+      $skip_validation = ($tipo_global === 'lista_libre');
 
       foreach ($pregs_to_check as $i => $p) {
         if ($skip_validation) { continue; }
@@ -538,8 +566,15 @@ add_action('rest_api_init', function(){
         // respuesta tiene forma de array PLANO de strings (lista_libre del
         // front), pasamos sin validar. Excluimos arrays anidados (que sí los
         // usa sopa_letras: [[r,c],…]).
+        // La heurística "parece lista libre" (respuesta con forma de array JSON
+        // plano) SOLO se admite como salvaguarda cuando la pregunta no tiene un
+        // tipo validable definido. Si la pregunta es de un tipo con respuesta
+        // correcta (multiple, texto, sopa, ahorcado, etc.) NUNCA se salta la
+        // validación por la forma de la respuesta: de lo contrario un jugador
+        // acertaría enviando su respuesta como '["x"]'.
+        $tipo_sin_definir = ($tipo === '' || $tipo === 'lista_libre');
         $looks_like_lista = false;
-        if (is_string($ans) && strlen($ans) > 0 && $ans[0] === '[') {
+        if ($tipo_sin_definir && is_string($ans) && strlen($ans) > 0 && $ans[0] === '[') {
           $maybe = json_decode($ans, true);
           if (is_array($maybe)) {
             // Plano = ningún elemento es a su vez array.
@@ -677,6 +712,14 @@ add_action('rest_api_init', function(){
           'already_passed'=>true,
           'points_awarded'=>0
         ],200);
+      }
+
+      // Respeta el orden obligatorio también en el "skip" por QR/GPS: no permite
+      // marcar una estación posterior antes de completar las previas. Si el
+      // escenario no fuerza orden, gc_user_can_access_station() devuelve true.
+      if (function_exists('gc_user_can_access_station')
+          && !gc_user_can_access_station($user_id, $escenario_id, $estacion_id)) {
+        return new WP_REST_Response(['ok'=>false,'error'=>'out_of_order'], 403);
       }
 
       // Si no llega tiempo real, usamos un fallback alto
