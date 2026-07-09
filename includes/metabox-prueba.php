@@ -511,6 +511,19 @@ function gc_render_prueba_metabox($post) {
         var btn  = document.getElementById('gc-add-pregunta');
         if (!wrap || !btn) return;
 
+        // Siguiente índice libre para gc_preguntas[]: MÁXIMO índice existente + 1
+        // (no el número de bloques). Si se borra una pregunta intermedia, contar
+        // bloques reutilizaría un índice ya en uso y, al enviar el formulario, dos
+        // preguntas caerían en el mismo índice y se perdería una al guardar.
+        function nextPreguntaIdx() {
+            var max = -1;
+            wrap.querySelectorAll('[name^="gc_preguntas["]').forEach(function (el) {
+                var m = (el.name || '').match(/^gc_preguntas\[(\d+)\]/);
+                if (m) { var n = parseInt(m[1], 10); if (n > max) max = n; }
+            });
+            return max + 1;
+        }
+
         // Helper: tipo actual del select
         function currentTipo() {
             var sel = document.getElementById('gc_tipo');
@@ -545,8 +558,7 @@ function gc_render_prueba_metabox($post) {
 
         // === Añadir pregunta manual ===
         btn.addEventListener('click', function(){
-            var count = wrap.querySelectorAll('.gc-pregunta-block').length;
-            var idx = count;
+            var idx = nextPreguntaIdx();
             var tipoNow = currentTipo();
             var html = '<div class="gc-pregunta-block" style="border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:12px;background:#fafafa;">'
                 + '<p style="margin:0 0 8px;"><strong>Pregunta ' + (idx+1) + '</strong>'
@@ -716,7 +728,7 @@ function gc_render_prueba_metabox($post) {
                 if (!enunciado) { errors.push('Fila ' + (li+2) + ': enunciado vacio.'); return; }
                 if (correcta < 1 || correcta > 4) { errors.push('Fila ' + (li+2) + ': correcta debe ser 1-4 (recibido: ' + cols[5] + ').'); return; }
 
-                var idx = wrap.querySelectorAll('.gc-pregunta-block').length;
+                var idx = nextPreguntaIdx();
                 var ops = [op1, op2, op3, op4];
 
                 var html = '<div class="gc-pregunta-block" style="border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:12px;background:#fafafa;">'

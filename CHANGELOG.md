@@ -5,6 +5,17 @@ Para el histórico anterior a la v1.0.117, consulta `git log`.
 
 ---
 
+## 1.0.120 — 2026-07-09 — Fix pérdida de preguntas al editar (colisión de índices)
+
+- **`metabox-prueba.php`**: el editor de pruebas calculaba el índice de la nueva
+  pregunta contando bloques (`.length`). Si el organizador borraba una pregunta
+  intermedia y añadía otra (o importaba por CSV tras un borrado), el índice
+  colisionaba con uno ya existente y, al guardar, dos preguntas caían en el mismo
+  índice y se perdía una sin aviso. Ahora el índice se calcula como el máximo
+  existente + 1 (helper `nextPreguntaIdx`), tanto al añadir a mano como al importar
+  CSV. Al guardar, PHP sigue reindexando el array, así que los índices se
+  normalizan en la siguiente recarga.
+
 ## 1.0.119 — 2026-07-09 — Fix inyección de fórmulas en el CSV de ranking
 
 - **`admin-users.php`**: la exportación del ranking a CSV neutraliza la inyección
