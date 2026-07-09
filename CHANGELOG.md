@@ -5,6 +5,19 @@ Para el histórico anterior a la v1.0.117, consulta `git log`.
 
 ---
 
+## 1.0.121 — 2026-07-09 — Fix colisión de slugs de prueba entre escenarios (importación CSV)
+
+- **`admin-import-csv.php`**: la importación buscaba la prueba a crear/actualizar
+  por su `slug` de forma **global** (`gincana_core_find_test_by_slug`), sin acotar
+  por escenario. Si dos escenarios usaban el mismo `test_slug` (p. ej. `p1`, `p2`
+  de las plantillas de ejemplo), importar el segundo **actualizaba y re-apuntaba la
+  prueba del primero**, corrompiendo datos en silencio. Además, como `post_name` es
+  único global, WordPress renombra los slugs duplicados a `slug-2`, con lo que el
+  emparejamiento por slug ni siquiera reencontraba la prueba propia al reimportar.
+  Ahora la prueba se localiza por su **estación** (`gincana_core_find_test_for_station`:
+  `gc_prueba_ref` de la estación, con respaldo en `gc_estacion_ref`), lo que es
+  idempotente por estación e inmune a colisiones de slug entre escenarios.
+
 ## 1.0.120 — 2026-07-09 — Fix pérdida de preguntas al editar (colisión de índices)
 
 - **`metabox-prueba.php`**: el editor de pruebas calculaba el índice de la nueva

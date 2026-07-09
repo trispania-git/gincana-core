@@ -400,7 +400,10 @@ function gincana_core_handle_csv_import($escenario_id, $tmp_path, $replace_mode 
 
     if ( $has_test_cols && $test_slug !== '' && $test_title !== '' ) {
 
-      $test_id = gincana_core_find_test_by_slug($test_slug);
+      // Emparejar la prueba por su ESTACIÓN (no por el slug global): así una
+      // reimportación actualiza la prueba correcta y no roba/pisa la de otro
+      // escenario que use el mismo test_slug.
+      $test_id = gincana_core_find_test_for_station($station_id);
 
       if ( $test_id ) {
         wp_update_post([
@@ -608,17 +611,35 @@ function gincana_core_find_station_by_slug_in_scenario($slug, $escenario_id, $or
   return $q->have_posts() ? (int)$q->posts[0] : 0;
 }
 
-function gincana_core_find_test_by_slug($slug) {
-  $slug = sanitize_title($slug);
+/**
+ * Localiza la prueba que pertenece a ESTA estación, para que la reimportación
+ * actualice la prueba correcta y NO robe/pise la de otro escenario que use el
+ * mismo test_slug. El post_name de las pruebas es único global y WordPress lo
+ * renombra a "slug-2" en colisiones, así que emparejar por slug es frágil.
+ * Orden de resolución:
+ *   1) gc_prueba_ref de la estación (enlace canónico estación -> prueba).
+ *   2) Una prueba con gc_estacion_ref = estación (por si faltara el enlace inverso).
+ * Devuelve 0 si la estación aún no tiene prueba (se creará una nueva).
+ */
+function gincana_core_find_test_for_station($station_id) {
+  $station_id = (int) $station_id;
+  if (!$station_id) return 0;
+
+  $ref = (int) get_post_meta($station_id, 'gc_prueba_ref', true);
+  if ($ref && get_post_type($ref) === 'prueba') return $ref;
 
   $q = new WP_Query([
     'post_type'      => 'prueba',
     'post_status'    => 'any',
     'posts_per_page' => 1,
-    'name'           => $slug,
+    'meta_query'     => [[
+      'key'     => 'gc_estacion_ref',
+      'value'   => $station_id,
+      'compare' => '=',
+    ]],
     'fields'         => 'ids',
     'no_found_rows'  => true,
   ]);
 
-  return $q->have_posts() ? (int)$q->posts[0] : 0;
+  return $q->have_posts() ? (int) $q->posts[0] : 0;
 }
